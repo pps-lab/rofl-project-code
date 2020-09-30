@@ -1,0 +1,34 @@
+# Configuration file for paper `How to backdoor federated learning`
+
+num_clients: 3383 # 100
+num_selected_clients: 30
+num_malicious_clients: 113
+global_learning_rate: 33
+
+num_rounds: 100000
+batch_size: 64
+num_epochs: 2
+optimizer: Adam
+learning_rate: 0.01
+decay_rate: 0.9
+decay_steps: 15625
+model_name: resnet56_v2
+augment_data: true
+save_updates: false
+dataset: cifar10
+data_distribution: dirichlet
+workers: 1
+print_every: 50
+attack_frequency: 1
+
+attack_type: min_loss
+backdoor_feature_aux_train: [2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392,389,561,874,1605,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,41336,41861,47001,47026,48003,48030,49163,49588,330,568,3934,12336,30560,30696,33105,33615,33907,36848,40713,41706]
+backdoor_feature_aux_test: [2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392,389,561,874,1605,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,41336,41861,47001,47026,48003,48030,49163,49588,330,568,3934,12336,30560,30696,33105,33615,33907,36848,40713,41706]
+backdoor_feature_target: 2
+# the same?
+
+#attack_type: backdoor
+#backdoor_attack_objective: [7, 1]
+#backdoor_stealth: false
+#estimate_other_updates: false
+#

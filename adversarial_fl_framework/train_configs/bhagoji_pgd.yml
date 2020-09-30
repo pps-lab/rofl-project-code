@@ -1,0 +1,29 @@
+# Sample configuration file for federated dropout
+
+num_clients: 10
+num_selected_clients: 10
+num_malicious_clients: 1
+
+attack_after: 25
+attack_stop_after: 25
+attack_type: min_loss
+backdoor_attack_objective: [5, 7]
+backdoor_stealth: false
+aux_samples: 10
+estimate_other_updates: false
+scale_attack: False
+scale_attack_weight: 1
+num_rounds: 80
+batch_size: 128
+num_epochs: 5
+optimizer: Adam
+learning_rate: 0.0001
+model_name: bhagoji
+dataset: fmnist
+workers: 1
+clip: 0.0015
+save_updates: false
+#
+pgd: l_inf
+pgd_constraint: 0.0015
+pgd_adaptive: false

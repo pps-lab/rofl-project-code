@@ -1,0 +1,24 @@
+# Sample configuration file for federated dropout
+
+num_clients: 24
+num_selected_clients: 24
+num_malicious_clients: 1
+attack_type: min_loss
+backdoor_attack_objective: [7, 1]
+backdoor_stealth: true
+estimate_other_updates: true
+scale_attack: True
+scale_attack_weight: 24
+num_rounds: 80
+batch_size: 128
+num_epochs: 1
+optimizer: Adam
+learning_rate: 0.0001
+model_name: mnist_cnn
+save_updates: false
+dataset: mnist
+data_distribution: nonIID
+workers: 10
+clip: 0.0015
+backdoor_tasks: 1
+number_of_samples: 60000

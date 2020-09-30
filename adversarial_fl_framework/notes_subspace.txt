@@ -1,0 +1,4 @@
+python -m src.main -c ./train_configs/cifar_lenet5.yml --model_name lenet5_intrinsic --learning_rate 0.00075 --global_learning_rate 1 --save_model_at 1000 2000 3000 4000 5000 6000 6250 6500 6750 7000 7250 7500 --num_rounds 7500 --experiment_name cifar_lenet_subspace
+
+
+python -m src.main -c ./train_configs/cifar_lenet5.yml --model_name lenet5_intrinsic --learning_rate 0.075 --global_learning_rate 1 --num_rounds 250 --experiment_name cifar_lenet_subspace_lowclients --hyperparameter_tuning true --tune_attack_clients 6 10 20 --tune_attack_clients_selected_frac 0.5

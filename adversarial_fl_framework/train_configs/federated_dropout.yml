@@ -1,0 +1,17 @@
+# Sample configuration file for federated dropout
+
+num_clients: 50
+num_selected_clients: 50
+num_malicious_clients: 0
+attack_type: min_loss
+scale_attack: True
+scale_attack_weight: 5
+num_rounds: 1000
+batch_size: 128
+num_epochs: 1
+optimizer: SGD
+learning_rate: 0.1
+model: dev
+federated_dropout_rate: 0.75
+global_learning_rate: 0.5
+save_updates: false

@@ -1,0 +1,14 @@
+# Sample configuration file for federated dropout
+
+num_clients: 1
+num_selected_clients: 1
+num_malicious_clients: 0
+
+num_rounds: 1000
+batch_size: 128
+num_epochs: 1
+optimizer: SGD
+learning_rate: 0.001
+model: dev
+
+save_updates: false

@@ -1,0 +1,19 @@
+# Sample configuration file for federated dropout
+
+num_clients: 50
+num_selected_clients: 50
+num_malicious_clients: 0
+global_learning_rate: -1
+
+num_rounds: 100000
+batch_size: 32
+num_epochs: 1
+optimizer: Adam
+learning_rate: 0.0001
+model_name: lenet5
+save_updates: false
+dataset: cifar10
+data_distribution: IID
+
+q_bits: 16
+q_frac: 7
