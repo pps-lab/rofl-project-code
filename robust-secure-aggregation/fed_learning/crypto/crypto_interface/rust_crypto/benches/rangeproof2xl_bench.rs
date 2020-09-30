@@ -40,7 +40,7 @@ static DIM: [usize; 5] = [65536, 131072, 262144, 524288, 1048576];
 //static DIM: [usize; 1] = [1024];
 static RANGE: [usize; 3] = [8, 16, 32];
 static N_PARTITION: usize = 16;
-static num_samples: usize = 40;
+static num_samples: usize = 8;
 
 fn bench_rangeproof2xl_fn(bench: &mut Bencher) {
 
