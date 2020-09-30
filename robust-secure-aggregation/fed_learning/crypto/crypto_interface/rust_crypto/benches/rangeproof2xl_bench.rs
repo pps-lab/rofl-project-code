@@ -35,8 +35,8 @@ use std::time::{Duration, Instant};
 use std::thread::sleep;
 
 
-static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-// static DIM: [usize; 5] = [1048576, 524288, 262144, 131072, 65536];
+// static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
+static DIM: [usize; 5] = [1048576, 524288, 262144, 131072, 65536];
 //static DIM: [usize; 1] = [1024];
 static RANGE: [usize; 3] = [8, 16, 32];
 static N_PARTITION: usize = 16;
@@ -132,5 +132,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(bench_rangeproof2, bench_rangeproof);
-benchmark_main!(bench_rangeproof2);
+benchmark_group!(bench_rangeproof2xl, bench_rangeproof);
+benchmark_main!(bench_rangeproof2xl);

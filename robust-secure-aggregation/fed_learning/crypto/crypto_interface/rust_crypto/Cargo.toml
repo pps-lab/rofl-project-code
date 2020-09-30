@@ -103,3 +103,7 @@ harness = false
 [[bench]]
 name = "l2rangeproof_bench"
 harness = false
+
+[[bench]]
+name = "rangeproof2xl_bench"
+harness = false
