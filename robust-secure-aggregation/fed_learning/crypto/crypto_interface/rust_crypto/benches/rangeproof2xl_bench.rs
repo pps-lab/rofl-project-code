@@ -36,7 +36,7 @@ use std::thread::sleep;
 
 
 // static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-static DIM: [usize; 5] = [1048576, 524288, 262144, 131072, 65536];
+static DIM: [usize; 5] = [65536, 131072, 262144, 524288, 1048576];
 //static DIM: [usize; 1] = [1024];
 static RANGE: [usize; 3] = [8, 16, 32];
 static N_PARTITION: usize = 16;
