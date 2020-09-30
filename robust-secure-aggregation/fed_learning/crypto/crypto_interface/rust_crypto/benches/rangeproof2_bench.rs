@@ -42,7 +42,7 @@ static RANGE: [usize; 3] = [8, 16, 32];
 static N_PARTITION: usize = 16;
 static num_samples: usize = 40;
 
-fn bench_rangeproof(bench: &mut Bencher) {
+fn bench_rangeproof_fn(bench: &mut Bencher) {
 
     let mut rng = rand::thread_rng();
     
@@ -132,5 +132,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(bench_rangeproof2, bench_rangeproof);
+benchmark_group!(bench_rangeproof2, bench_rangeproof_fn);
 benchmark_main!(bench_rangeproof2);
