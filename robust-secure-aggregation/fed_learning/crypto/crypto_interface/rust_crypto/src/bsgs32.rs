@@ -1,0 +1,120 @@
+#![allow(non_snake_case)]
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek::scalar::Scalar;
+
+use hashbrown::HashMap;
+
+// use crate::fp::{N_BITS, URawFix, PRECOMP_BIAS};
+// Fix for 8 bits for L2 evaluation
+pub const N_BITS: usize = 16;
+pub type URawFix = u16;
+pub const PRECOMP_BIAS: usize = 7;
+
+pub struct BSGSTable {
+    pub table: HashMap<[u8; 32], URawFix>,
+    pub mG: RistrettoPoint,
+}
+
+impl BSGSTable {
+    pub fn new(m: usize) -> BSGSTable {
+        let mut tab = BSGSTable {
+            table: HashMap::with_capacity(m as usize),
+            mG: RISTRETTO_BASEPOINT_POINT * Scalar::from(m as URawFix),
+        };
+
+        let mut cur = RISTRETTO_BASEPOINT_POINT;
+        let id = RISTRETTO_BASEPOINT_POINT * Scalar::from(0u32);
+        tab.table.insert(id.compress().to_bytes(), 0);
+        for x in 1..(m + 1) {
+            tab.table.insert(cur.compress().to_bytes(), x as URawFix);
+            cur += RISTRETTO_BASEPOINT_POINT;
+        }
+        tab
+    }
+
+    pub fn default() -> BSGSTable {
+        BSGSTable::new((1 as usize) << (N_BITS/2 + PRECOMP_BIAS))
+    }
+
+    pub fn get_value(&self, point: RistrettoPoint) -> Option<&URawFix> {
+        self.table.get(point.compress().as_bytes())
+    }
+
+    pub fn get_size(&self) -> u64 {
+        (self.table.len() as u64) - 1
+    }
+
+    pub fn solve_discrete_log(&self, M: RistrettoPoint, max_it: u64) -> Option<URawFix> {
+        let mut cur_point = M.clone();
+        for i in 0..max_it {
+            let cur_pow = self.get_value(cur_point);
+            match cur_pow {
+                Some(&pow) => return Some((i * self.get_size() + (pow as u64)) as URawFix),
+                None => cur_point -= self.mG,
+            }
+        }
+        None
+    }
+
+    pub fn solve_discrete_log_default(&self, M: RistrettoPoint) -> Option<URawFix> {
+        return self.solve_discrete_log(M, (1u64 << N_BITS) / self.get_size());
+    }
+
+    pub fn solve_discrete_log_with_neg(&self, M: RistrettoPoint) -> Scalar {
+        let res: Option<URawFix> = self.solve_discrete_log_default(M);
+        match res {
+                Some(val) => val.into(),
+                None => {
+                    let inv_res = self.solve_discrete_log_default(-M);
+                    -Scalar::from(inv_res.unwrap())
+                },
+        }
+        
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::Rng;
+    use crate::pedersen_ops::{commit_no_blinding_vec, discrete_log_vec};
+    use crate::conversion32::f32_to_scalar_vec;
+    use crate::fp::Fix;
+
+    #[test]
+    fn test_solve_discrete_log_positive() {
+        let bsgs: BSGSTable = BSGSTable::default();
+        let n_values: usize = 30;
+        let mut rng = rand::thread_rng();
+
+        let x_vec: Vec<f32> = (0..n_values).map(|_| rng.gen_range::<f32>(0.0, Fix::max_value().to_float::<f32>())).collect();
+        let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
+        let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
+        let y_vec_scalar: Vec<Scalar> = x_vec_enc.iter()
+                                  .map(|x| bsgs.solve_discrete_log_default(*x).unwrap().into())
+                                  .collect();
+        for (x, y) in x_vec_scalar.iter().zip(&y_vec_scalar) {
+            assert_eq!(x, y);
+        }
+    }
+
+
+    #[test]
+    fn test_solve_discrete_log_negative() {
+        let bsgs: BSGSTable = BSGSTable::default();
+        let n_values: usize = 30;
+        let mut rng = rand::thread_rng();
+
+        let x_vec: Vec<f32> = (0..n_values).map(|_| rng.gen_range::<f32>(-Fix::max_value().to_float::<f32>(), 0.0)).collect();
+        //let x_vec: Vec<f32> = vec![Fix::max_value().to_float::<f32>()];
+        let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
+        let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
+        let y_vec_scalar: Vec<Scalar> = x_vec_enc.iter()
+                                  .map(|x| bsgs.solve_discrete_log_with_neg(*x))
+                                  .collect();
+        for (x, y) in x_vec_scalar.iter().zip(&y_vec_scalar) {
+            assert_eq!(x, y);
+        }
+    }
+}

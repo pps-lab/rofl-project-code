@@ -1,0 +1,38 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Robust Secure Aggregation
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Switch to Rust nightly release channel
+      run: rustup override set nightly 
+    - name: Build crypto
+      run: (cd fed_learning/crypto/crypto_interface/rust_crypto && cargo build --verbose --release --features "fp16 frac5")
+    - name: Test crypto with pytest
+      run: |
+        pip install pytest
+        pip install pytest-cov
+        pytest test/unit_test/test_crypto_interface.py
+        
+      
+
