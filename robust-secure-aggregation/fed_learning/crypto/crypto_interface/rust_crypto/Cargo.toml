@@ -113,17 +113,17 @@ name = "paper_l2rangeproof_bench"
 harness = false
 
 [[bench]]
-name = "bench_paper_randproof"
+name = "paper_randproof_bench"
 harness = false
 
 [[bench]]
-name = "bench_paper_squarerandproof"
+name = "paper_squarerandproof_bench"
 harness = false
 
 [[bench]]
-name = "dlog_paper_bench"
+name = "paper_dlog_bench"
 harness = false
 
 [[bench]]
-name = "bench_paper_addelgamal"
+name = "paper_addelgamal_bench"
 harness = false

@@ -94,5 +94,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(bench_paper_addelgamal, bench_paper_addelgamalfunction);
-benchmark_main!(bench_paper_addelgamal);
+benchmark_group!(paper_addelgamal_bench, bench_paper_addelgamalfunction);
+benchmark_main!(paper_addelgamal_bench);

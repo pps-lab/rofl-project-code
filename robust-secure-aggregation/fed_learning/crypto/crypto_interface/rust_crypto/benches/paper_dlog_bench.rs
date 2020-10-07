@@ -106,5 +106,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(dlog_paper_bench, bench_paper_solve_discrete_log2);
-benchmark_main!(dlog_paper_bench);
+benchmark_group!(paper_dlog_bench, bench_paper_solve_discrete_log2);
+benchmark_main!(paper_dlog_bench);

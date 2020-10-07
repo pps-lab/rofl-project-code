@@ -22,9 +22,7 @@ use bulletproofs::RangeProof;
 
 use rust_crypto::fp::N_BITS;
 use rust_crypto::pedersen_ops::*;
-use rust_crypto::rand_proof::{RandProof, ElGamalPair};
-use rust_crypto::rand_proof_vec::*;
-use rust_crypto::range_proof_vec::*;
+use rust_crypto::square_rand_proof_vec::*;
 use rust_crypto::bsgs32::*;
 use rust_crypto::conversion32::*;
 use std::fs::OpenOptions;
@@ -35,12 +33,14 @@ use std::env;
 use std::time::{Duration, Instant};
 
 use std::thread::sleep;
+use rust_crypto::square_rand_proof::SquareRandProof;
+use rust_crypto::square_rand_proof::pedersen::SquareRandProofCommitments;
 
 
 static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
 static num_samples: usize = 8;
 
-fn bench_paper_randproof_fn(bench: &mut Bencher) {
+fn bench_paper_squarerandproof_fn(bench: &mut Bencher) {
 
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
@@ -55,10 +55,11 @@ fn bench_paper_randproof_fn(bench: &mut Bencher) {
 
         let value_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let random_sq_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         println!("warming up...");
-        let (randproof_vec, commit_vec_vec) : (Vec<RandProof>, Vec<ElGamalPair>) =
-            create_randproof_vec(&value_vec, &blinding_vec).unwrap();
-        verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
+        let (randproof_vec, commit_vec_vec) : (Vec<SquareRandProof>, Vec<SquareRandProofCommitments>) =
+            create_l2rangeproof_vec(&value_vec, &blinding_vec, &random_sq_vec).unwrap();
+        verify_l2rangeproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -67,15 +68,15 @@ fn bench_paper_randproof_fn(bench: &mut Bencher) {
 
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
-            let (randproof_vec, commit_vec_vec) : (Vec<RandProof>, Vec<ElGamalPair>) =
-                create_randproof_vec(&value_vec, &blinding_vec).unwrap();
+            let (randproof_vec, commit_vec_vec) : (Vec<SquareRandProof>, Vec<SquareRandProofCommitments>) =
+                create_l2rangeproof_vec(&value_vec, &blinding_vec, &random_sq_vec).unwrap();
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
             let verify_now = Instant::now();
-            verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
+            verify_l2rangeproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());
             verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
@@ -88,7 +89,7 @@ fn bench_paper_randproof_fn(bench: &mut Bencher) {
 
 fn createproof_label(dim: usize) -> String{
     let t: DateTime<Local> = Local::now();
-    format!("create-paper-randproof-{:02}-{:05}-({})",
+    format!("create-paper-squarerandproof-{:02}-{:05}-({})",
         N_BITS,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string())
@@ -96,7 +97,7 @@ fn createproof_label(dim: usize) -> String{
 
 fn verifyproof_label(dim: usize) -> String{
     let t: DateTime<Local> = Local::now();
-    format!("verify-paper-randproof-{:02}-{:05}-({})",
+    format!("verify-paper-squarerandproof-{:02}-{:05}-({})",
         N_BITS,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string())
@@ -123,5 +124,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(bench_paper_randproof, bench_paper_randproof_fn);
-benchmark_main!(bench_paper_randproof);
+benchmark_group!(paper_squarerandproof_bench, bench_paper_squarerandproof_fn);
+benchmark_main!(paper_squarerandproof_bench);
