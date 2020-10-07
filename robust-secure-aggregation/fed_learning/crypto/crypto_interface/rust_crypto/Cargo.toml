@@ -120,9 +120,9 @@ harness = false
 name = "paper_squarerandproof_bench"
 harness = false
 
-[[bench]]
-name = "paper_dlog_bench"
-harness = false
+#[[bench]]
+#name = "paper_dlog_bench"
+#harness = false
 
 #[[bench]]
 #name = "paper_addelgamal_bench"
