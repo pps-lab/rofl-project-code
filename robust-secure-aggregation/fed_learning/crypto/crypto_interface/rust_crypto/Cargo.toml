@@ -124,6 +124,6 @@ harness = false
 name = "paper_dlog_bench"
 harness = false
 
-[[bench]]
-name = "paper_addelgamal_bench"
-harness = false
+#[[bench]]
+#name = "paper_addelgamal_bench"
+#harness = false
