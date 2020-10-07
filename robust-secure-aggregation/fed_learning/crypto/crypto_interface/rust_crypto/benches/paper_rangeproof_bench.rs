@@ -37,7 +37,7 @@ use std::thread::sleep;
 
 static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
 static RANGE: [usize; 1] = [8];
-static N_PARTITION: usize = 16;
+static N_PARTITION: usize = 4;
 static num_samples: usize = 8;
 
 fn paper_rangeproof_bench_fn(bench: &mut Bencher) {
