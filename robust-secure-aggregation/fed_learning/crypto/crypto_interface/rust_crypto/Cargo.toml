@@ -105,5 +105,25 @@ name = "l2rangeproof_bench"
 harness = false
 
 [[bench]]
-name = "rangeproof2xl_bench"
+name = "paper_rangeproof_bench"
+harness = false
+
+[[bench]]
+name = "paper_l2rangeproof_bench"
+harness = false
+
+[[bench]]
+name = "bench_paper_randproof"
+harness = false
+
+[[bench]]
+name = "bench_paper_squarerandproof"
+harness = false
+
+[[bench]]
+name = "dlog_paper_bench"
+harness = false
+
+[[bench]]
+name = "bench_paper_addelgamal"
 harness = false

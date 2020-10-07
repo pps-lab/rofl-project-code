@@ -22,6 +22,8 @@ use bulletproofs::RangeProof;
 
 use rust_crypto::fp::N_BITS;
 use rust_crypto::pedersen_ops::*;
+use rust_crypto::rand_proof::{RandProof, ElGamalPair};
+use rust_crypto::rand_proof_vec::*;
 use rust_crypto::range_proof_vec::*;
 use rust_crypto::bsgs32::*;
 use rust_crypto::conversion32::*;
@@ -35,38 +37,29 @@ use std::time::{Duration, Instant};
 use std::thread::sleep;
 
 
-// static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-static DIM: [usize; 5] = [65536, 131072, 262144, 524288, 1048576];
-//static DIM: [usize; 1] = [1024];
-static RANGE: [usize; 3] = [8, 16, 32];
-static N_PARTITION: usize = 16;
+static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
 static num_samples: usize = 8;
 
-fn bench_rangeproof2xl_fn(bench: &mut Bencher) {
+fn bench_paper_randproof_fn(bench: &mut Bencher) {
 
     let mut rng = rand::thread_rng();
-    
+    let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
-    let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
-    for (r, d) in iproduct!(range, &DIM) {
+    for d in DIM.iter() {
 
-        let (fp_min, fp_max) = get_clip_bounds(*r);
-        let createproof_label: String = createproof_label(*d, *r);
+        let createproof_label: String = createproof_label(*d);
         let mut createproof_file = create_bench_file(&createproof_label);
 
-        let verifyproof_label: String = verifyproof_label(*d, *r);
+        let verifyproof_label: String = verifyproof_label(*d);
         let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
-        let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
-        let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
-        let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
-        println!("warming up...");
         let value_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
-        let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) = 
-        create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
-        verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
-        println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
+        println!("warming up...");
+        let (randproof_vec, commit_vec_vec) : (Vec<RandProof>, Vec<ElGamalPair>) =
+            create_randproof_vec(&value_vec, &blinding_vec).unwrap();
+        verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
+        println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
             let value_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
@@ -74,15 +67,15 @@ fn bench_rangeproof2xl_fn(bench: &mut Bencher) {
 
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
-            let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) = 
-            create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
+            let (randproof_vec, commit_vec_vec) : (Vec<RandProof>, Vec<ElGamalPair>) =
+                create_randproof_vec(&value_vec, &blinding_vec).unwrap();
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
             let verify_now = Instant::now();
-            verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+            verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());
             verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
@@ -93,20 +86,18 @@ fn bench_rangeproof2xl_fn(bench: &mut Bencher) {
     }
 }
 
-fn createproof_label(dim: usize, range: usize) -> String{
+fn createproof_label(dim: usize) -> String{
     let t: DateTime<Local> = Local::now();
-    format!("create-rangeproof-{:02}-{:02}-{:05}-({})",
+    format!("create-paper-randproof-{:02}-{:05}-({})",
         N_BITS,
-        range,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string())
 }
 
-fn verifyproof_label(dim: usize, range: usize) -> String{
+fn verifyproof_label(dim: usize) -> String{
     let t: DateTime<Local> = Local::now();
-    format!("verify-rangeproof-{:02}-{:02}-{:05}-({})",
+    format!("verify-paper-randproof-{:02}-{:05}-({})",
         N_BITS,
-        range,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string())
 }
@@ -132,5 +123,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(bench_rangeproof2xl, bench_rangeproof2xl_fn);
-benchmark_main!(bench_rangeproof2xl);
+benchmark_group!(bench_paper_randproof, bench_paper_randproof_fn);
+benchmark_main!(bench_paper_randproof);
