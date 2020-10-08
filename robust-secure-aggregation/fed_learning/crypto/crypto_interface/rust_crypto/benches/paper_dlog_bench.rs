@@ -31,9 +31,9 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static TABLE_SIZE: [usize; 1] = [16];
-static num_samples: usize = 8;
+static num_samples: usize = 4;
 
 fn bench_paper_solve_discrete_log2(bench: &mut Bencher) {
     

@@ -37,8 +37,8 @@ use std::time::{Duration, Instant};
 use std::thread::sleep;
 
 
-static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
-static num_samples: usize = 8;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static num_samples: usize = 4;
 
 fn bench_paper_randproof_fn(bench: &mut Bencher) {
 

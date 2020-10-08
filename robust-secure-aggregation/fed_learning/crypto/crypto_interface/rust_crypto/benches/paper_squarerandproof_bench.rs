@@ -37,8 +37,8 @@ use rust_crypto::square_rand_proof::SquareRandProof;
 use rust_crypto::square_rand_proof::pedersen::SquareRandProofCommitments;
 
 
-static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
-static num_samples: usize = 8;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static num_samples: usize = 4;
 
 fn bench_paper_squarerandproof_fn(bench: &mut Bencher) {
 
