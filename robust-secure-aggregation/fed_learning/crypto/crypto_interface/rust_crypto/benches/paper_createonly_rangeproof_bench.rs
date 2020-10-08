@@ -40,7 +40,7 @@ static RANGE: [usize; 1] = [8];
 static N_PARTITION: usize = 4;
 static num_samples: usize = 4;
 
-fn paper_rangeproof_bench_fn(bench: &mut Bencher) {
+fn paper_createonly_rangeproof_bench_fn(bench: &mut Bencher) {
 
     let mut rng = rand::thread_rng();
     
@@ -52,8 +52,8 @@ fn paper_rangeproof_bench_fn(bench: &mut Bencher) {
         let createproof_label: String = createproof_label(*d, *r);
         let mut createproof_file = create_bench_file(&createproof_label);
 
-        let verifyproof_label: String = verifyproof_label(*d, *r);
-        let mut verifyproof_file = create_bench_file(&verifyproof_label);
+        // let verifyproof_label: String = verifyproof_label(*d, *r);
+        // let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
@@ -63,7 +63,7 @@ fn paper_rangeproof_bench_fn(bench: &mut Bencher) {
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) = 
         create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
-        verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+        // verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
         for i in 0..num_samples {
@@ -79,13 +79,6 @@ fn paper_rangeproof_bench_fn(bench: &mut Bencher) {
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
-            let verify_now = Instant::now();
-            verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
-            let verify_elapsed = verify_now.elapsed().as_millis();
-            println!("verifyproof elapsed: {}", verify_elapsed.to_string());
-            verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
-            verifyproof_file.write_all(b"\n");
-            verifyproof_file.flush();
         }
 
     }
@@ -130,5 +123,5 @@ fn create_bench_file(label: &String) -> File {
 }
 
 
-benchmark_group!(paper_rangeproof_bench, paper_rangeproof_bench_fn);
-benchmark_main!(paper_rangeproof_bench);
+benchmark_group!(paper_createonly_rangeproof_bench, paper_createonly_rangeproof_bench_fn);
+benchmark_main!(paper_createonly_rangeproof_bench);

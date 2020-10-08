@@ -127,3 +127,15 @@ harness = false
 [[bench]]
 name = "paper_addelgamal_bench"
 harness = false
+
+[[bench]]
+name = "paper_createonly_rangeproof_bench"
+harness = false
+
+[[bench]]
+name = "paper_createonly_randproof_bench"
+harness = false
+
+[[bench]]
+name = "paper_createonly_squarerandproof_bench"
+harness = false
