@@ -34,7 +34,7 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static DIM: [usize; 1] = [524288];
 // static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
 static RANGE: [usize; 1] = [8];
 static N_PARTITION: usize = 4;
