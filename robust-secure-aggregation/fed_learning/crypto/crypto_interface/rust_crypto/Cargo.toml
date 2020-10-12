@@ -35,7 +35,6 @@ itertools = "0.8.0"
 chrono = "0.4.6"
 bencher = "0.1.5"
 reduce = "0.1.2"
-rayon = "1.4.1"
 
 
 
