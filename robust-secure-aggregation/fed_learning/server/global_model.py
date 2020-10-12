@@ -55,6 +55,7 @@ class GlobalModel(object):
         self.model.summary(print_fn=logger.info)
 
     def evaluate(self):
+        print(self.x_test[0])
         score = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         logger.info(
             '[EVAL] Test (round,loss,accuracy): (%d, %f, %f)' %
