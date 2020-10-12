@@ -117,8 +117,6 @@ class Aggregator(object):
             except KeyError:
                 logger.error('Client id missing in pending clients')
                 return
-            print("Left")
-            print(self.pending_clients)
             # store the message with client id
             self.finished_clients_round[request.sid] = msg
             if not self.pending_clients:
