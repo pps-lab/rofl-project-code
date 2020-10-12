@@ -3,7 +3,7 @@ import numpy as np
 
 # def get_callbacks(lr_decay, epoch) -> list:
 #     if lr_decay == 'cifar_resnet_step':
-#         lr_scheduler = LearningRateScheduler(lr_schedule)
+#         lr_scheduler = LearningRateScheduler(specific_decay(epoch))
 #
 #         lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
 #                                        cooldown=0,
@@ -13,7 +13,7 @@ import numpy as np
 #         return [lr_scheduler, lr_reducer]
 #     else:
 #         return []
-
+#
 # def specific_decay(epoch):
 #     def call(e):
 #         return lr_schedule(epoch)
@@ -32,7 +32,7 @@ def get_callbacks(lr_decay) -> list:
         return []
 
 
-def lr_schedule(self, epoch):
+def lr_schedule(epoch):
     """Learning Rate Schedule
 
     Learning rate is scheduled to be reduced after 80, 120, 160, 180 epochs.
