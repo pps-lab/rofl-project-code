@@ -50,5 +50,5 @@ class CIFARResNet(GlobalModel):
         return model
 
     def get_all_weights(self):
-        return self.model.weights
+        return self.model.get_weights()
 
