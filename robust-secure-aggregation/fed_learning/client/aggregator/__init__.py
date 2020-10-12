@@ -126,7 +126,7 @@ class Aggregator(object):
         :param msg: TransferInitialWeightsMsg
         :return:
         """
-        # self.model.set_all_weights(msg.weights)
+        self.model.set_all_weights(msg.weights)
 
     def setup_crypto_config(self, msg):
         crypto_config = ClientCryptoConfig(msg.value_range, msg.n_partition, msg.l2_value_range)
