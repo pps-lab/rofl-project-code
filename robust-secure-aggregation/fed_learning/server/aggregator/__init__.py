@@ -1,3 +1,5 @@
+from fed_learning.util.async_tools import ASYNC_MODE, run_native, shutdown_pool
+
 import os
 import threading
 import time
@@ -15,7 +17,6 @@ from flask import request
 from flask_socketio import SocketIO, disconnect
 from flask_socketio import *
 
-from fed_learning.util.async_tools import ASYNC_MODE, run_native, shutdown_pool
 from fed_learning.server.global_model import GlobalModel
 from fed_learning.message import *
 from fed_learning.server.server_crypto_config import ServerCryptoConfig
