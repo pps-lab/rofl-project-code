@@ -496,7 +496,7 @@ pub extern fn join_to_elgamal_pair_vector(
     let ped_commit_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&ped_commit_bytes);
     let rand_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(rand_commit_ptr, rand_commit_len as usize) };
     let rand_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&rand_commit_bytes);
-    let eg_pair_vec: Vec<ElGamalPair> = ped_commit_rp_vec.iter().zip(&rand_rp_vec).map(|(x, y)| ElGamalPair{L: *x, R: *y}).collect();
+    let eg_pair_vec: Vec<ElGamalPair> = ped_commit_rp_vec.par_iter().zip(&rand_rp_vec).map(|(x, y)| ElGamalPair{L: *x, R: *y}).collect();
     let eg_pair_vec_ser: Vec<u8> = serialize_eg_pair_vec(&eg_pair_vec);
     create_pyvec(eg_pair_vec_ser)
 }
