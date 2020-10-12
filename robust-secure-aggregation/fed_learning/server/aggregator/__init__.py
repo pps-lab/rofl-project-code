@@ -39,7 +39,7 @@ class Aggregator(object):
         self.global_model.evaluate()
         self.register_handles()
         self.checking_previous_round = False
-        self.optimistic_starting = True
+        self.optimistic_starting = crypto_config.optimistic_starting
 
     def register_handles(self):
 
@@ -132,6 +132,8 @@ class Aggregator(object):
                                      config.learning_rate,
                                      config.loss,
                                      config.metrics,
+                                     config.image_augmentation,
+                                     config.lr_decay,
                                      config.model_id,
                                      config.probabilistic_quantization,
                                      config.fp_bits,

@@ -14,6 +14,7 @@ from fed_learning.client.dataset import DataSet
 
 import logging
 
+from fed_learning.client.util.training import LocalModelTraining
 from fed_learning.intrinsic_dimension.general.tfutil import tf_get_uninitialized_variables
 
 logger = logging.getLogger(__name__)
@@ -25,11 +26,14 @@ class LocalModel(object):
         self.model_config = model_config
         self.dataset = dataset
         self.round_ids = []
+        self.model = None
+        self.training_helper = LocalModelTraining(self.dataset, self.model_config)
         logger.info('Initializing model with with dtype %s' % backend.floatx())
 
     #@run_native
     def set_model(self, model: Model):
         self.model = model
+        self.training_helper.set_model(model)
         logger.info('Compiling model')
         # self.init_vars(model, "dense")
         self.model.compile(loss=self.model_config.loss,
@@ -65,12 +69,7 @@ class LocalModel(object):
         logger.info('Training start')
         # self._verify_weights_norm()
 
-        self.model.fit(self.dataset.x_train,
-                       self.dataset.y_train,
-                       batch_size=self.model_config.client_batch_size,
-                       epochs=self.model_config.num_local_epochs,
-                       validation_data=(self.dataset.x_test, self.dataset.y_test),
-                       verbose=0)
+        self.training_helper.train()
         self.evaluate()
         update = self._calculate_update()
         flattened_update = self._flatten_update(update)

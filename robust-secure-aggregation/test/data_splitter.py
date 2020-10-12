@@ -56,18 +56,27 @@ class DataSplitter(object):
         logger.info('Loading %s dataset', self.dataset)
         file_prefix = self.dataset + '_'
         (x_train, y_train), (x_test, y_test) = self.data_module.load_data(**self.kwargs)
-        x_train, x_test = x_train / 255.0, x_test / 255.0
+        # x_train, x_test = x_train / 255.0, x_test / 255.0
 
         logger.info('Loaded %d training samples from %s', len(x_train), self.module_name)
         logger.info('Loaded %d test samples from %s', len(x_test), self.module_name)
         logger.info('Splitting %s dataset into %d files', self.dataset, self.num_clients)
+
+        test_data_size = len(x_test) // self.num_clients
+        if self.test_size is not None:
+            test_data_size = min(test_data_size, self.test_size)
+        logger.info('Limit test sample size to %d', test_data_size)
 
         training_data = list(zip(x_train, y_train))
         file_paths = []
         for i in range(0, self.num_clients):
             tr_data = random.sample(training_data, self.training_size)
             x_tr, y_tr = list(zip(*tr_data))
-            data = (x_tr, y_tr, x_test, y_test)
+
+            x_te = x_test[:test_data_size]
+            y_te = y_test[:test_data_size]
+
+            data = (x_tr, y_tr, x_te, y_te)
 
             file_path = os.path.join(DATA, file_prefix + str(i+1))
             fh = open(file_path, 'wb')
@@ -109,10 +118,10 @@ class DataSplitter(object):
             train_data_size = min(train_data_size, self.training_size)
         logger.info('Limit training sample size to %d', train_data_size)
 
-        # test_data_size = len(x_test) // self.num_clients
-        # if self.test_size is not None:
-        #     test_data_size = min(test_data_size, self.test_size)
-        # logger.info('Limit test sample size to %d', test_data_size)
+        test_data_size = len(x_test) // self.num_clients
+        if self.test_size is not None:
+            test_data_size = min(test_data_size, self.test_size)
+        logger.info('Limit test sample size to %d', test_data_size)
 
         file_paths = []
         for i in range(0, self.num_clients):
@@ -120,11 +129,11 @@ class DataSplitter(object):
             x_tr = x_train[idx_tr:idx_tr+train_data_size]
             y_tr = y_train[idx_tr:idx_tr+train_data_size]
 
-            # idx_te = i*test_data_size
-            # x_te = x_test[idx_te:idx_te+test_data_size]
-            # y_te = y_test[idx_te:idx_te+test_data_size]
+            idx_te = i*test_data_size
+            x_te = x_test[idx_te:idx_te+test_data_size]
+            y_te = y_test[idx_te:idx_te+test_data_size]
 
-            data = (x_tr, y_tr, x_test, y_test)
+            data = (x_tr, y_tr, x_te, y_te)
             file_path = os.path.join(DATA, file_prefix + str(i+1))
             fh = open(file_path, 'wb')
             file_paths.append(file_path)

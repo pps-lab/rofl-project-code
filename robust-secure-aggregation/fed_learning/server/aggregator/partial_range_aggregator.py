@@ -66,7 +66,7 @@ class PartialRangeAggregator(SecureAggregator):
 
             total_number_of_updates = self.global_model.params_count()
             np.random.seed(random_seed)
-            selected_indices = np.random.choice(range(0, total_number_of_updates), int(total_number_of_updates * 0.1), replace=False)
+            selected_indices = np.random.choice(range(0, total_number_of_updates), int(total_number_of_updates * 0.005), replace=False)
             commits_to_verify = self.ci.select_commitments(update_enc, selected_indices)
 
             try:

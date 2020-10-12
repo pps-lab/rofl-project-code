@@ -63,6 +63,8 @@ class TestServer(object):
                                  self.config.learning_rate,
                                  self.config.loss,
                                  self.config.metrics,
+                                 self.config.image_augmentation,
+                                 self.config.lr_decay,
                                  self.config.probabilistic_quantization,
                                  self.config.fp_bits,
                                  self.config.fp_frac,
@@ -83,7 +85,8 @@ class TestServer(object):
                                   self.config.fp_frac,
                                   self.config.value_range,
                                   self.config.n_partition,
-                                  self.config.l2_value_range)
+                                  self.config.l2_value_range,
+                                  self.config.optimistic_starting)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Instantiate server for federated learning from config file")

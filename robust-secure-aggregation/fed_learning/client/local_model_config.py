@@ -11,6 +11,8 @@ class LocalModelConfig(object):
                  lr,
                  loss,
                  metrics,
+                 image_augmentation,
+                 lr_decay,
                  model_id,
                  probabilistic_quantization,
                  fp_bits,
@@ -23,6 +25,8 @@ class LocalModelConfig(object):
         self.learning_rate = lr
         self.loss = loss
         self.metrics = metrics
+        self.image_augmentation = image_augmentation
+        self.lr_decay = lr_decay
         self.model_id = model_id
         self.probabilistic_quantization = probabilistic_quantization
         self.fp_bits = fp_bits
@@ -41,6 +45,12 @@ class LocalModelConfig(object):
                    config.learning_rate,
                    config.loss,
                    config.metrics,
-                   model_id)
+                   config.image_augmentation,
+                   config.lr_decay,
+                   model_id,
+                   config.probabilistic_quantization, # Should we add this ? + below
+                   config.fp_bits,
+                   config.fp_frac,
+                   config.range_bits)
 
 

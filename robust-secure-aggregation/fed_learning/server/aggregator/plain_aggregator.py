@@ -40,6 +40,7 @@ class PlainAggregator(Aggregator):
     def aggregate_updates(self):
         client_updates = [ x.content['update'] for x in self.finished_clients_round.values() ]
         new_update = sum(client_updates, 0)
+        new_update = new_update / 10.0
         return new_update
 
     def perform_checks(self):

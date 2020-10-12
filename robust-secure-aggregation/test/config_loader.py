@@ -44,6 +44,8 @@ class ConfigLoader(object):
         self.learning_rate = self.parser.getfloat('model', 'LEARNING_RATE')
         self.loss = self.parser.get('model', 'LOSS')
         self.metrics = self._get_list(self.parser.get('model', 'METRICS'))
+        self.image_augmentation = self.parser.get('model', 'IMAGE_AUGMENTATION', fallback=False)
+        self.lr_decay = self.parser.get('model', 'LEARNING_RATE_DECAY', fallback=None)
 
         self.aggregator = self.parser.get('aggregator', 'AGGREGATOR')
 
@@ -53,6 +55,7 @@ class ConfigLoader(object):
         self.value_range = self.parser.getint('crypto', 'VALUE_RANGE')
         self.l2_value_range = self.parser.getint('crypto', 'L2_VALUE_RANGE')
         self.probabilistic_quantization = self.parser.getboolean('crypto', 'PROBABILISTIC_QUANTIZATION')
+        self.optimistic_starting = self.parser.getboolean('crypto', 'OPTIMISTIC_STARTING', fallback=False)
 
         if self.fp_bits < self.fp_frac:
             logger.error('Bitsize for fixed point precision cannot be smaller than the number of fractional bits demanded')

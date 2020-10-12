@@ -14,6 +14,8 @@ class GlobalModelConfig(object):
                  lr,
                  loss,
                  metrics: list,
+                 image_augmentation,
+                 lr_decay,
                  probabilistic_quantization,
                  fp_bits,
                  fp_frac,
@@ -26,6 +28,8 @@ class GlobalModelConfig(object):
         self.learning_rate = lr
         self.loss = loss
         self.metrics = metrics
+        self.image_augmentation = image_augmentation
+        self.lr_decay = lr_decay
         self.model_id = str(uuid.uuid4())
         self.probabilistic_quantization = probabilistic_quantization
         self.fp_bits = fp_bits
@@ -42,7 +46,9 @@ class GlobalModelConfig(object):
                    config.learning_rate,
                    config.loss,
                    config.metrics,
-                   config.model_id,
+                   config.image_augmentation,
+                   config.lr_decay,
+                   config.model_id, # ??
                    config.probabilistic_quantization,
                    config.fp_bits,
                    config.fp_frac,

@@ -11,7 +11,7 @@ cffi
 # NOTE mlei: socketio is completely obsolete and python-socketio should be used instead
 #            this stays for educatory purposes
 #socketIO
-keras
+keras==2.3.1
 rig
 tensorflow==1.15
 python-socketio

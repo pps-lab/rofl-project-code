@@ -102,6 +102,8 @@ class Aggregator(object):
                                         msg.learning_rate,
                                         msg.loss,
                                         msg.metrics,
+                                        msg.image_augmentation,
+                                        msg.lr_decay,
                                         msg.model_id,
                                         msg.probabilistic_quantization,
                                         msg.fp_bits,

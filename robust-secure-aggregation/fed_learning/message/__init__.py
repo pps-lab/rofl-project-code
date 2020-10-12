@@ -24,6 +24,8 @@ class TransferModelConfigMsg(Message):
                  learning_rate,
                  loss,
                  metrics,
+                 image_augmentation,
+                 lr_decay,
                  model_id,
                  probabilistic_quantization,
                  fp_bits,
@@ -36,6 +38,8 @@ class TransferModelConfigMsg(Message):
         self.learning_rate = learning_rate
         self.loss = loss
         self.metrics = metrics
+        self.image_augmentation = image_augmentation,
+        self.lr_decay = lr_decay
         self.model_id = model_id
         self.probabilistic_quantization = probabilistic_quantization
         self.fp_bits = fp_bits
