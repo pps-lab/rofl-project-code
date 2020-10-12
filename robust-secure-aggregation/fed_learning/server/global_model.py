@@ -89,6 +89,10 @@ class GlobalModel(object):
         """Get all trainable weights. Optional"""
         return None
 
+    def set_all_weights(self, weights):
+        self.model.set_weights(weights)
+        # raise NotImplementedError("Subclass must implement this ?")
+
     def get_weights_seed(self):
         """Return seed to initialize weights with. Optional"""
         return None
