@@ -24,7 +24,10 @@ class LocalModelTraining:
         callbacks = lr_scheduler.get_callbacks(self.model_config.lr_decay)
         augmentation_generator = augmentation.get_augmentation(self.model_config.image_augmentation)
         verbose = 1
+        print(self.dataset.x_train[0])
+        print("Test", self.dataset.x_test[0])
         if augmentation_generator is not None:
+            # print("Augmenting")
             self.model.fit_generator(augmentation_generator.flow(self.dataset.x_train, self.dataset.y_train,
                                                                  batch_size=self.model_config.client_batch_size),
                                      epochs=self.model_config.num_local_epochs,
@@ -32,6 +35,7 @@ class LocalModelTraining:
                                      verbose=verbose,
                                      callbacks=callbacks)
         else:
+            # print("Regular fix")
             self.model.fit(self.dataset.x_train,
                            self.dataset.y_train,
                            batch_size=self.model_config.client_batch_size,
