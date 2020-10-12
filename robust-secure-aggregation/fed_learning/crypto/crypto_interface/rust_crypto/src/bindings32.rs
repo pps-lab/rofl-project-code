@@ -280,8 +280,13 @@ pub extern fn verify_randproof(
     println!("Is this slow?");
 
     let commit_bytes: &[u8] = unsafe { slice::from_raw_parts(commit_ptr, commit_len as usize) };
+    println!("Twelve");
     let eg_pair_vec: Vec<ElGamalPair> = deserialize_eg_pair_vec(&commit_bytes);
+    println!("Thirteen");
+
     let rand_proof_bytes: &[u8] = unsafe { slice::from_raw_parts(randproof_ptr, proof_len as usize) };
+    println!("Fourteen");
+
     let rand_proof_vec: Vec<RandProof> = deserialize_rand_proof_vec(&rand_proof_bytes);
 
     println!("Eight");
