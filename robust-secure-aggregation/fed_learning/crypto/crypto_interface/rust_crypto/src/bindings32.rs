@@ -282,6 +282,10 @@ pub extern fn verify_randproof(
 
     println!("Is this slow?");
 
+    let ped_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(ped_commit_ptr, ped_commit_len as usize) };
+    let ped_commit_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&ped_commit_bytes);
+    println!("Twelve");
+
     let rand_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(rand_commit_ptr, rand_commit_len as usize) };
     let rand_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&rand_commit_bytes);
     println!("Thirteen");
