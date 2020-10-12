@@ -50,23 +50,29 @@ pub fn verify_randproof_vec(
     randproof_vec: &Vec<RandProof>,
     commit_vec: &Vec<ElGamalPair>)
     -> Result<bool, RandProofError> {
+
+    println!("One");
     
     if randproof_vec.len() != commit_vec.len() {
         return Err(RandProofError::WrongNumberOfElGamalPairs);
     }
 
+    println!("Two");
+
     let eg_gens: ElGamalGens = ElGamalGens::default();
-    let verify_args: Vec<(&RandProof, &ElGamalPair)> = randproof_vec.iter().zip(commit_vec).collect();
+    println!("Three");
+    let verify_args: Vec<(&RandProof, &ElGamalPair)> = randproof_vec.par_iter().zip(commit_vec).collect();
+    println!("Four");
     let res_vec: Vec<Result<(), ProofError>> = verify_args.par_iter().map(|(rp, c)| rp.verify(&eg_gens, &mut Transcript::new(b"RandProof"), **c)).collect();
-    
+    println!("Five");
     // check if error occurred in verification
     let proof_error_opt: Option<&Result<(), ProofError>> = 
     res_vec.iter().find(|&r| r.is_err() && r.clone().unwrap_err() != ProofError::VerificationError);
-
+    println!("Six");
     if proof_error_opt.is_some() {
         return Err(proof_error_opt.unwrap().clone().unwrap_err().into());
     }
-    
+    println!("Seven");
     // check if verification succeeded
     return Ok(res_vec
         .iter()

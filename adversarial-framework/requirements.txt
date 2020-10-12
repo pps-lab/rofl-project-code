@@ -26,3 +26,4 @@ tensorboardX==1.9
 scipy
 scikit-learn
 orderedset
+IPython
