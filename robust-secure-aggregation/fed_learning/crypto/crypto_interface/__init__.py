@@ -51,7 +51,7 @@ def _get_bindings():
             PyRes create_rangeproof(float* value_ptr, size_t value_len, char* blinding_ptr, size_t blinding_len, size_t range, size_t n_partition);
             PyRes verify_rangeproof(char* commit_ptr, size_t commit_len, char* proof_ptr, size_t proof_len, size_t range_exp);
             PyRes create_randproof(float* value_ptr, size_t value_len, char* const u8, size_t blinding_len);
-            PyRes verify_randproof(char* commit_ptr, size_t commit_len, char* randproof_ptr, size_t proof_len);
+            PyRes verify_randproof(char* commit_ptr, size_t commit_len, char* commit2_ptr, size_t commit2_len, char* randproof_ptr, size_t proof_len);
             PyRes create_squarerandproof(float* value_ptr, size_t value_len, char* const blinding_1_ptr, size_t blinding_1_len, char* const blinding_2_ptr, size_t blinding_2_len);
             PyRes verify_squarerandproof(char* commit_ptr, size_t commit_len, char* randproof_ptr, size_t proof_len);
             PyRes create_l2proof(float* value_ptr, size_t value_len, char* const blinding_1_ptr, size_t blinding_1_len, char* const blinding_2_ptr, size_t blinding_2_len, size_t range, size_t n_partition);
@@ -206,17 +206,17 @@ class CryptoInterface(object):
     @run_native
     def verify_randproof(self, ped_commits: bytes, rand_commits: bytes, randproof: bytes) -> bool:
         logging.info('Calling verify_randproof from thread %s' % threading.current_thread())
-        eg_commits = self.join_to_elgamal_pair_vector(ped_commits, rand_commits)
-        logging.info("PythonOne")
-        eg_commits_len = self._as_size_t(len(eg_commits))
-        logging.info("PythonTwo")
-        eg_commits_ptr = self._as_char_ptr(eg_commits)
-        logging.info("PythonThree")
+        # eg_commits = self.join_to_elgamal_pair_vector(ped_commits, rand_commits)
+        # eg_commits_len = self._as_size_t(len(eg_commits))
+        # eg_commits_ptr = self._as_char_ptr(eg_commits)
+        ped_commits_len = self._as_size_t(len(ped_commits))
+        ped_commits_ptr = self._as_char_ptr(ped_commits)
+        rand_commits_len = self._as_size_t(len(rand_commits))
+        rand_commits_ptr = self._as_char_ptr(rand_commits)
         randproof_len = self._as_size_t(len(randproof))
-        logging.info("PythonFour")
         randproof_ptr = self._as_char_ptr(randproof)
-        logging.info("PythonFive")
-        pyres = self.lib.verify_randproof(eg_commits_ptr, eg_commits_len, randproof_ptr, randproof_len)
+        pyres = self.lib.verify_randproof(ped_commits_ptr, ped_commits_len, rand_commits_ptr, randproof_len, randproof_ptr, randproof_len)
+        # pyres = self.lib.verify_randproof(eg_commits_ptr, eg_commits_len, randproof_ptr, randproof_len)
 
         if not pyres.ret == 0:
             err_msg = self._unpack_pyres_err(pyres)

@@ -269,12 +269,15 @@ pub extern fn create_randproof(
 
 #[no_mangle]
 pub extern fn verify_randproof(
-    commit_ptr: *const u8,
-    commit_len: usize,
+    ped_commit_ptr: *const u8,
+    ped_commit_len: usize,
+    rand_commit_ptr: *const u8,
+    rand_commit_len: usize
     randproof_ptr: *const u8,
     proof_len: usize)
     -> PyRes {
-    assert!(!commit_ptr.is_null());
+    assert!(!ped_commit_ptr.is_null());
+    assert!(!rand_commit_ptr.is_null());
     assert!(!randproof_ptr.is_null());
 
     println!("Is this slow?");
@@ -283,6 +286,12 @@ pub extern fn verify_randproof(
     println!("Twelve");
     let eg_pair_vec: Vec<ElGamalPair> = deserialize_eg_pair_vec(&commit_bytes);
     println!("Thirteen");
+    let ped_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(ped_commit_ptr, ped_commit_len as usize) };
+    let ped_commit_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&ped_commit_bytes);
+    let rand_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(rand_commit_ptr, rand_commit_len as usize) };
+    let rand_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&rand_commit_bytes);
+    let eg_pair_vec: Vec<ElGamalPair> = ped_commit_rp_vec.par_iter().zip(&rand_rp_vec).map(|(x, y)| ElGamalPair{L: *x, R: *y}).collect();
+    println!("Eighteen");
 
     let rand_proof_bytes: &[u8] = unsafe { slice::from_raw_parts(randproof_ptr, proof_len as usize) };
     println!("Fourteen");
