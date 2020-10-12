@@ -16,35 +16,35 @@ from test.demo.util import resnet
 
 
 def build_model(model_config: GlobalModelConfig, test_data):
-    return CIFARLeNet(model_config, test_data)
+    return CIFARResNet(model_config, test_data)
 
-class CIFARLeNet(GlobalModel):
+class CIFARResNet(GlobalModel):
     
     def __init__(self, model_config: GlobalModelConfig, test_data):
-        super(CIFARLeNet, self).__init__(model_config, test_data)
+        super(CIFARResNet, self).__init__(model_config, test_data)
 
     @classmethod
     def build_model(cls):
         # ~less parameters
-        # do = 0.2
-        # model = keras.Sequential()
-        #
-        # model.add(Conv2D(filters=6, kernel_size=5, strides=1, kernel_initializer='he_normal', padding='valid', activation='relu', input_shape=(32, 32, 3)))
-        # model.add(MaxPooling2D())
-        # model.add(Conv2D(filters=16, kernel_size=5, strides=1, kernel_initializer='he_normal', padding='valid', activation='relu'))
-        # model.add(MaxPooling2D())
-        #
-        # model.add(Flatten())
-        # # model.add(layers.Dropout(do))
-        # model.add(Dense(units=120, kernel_initializer='he_normal', activation='relu'))
-        # # model.add(layers.Dropout(do))
-        # model.add(Dense(units=84, kernel_initializer='he_normal', activation='relu'))
-        # # model.add(layers.Dropout(do))
-        # model.add(Dense(units=10, activation='softmax'))
+        do = 0.2
+        model = keras.Sequential()
 
-        n = 3
-        depth = n * 6 + 2
-        input_shape = (32, 32, 3)
-        model = resnet.resnet_v1(input_shape, depth)
+        model.add(Conv2D(filters=6, kernel_size=5, strides=1, kernel_initializer='he_normal', padding='valid', activation='relu', input_shape=(32, 32, 3)))
+        model.add(MaxPooling2D())
+        model.add(Conv2D(filters=16, kernel_size=5, strides=1, kernel_initializer='he_normal', padding='valid', activation='relu'))
+        model.add(MaxPooling2D())
+
+        model.add(Flatten())
+        # model.add(layers.Dropout(do))
+        model.add(Dense(units=120, kernel_initializer='he_normal', activation='relu'))
+        # model.add(layers.Dropout(do))
+        model.add(Dense(units=84, kernel_initializer='he_normal', activation='relu'))
+        # model.add(layers.Dropout(do))
+        model.add(Dense(units=10, activation='softmax'))
+
+        # n = 3
+        # depth = n * 6 + 2
+        # input_shape = (32, 32, 3)
+        # model = resnet.resnet_v1(input_shape, depth)
         return model
 
