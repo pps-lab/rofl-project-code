@@ -35,7 +35,7 @@ class Client(object):
         print("Initializing")
         logger.info('Initializing client with id ' + str(self.id))
 
-        time.sleep(10)
+        time.sleep(15)
 
         self.sio = socketio.Client(reconnection_delay_max=10000, request_timeout=3600)
         self.url = 'http://%s:%d' % (server_host, server_port)
