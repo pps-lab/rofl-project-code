@@ -1,3 +1,5 @@
+import fed_learning.util.async_tools
+
 import os
 import sys
 from os.path import dirname, abspath, join
