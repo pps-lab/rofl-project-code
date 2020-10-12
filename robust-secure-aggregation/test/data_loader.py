@@ -40,4 +40,4 @@ class DataLoader(object):
 
         print("Data load done")
 
-        return (x_train / 255.0, y_train), (x_test / 255.0, y_test)
+        return (x_train, y_train), (x_test, y_test)
