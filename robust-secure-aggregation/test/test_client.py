@@ -1,4 +1,3 @@
-import fed_learning.util.async_tools
 
 import os
 import sys
@@ -6,6 +5,8 @@ from os.path import dirname, abspath, join
 
 module_path = dirname(abspath(__file__))
 sys.path.insert(0, dirname(module_path))
+
+import fed_learning.util.async_tools
 
 import unittest
 import time
