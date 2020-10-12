@@ -47,7 +47,7 @@ class LocalModel(object):
         :param weights: weights
         :return:
         """
-        self.model.set_all_weights(weights)
+        self.model.set_weights(weights)
 
     def setup_new_round(self, round_id, weights):
         self.server_weights = weights
