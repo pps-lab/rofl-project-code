@@ -207,10 +207,15 @@ class CryptoInterface(object):
     def verify_randproof(self, ped_commits: bytes, rand_commits: bytes, randproof: bytes) -> bool:
         logging.info('Calling verify_randproof from thread %s' % threading.current_thread())
         eg_commits = self.join_to_elgamal_pair_vector(ped_commits, rand_commits)
+        logging.info("PythonOne")
         eg_commits_len = self._as_size_t(len(eg_commits))
+        logging.info("PythonTwo")
         eg_commits_ptr = self._as_char_ptr(eg_commits)
+        logging.info("PythonThree")
         randproof_len = self._as_size_t(len(randproof))
+        logging.info("PythonFour")
         randproof_ptr = self._as_char_ptr(randproof)
+        logging.info("PythonFive")
         pyres = self.lib.verify_randproof(eg_commits_ptr, eg_commits_len, randproof_ptr, randproof_len)
 
         if not pyres.ret == 0:
