@@ -9,6 +9,8 @@ use crate::conversion32::{f32_to_scalar_vec, f32_to_fp_vec};
 use crate::fp::URawFix;
 mod errors;
 pub use self::errors::RandProofError;
+use rayon::prelude::*;
+
 
 pub fn create_randproof_vec(
     value_vec: &Vec<f32>,
@@ -55,7 +57,7 @@ pub fn verify_randproof_vec(
 
     let eg_gens: ElGamalGens = ElGamalGens::default();
     let verify_args: Vec<(&RandProof, &ElGamalPair)> = randproof_vec.iter().zip(commit_vec).collect();
-    let res_vec: Vec<Result<(), ProofError>> = verify_args.par_iter().map(|(rp, c)| rp.verify(&eg_gens, &mut Transcript::new(b"RandProof"), **c)).collect();
+    let res_vec: Vec<Result<(), ProofError>> = verify_args.par_iter_mut().map(|(rp, c)| rp.verify(&eg_gens, &mut Transcript::new(b"RandProof"), **c)).collect();
     
     // check if error occurred in verification
     let proof_error_opt: Option<&Result<(), ProofError>> = 
