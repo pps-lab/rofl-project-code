@@ -272,7 +272,7 @@ pub extern fn verify_randproof(
     ped_commit_ptr: *const u8,
     ped_commit_len: usize,
     rand_commit_ptr: *const u8,
-    rand_commit_len: usize
+    rand_commit_len: usize,
     randproof_ptr: *const u8,
     proof_len: usize)
     -> PyRes {
