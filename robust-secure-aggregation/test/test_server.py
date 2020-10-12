@@ -1,3 +1,5 @@
+import fed_learning.util.async_tools
+
 import os
 import sys
 module_loc = os.path.dirname(os.path.abspath(__file__))
