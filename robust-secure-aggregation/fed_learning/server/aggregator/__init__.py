@@ -1,5 +1,3 @@
-from fed_learning.util.async_tools import ASYNC_MODE, run_native, shutdown_pool
-
 import os
 import threading
 import time
@@ -7,6 +5,7 @@ import time
 import sys
 import pickle
 import codecs
+import traceback
 import uuid
 from threading import Lock
 #import threading
@@ -94,6 +93,7 @@ class Aggregator(object):
         def default_error_handler(e):
             logger.error("Error occurred")
             logger.error(e)
+            traceback.print_exc()
 
         @self.socketio.on('training_finished')
         def handle_training_finished(content):

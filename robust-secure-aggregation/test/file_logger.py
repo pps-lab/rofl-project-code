@@ -42,12 +42,12 @@ def setup_file_logger(logger: Logger, config: ConfigLoader, file_name: str):
             fh.setFormatter(formatter)
             logger.addHandler(fh)
 
-        try:
-            import watchtower
-            print("Setting up AWS CloudWatch logging")
-            handler = watchtower.CloudWatchLogHandler(stream_name=file_name)
-            logger.addHandler(handler)
-        except ImportError as e:
-            pass  # module doesn't exist, deal with it.
+        # try:
+        #     import watchtower
+        #     print("Setting up AWS CloudWatch logging")
+        #     handler = watchtower.CloudWatchLogHandler(stream_name=file_name)
+        #     logger.addHandler(handler)
+        # except ImportError as e:
+        #     pass  # module doesn't exist, deal with it.
 
 

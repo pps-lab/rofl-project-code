@@ -5,7 +5,7 @@ import sys
 module_loc = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0,os.path.dirname(module_loc))
 
-import fed_learning.util.async_tools
+# import fed_learning.util.async_tools
 
 import unittest
 import logging 
