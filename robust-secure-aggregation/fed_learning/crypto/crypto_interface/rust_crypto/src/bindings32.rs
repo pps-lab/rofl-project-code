@@ -24,6 +24,7 @@ use crate::square_rand_proof::SquareRandProof;
 use bincode::serialize;
 use crate::square_rand_proof_vec::L2RangeProofError;
 use itertools::Itertools;
+use rayon::prelude::*;
 
 
 #[repr(C)]
