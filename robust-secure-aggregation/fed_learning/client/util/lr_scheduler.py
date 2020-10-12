@@ -1,35 +1,39 @@
 from keras.callbacks import LearningRateScheduler, ReduceLROnPlateau
 import numpy as np
 
-# def get_callbacks(lr_decay, epoch) -> list:
-#     if lr_decay == 'cifar_resnet_step':
-#         lr_scheduler = LearningRateScheduler(specific_decay(epoch))
-#
-#         lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
-#                                        cooldown=0,
-#                                        patience=5,
-#                                        min_lr=0.5e-6)
-#
-#         return [lr_scheduler, lr_reducer]
-#     else:
-#         return []
-#
-# def specific_decay(epoch):
-#     def call(e):
-#         return lr_schedule(epoch)
-
-def get_callbacks(lr_decay) -> list:
+def get_callbacks(lr_decay, epoch) -> list:
     if lr_decay == 'cifar_resnet_step':
-        lr_scheduler = LearningRateScheduler(lr_schedule)
+        lr_scheduler = LearningRateScheduler(specific_decay(epoch))
 
         lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
                                        cooldown=0,
                                        patience=5,
-                                       min_lr=0.5e-6)
+                                       min_lr=0.5e-6,
+                                       verbose=1)
 
         return [lr_scheduler, lr_reducer]
     else:
         return []
+
+def specific_decay(epoch):
+    def call(e):
+        return lr_schedule(epoch)
+
+    return call
+
+# def get_callbacks(lr_decay, round) -> list:
+#     if lr_decay == 'cifar_resnet_step':
+#         lr_scheduler = LearningRateScheduler(lr_schedule)
+#
+#         lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+#                                        cooldown=0,
+#                                        patience=5,
+#                                        min_lr=0.5e-6,
+#                                        verbose=1)
+#
+#         return [lr_scheduler, lr_reducer]
+#     else:
+#         return []
 
 
 def lr_schedule(epoch):

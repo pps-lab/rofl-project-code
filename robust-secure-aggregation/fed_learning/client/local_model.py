@@ -69,7 +69,7 @@ class LocalModel(object):
         logger.info('Training start')
         # self._verify_weights_norm()
 
-        self.training_helper.train()
+        self.training_helper.train(self.get_current_round_nr())
         self.evaluate()
         update = self._calculate_update()
         flattened_update = self._flatten_update(update)
