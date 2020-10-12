@@ -282,14 +282,10 @@ pub extern fn verify_randproof(
 
     println!("Is this slow?");
 
-    let commit_bytes: &[u8] = unsafe { slice::from_raw_parts(commit_ptr, commit_len as usize) };
-    println!("Twelve");
-    let eg_pair_vec: Vec<ElGamalPair> = deserialize_eg_pair_vec(&commit_bytes);
-    println!("Thirteen");
-    let ped_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(ped_commit_ptr, ped_commit_len as usize) };
-    let ped_commit_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&ped_commit_bytes);
     let rand_commit_bytes: &[u8] = unsafe { slice::from_raw_parts(rand_commit_ptr, rand_commit_len as usize) };
     let rand_rp_vec: Vec<RistrettoPoint> = deserialize_rp_vec(&rand_commit_bytes);
+    println!("Thirteen");
+
     let eg_pair_vec: Vec<ElGamalPair> = ped_commit_rp_vec.par_iter().zip(&rand_rp_vec).map(|(x, y)| ElGamalPair{L: *x, R: *y}).collect();
     println!("Eighteen");
 
