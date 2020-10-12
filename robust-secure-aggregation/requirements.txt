@@ -21,4 +21,7 @@ scikit-learn
 colorama
 IPython==5.6
 gevent
+
+# AWS Logging
+watchtower
 #gevent-websocket
