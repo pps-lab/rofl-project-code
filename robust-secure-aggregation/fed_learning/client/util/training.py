@@ -23,7 +23,7 @@ class LocalModelTraining:
         """Trains model based on configuration"""
         callbacks = lr_scheduler.get_callbacks(self.model_config.lr_decay, round)
         augmentation_generator = augmentation.get_augmentation(self.model_config.image_augmentation)
-        verbose = 1
+        verbose = 0
         # print(self.dataset.x_train[0])
         # print("Test", self.dataset.x_test[0])
         if augmentation_generator is not None:
