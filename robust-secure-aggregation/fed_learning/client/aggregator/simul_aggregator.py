@@ -21,7 +21,7 @@ def build_aggregator(sio, dataset: DataSet, *args) -> Aggregator:
 class SecureAggregator(Aggregator):
 
     def __init__(self, sio, dataset: DataSet):
-        logger.info('Initializing client-side aggregator with secure aggregation')
+        logger.info('Initializing client-side aggregator with simul aggregation')
         super().__init__(sio, dataset)
         self.ci = CryptoInterface()
         self.register_at_server()
