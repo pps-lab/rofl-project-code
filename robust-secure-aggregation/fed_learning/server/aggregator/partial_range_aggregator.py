@@ -76,6 +76,7 @@ class PartialRangeAggregator(SecureAggregator):
                     logger.warn('Range proof verification failed for client %s' % sid)
                     sys.exit(0)
                 logger.info('Client %s passed range verification' % sid)
+                self.socketio.sleep()
             except VerificationException as e:
                     logger.warn('Range proof verification threw exception for client %s with msg: %s' % (sid, str(e)))
                     sys.exit(0)
