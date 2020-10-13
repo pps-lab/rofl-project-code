@@ -31,7 +31,7 @@ def specific_decay_cifar(epoch):
 
 def specific_decay_mnist(epoch):
     def call(e):
-        return lr_schedule_cifar(epoch)
+        return lr_schedule_mnist(epoch)
     return call
 
 # def get_callbacks(lr_decay, round) -> list:
