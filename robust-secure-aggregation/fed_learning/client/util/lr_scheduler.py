@@ -87,6 +87,6 @@ def lr_schedule_mnist(epoch):
     """
     lr = 0.01 # federated
     if epoch > 40:
-        lr *= 1e-1
+        lr *= 0.5
     logger.info(f'Learning rate: {lr} {epoch}')
     return lr
