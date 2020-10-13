@@ -26,7 +26,7 @@ class LocalModelTraining:
         """Trains model based on configuration"""
         callbacks = lr_scheduler.get_callbacks(self.model_config.lr_decay, round)
         logger.info("Starting training")
-        logger.info(f"LR: {lr_scheduler.specific_decay_mnist(round)} {round}")
+        logger.info(f"LR: {lr_scheduler.specific_decay_mnist(round)()} {round}")
         augmentation_generator = augmentation.get_augmentation(self.model_config.image_augmentation)
         verbose = 0
         # print(self.dataset.x_train[0])
