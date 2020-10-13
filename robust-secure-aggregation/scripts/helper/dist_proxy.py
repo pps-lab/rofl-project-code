@@ -19,9 +19,14 @@ sys.path.insert(0, ROOT)
 from test.config_loader import ConfigLoader
 from test.data_splitter import DataSplitter
 
-_DEFAULT_DP_CONF = '/Users/hidde/IdeaProjects/robust-secure-aggregation/scripts/remote_config.ini'
-_DEFAULT_CONF = '/Users/hidde/IdeaProjects/robust-secure-aggregation/config/lhidde_eval_cifar.ini'
+_DEFAULT_DP_PREFIX = '/Users/hidde/IdeaProjects/fl-project-code/robust-secure-aggregation/scripts/'
+_DEFAULT_DP_CONF = 'remote_config.ini'
+
+_DEFAULT_PREFIX = '/Users/hidde/IdeaProjects/fl-project-code/robust-secure-aggregation/config/'
+_DEFAULT_CONF = 'lhidde_eval_mnist_l2_optim.ini'
 # _DEFAULT_CONF = '/Users/hidde/IdeaProjects/robust-secure-aggregation/config/dev_config.ini'
+# _DEFAULT_CONF = '/Users/hidde/IdeaProjects/fl-project-code/robust-secure-aggregation/config/lhidde_eval_mnist_l2_optim.ini'
+# _DEFAULT_CONF = '/Users/hidde/IdeaProjects/fl-project-code/robust-secure-aggregation/config/lhidde_eval_cifar_lenet_l2_subspace.ini'
 
 #_DEFAULT_CONF = '/home/mlei/Dropbox/mathias/studies/masterthesis/fed_learning/config/large_dist_nn_config.ini'
 
@@ -152,7 +157,7 @@ class DistProxy(object):
         c.run('rm -rf %s/*' % self.log_dir)
 
     def _start_server(self, c):
-        cmd = 'python3 %s %s' % (self.test_server, self.remote_config_path)
+        cmd = 'AWS_DEFAULT_REGION=eu-central-1 python3 %s %s' % (self.test_server, self.remote_config_path)
         c.run(cmd)
 
     def _start_client(self, c, ids):
@@ -162,8 +167,18 @@ class DistProxy(object):
         #     c.run(cmd)
         cmd = ''
         for i in ids:
-             cmd += 'python3 %s %s %s & ' % (self.test_client, i, self.remote_config_path)
+             cmd += 'AWS_DEFAULT_REGION=eu-central-1 python3 %s %s %s & ' % (self.test_client, i, self.remote_config_path)
         c.run(cmd)
+
+    # def _set_aws_config(self, c, ids):
+    #     # for i in ids:
+    #     #     print('Starting client %s' % i)
+    #     #     cmd = 'setsid python3 %s %s %s &' % (self.test_client, i, self.remote_config_path)
+    #     #     c.run(cmd)
+    #     cmd = ''
+    #     for i in ids:
+    #         cmd += 'AWS_DEFAULT_REGION=eu-central-1 python3 %s %s %s & ' % (self.test_client, i, self.remote_config_path)
+    #     c.run(cmd)
 
         
     def _retrieve_logs(self, c):
@@ -184,7 +199,7 @@ class DistProxy(object):
 
     def _compile_rust(self, c):
         with c.cd(self.rust_dir):
-            cargo_path_var = "PATH=$PATH:~/.cargo/bin ; "
+            cargo_path_var = "PATH=$PATH:~/.cargo/bin ; rustup override set nightly ; RUSTFLAGS=\"-C target_cpu=skylake-avx512\" "
             cmd = 'cargo build --release --features "fp%s frac%s"' % (self.lc.fp_bits, self.lc.fp_frac)
             c.run(cargo_path_var + cmd)
 
@@ -239,9 +254,9 @@ class DistProxy(object):
         if not self._file_exists(c, self.data_dir):
             with c.cd(self.root):
                 c.run('mkdir %s' % self.data_dir)
-        # for f in files:
-        #     print("Sending: %s" % f)
-        #     c.put(f, self.data_dir)
+        for f in files:
+            print("Sending: %s" % f)
+            c.put(f, self.data_dir)
 
     def _project_exists(self, c):
         return self._file_exists(c, self.root)
@@ -266,11 +281,15 @@ if __name__ == "__main__":
     parser.add_argument('-c',  type=str, default=None, help="Custom command")
     parser.add_argument('-s',  type=str, default=None, help="Sudo command")
     parser.add_argument('-r',  action='store_true', help="Retrieve logs")
+    parser.add_argument('-remote', type=str, default=_DEFAULT_DP_CONF, help="Remote config file. Default: remote_config.ini")
+    parser.add_argument('-config', type=str, default=_DEFAULT_CONF, help="Config file")
     args = parser.parse_args()
 
+    remote_config_file = _DEFAULT_DP_PREFIX + args.remote
 
-    dp_config = DistProxyConfigLoader(_DEFAULT_DP_CONF)
-    config = ConfigLoader(_DEFAULT_CONF)
+    print(f"Loading config {args.remote} {args.config}")
+    dp_config = DistProxyConfigLoader(remote_config_file)
+    config = ConfigLoader(_DEFAULT_PREFIX + args.config)
     d = DistProxy(dp_config, config)
 
     if args.c is not None:
@@ -303,13 +322,13 @@ if __name__ == "__main__":
     d.pull_repo_all_hosts()
     print('sending config')
     d.send_config_all_hosts()
-    # print('compiling rust library')
-    # d.compile_rust_all_hosts()
+    print('compiling rust library')
+    d.compile_rust_all_hosts()
     print('clearing logs')
     d.clear_logs_all_hosts()
     print('send sending training data in split_mode: %s' % config.split_mode)
     d.send_training_data_clients()
-    d.pip_install_hosts_all_hosts()
+    # d.pip_install_hosts_all_hosts()
     print('start simulation')
     d.start_simulation()
     print('simulation finished')
