@@ -35,7 +35,7 @@ def build_model(model_config: GlobalModelConfig, test_data):
 def getType():
     return DevFedMNISTCNNSubspace
 
-SUBSPACE_VSIZE = 4500
+SUBSPACE_VSIZE = 4300
 SEED = 41
 
 class DevFedMNISTCNNSubspace(GlobalModel):
