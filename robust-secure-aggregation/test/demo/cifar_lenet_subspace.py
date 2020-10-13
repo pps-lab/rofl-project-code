@@ -35,7 +35,7 @@ def build_model(model_config: GlobalModelConfig, test_data):
 def getType():
     return CIFARLeNetSubspace
 
-SUBSPACE_VSIZE = 10000
+SUBSPACE_VSIZE = 12000
 SEED = 41
 
 class CIFARLeNetSubspace(GlobalModel):
