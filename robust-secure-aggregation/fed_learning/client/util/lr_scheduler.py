@@ -3,7 +3,7 @@ import numpy as np
 
 def get_callbacks(lr_decay, epoch) -> list:
     if lr_decay == 'cifar_resnet_step':
-        lr_scheduler = LearningRateScheduler(specific_decay(epoch))
+        lr_scheduler = LearningRateScheduler(specific_decay_cifar(epoch))
 
         lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
                                        cooldown=0,
@@ -12,13 +12,21 @@ def get_callbacks(lr_decay, epoch) -> list:
                                        verbose=1)
 
         return [lr_scheduler, lr_reducer]
+    if lr_decay == 'mnist_subspace_step':
+        lr_scheduler = LearningRateScheduler(specific_decay_mnist(epoch))
+
+        return [lr_scheduler]
     else:
         return []
 
-def specific_decay(epoch):
+def specific_decay_cifar(epoch):
     def call(e):
-        return lr_schedule(epoch)
+        return lr_schedule_cifar(epoch)
+    return call
 
+def specific_decay_mnist(epoch):
+    def call(e):
+        return lr_schedule_cifar(epoch)
     return call
 
 # def get_callbacks(lr_decay, round) -> list:
@@ -36,7 +44,7 @@ def specific_decay(epoch):
 #         return []
 
 
-def lr_schedule(epoch):
+def lr_schedule_cifar(epoch):
     """Learning Rate Schedule
 
     Learning rate is scheduled to be reduced after 80, 120, 160, 180 epochs.
@@ -60,3 +68,20 @@ def lr_schedule(epoch):
     print('Learning rate: ', lr)
     return lr
 
+def lr_schedule_mnist(epoch):
+    """Learning Rate Schedule
+
+    Learning rate is scheduled to be reduced after 80, 120, 160, 180 epochs.
+    Called automatically every epoch as part of callbacks during training.
+
+    # Arguments
+        epoch (int): The number of epochs
+
+    # Returns
+        lr (float32): learning rate
+    """
+    lr = 0.01 # federated
+    if epoch > 40:
+        lr *= 1e-1
+    print('Learning rate: ', lr)
+    return lr
