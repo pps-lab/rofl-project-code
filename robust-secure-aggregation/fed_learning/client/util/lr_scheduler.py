@@ -1,6 +1,11 @@
 from keras.callbacks import LearningRateScheduler, ReduceLROnPlateau
 import numpy as np
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 def get_callbacks(lr_decay, epoch) -> list:
     if lr_decay == 'cifar_resnet_step':
         lr_scheduler = LearningRateScheduler(specific_decay_cifar(epoch))
@@ -83,5 +88,5 @@ def lr_schedule_mnist(epoch):
     lr = 0.01 # federated
     if epoch > 40:
         lr *= 1e-1
-    print('Learning rate: ', lr)
+    logger.info(f'Learning rate: {lr} {epoch}')
     return lr
