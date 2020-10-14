@@ -328,7 +328,7 @@ if __name__ == "__main__":
     d.clear_logs_all_hosts()
     print('send sending training data in split_mode: %s' % config.split_mode)
     d.send_training_data_clients()
-    # d.pip_install_hosts_all_hosts()
+    d.pip_install_hosts_all_hosts()
     print('start simulation')
     d.start_simulation()
     print('simulation finished')
