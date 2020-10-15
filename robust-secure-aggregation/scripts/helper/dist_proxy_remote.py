@@ -241,7 +241,7 @@ class DistProxy(object):
             self._clone_repo(c)
             return
         with c.cd(self.target_folder):
-            cmd = 'git pull origin %s' % (self.dpc.branch)
+            cmd = 'git stash && git pull origin %s' % (self.dpc.branch)
             c.run(cmd)
     
     def _pip_install_hosts(self, c):
