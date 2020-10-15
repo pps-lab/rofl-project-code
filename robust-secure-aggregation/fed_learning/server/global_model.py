@@ -132,5 +132,5 @@ class GlobalModel(object):
         model = keras.models.load_model('models')
         if model is not None:
             logger.info("Loading existing model weights")
-            weights = model.weights
-            self.model.set_weights(weights)
+            weights = model.get_weights()
+            self.set_weights(weights)
