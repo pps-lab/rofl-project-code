@@ -55,6 +55,7 @@ class GlobalModel(object):
                 optimizer=self.model_config.optimizer,
                 metrics=self.model_config.metrics)
         logger.info('Number of parameters: %s' % self.model.count_params())
+        self.load_existing_model_if_exists()
         self.model.summary(print_fn=logger.info)
 
     def evaluate(self):
@@ -126,3 +127,10 @@ class GlobalModel(object):
         update_list = [np.reshape(u, s) for s, u in zip (shapes, update_ravelled)]
         return update_list
 
+    def load_existing_model_if_exists(self):
+        import keras
+        model = keras.models.load_model('models')
+        if model is not None:
+            logger.info("Loading existing model weights")
+            weights = model.weights
+            self.model.set_weights(weights)
