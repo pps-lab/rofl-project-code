@@ -272,16 +272,17 @@ def cifar_lenet_wr_plot(plotname):
     plt.clf()
     pdf_pages.close()
 
-def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, add_legend=True):
-    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
+def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, add_legend=True, model="mnist"):
+    #df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
 
-    def build_df(df, norm, window_size, selected_round, pattern):
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
+
+    def build_df(df, norm, window_size, selected_round, pattern, col_baseline="e41_google_tasks_noconstrain_evaluation/test_accuracy", ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"]):
 
         lst = []
         used = []
         notused = []
 
-        col_baseline = "e41_google_tasks_noconstrain_evaluation/test_accuracy"
         df["baseline_mean"] = df[col_baseline].rolling(window_size).mean()
         df["baseline_std"] = df[col_baseline].rolling(window_size).std()
         df_baseline = df[df["Round"]==selected_round]
@@ -290,7 +291,6 @@ def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, ad
 
         bounds = {}
 
-        ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"]
 
         for col in df.columns:
 
@@ -356,19 +356,17 @@ def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, ad
 
 
 
-    setup_plt(square=True)
+    setup_plt(square=False)
     name = plotname
 
-    if norm == "l2":
+    if norm == "l2" and model == "mnist":
         norm_label = "$L_2$"
-        df = build_df(df, norm="l2", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipl2_([0-9_\.]+)_evaluation/(.*)")
+        df = build_df(df, norm="l2", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipl2_([0-9_\.]+)_evaluation/(.*)", col_baseline="e41_google_tasks_noconstrain_evaluation/test_accuracy", ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"])
         df = df[df["bound"]<100]
-    elif norm == "l8":
+    elif norm == "l8" and model == "mnist":
         norm_label = "$L_{\infty}$"
-        df = build_df(df, norm="l8", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipinf_([0-9_\.]+)_evaluation/(.*)")
+        df = build_df(df, norm="l8", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipinf_([0-9_\.]+)_evaluation/(.*)", col_baseline="e41_google_tasks_noconstrain_evaluation/test_accuracy", ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"])
         df = df[df["bound"]<=0.075]
-        
-
 
     
     else: raise ValueError("unknown norm")
@@ -385,17 +383,12 @@ def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, ad
         # Draw all the lines         
         ##########################
 
-
-
     
         baseline= ax.plot(df["bound"], df["baseline_mean"], label="Baseline (no bound)", color=colors[0],
              linestyle='dashdot', linewidth=2, alpha=0.5)
 
-        testacc =  ax.errorbar(df["bound"], df["test_accuracy_mean"], yerr=df["test_accuracy_std"], label="Glob. Accuracy", color=colors[0], linewidth=2, capsize=5, ecolor=ecolor, marker="o")
-        advsucc = ax.errorbar(df["bound"], df["adv_success_mean"], yerr=df["adv_success_std"], label="Adv. Success", color=colors[1], linestyle="dashed", linewidth=2, capsize=5, ecolor=ecolor, marker="o")
-
-
-
+        testacc =  ax.errorbar(df["bound"], df["test_accuracy_mean"], yerr=df["test_accuracy_std"], label="Main Task", color=colors[0], linewidth=2, capsize=5, ecolor=ecolor, marker="o")
+        advsucc = ax.errorbar(df["bound"], df["adv_success_mean"], yerr=df["adv_success_std"], label="Backdoor Task", color=colors[1], linestyle="dashed", linewidth=2, capsize=5, ecolor=ecolor, marker="o")
 
 
         ##########################
@@ -408,7 +401,8 @@ def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, ad
         ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
 
         if add_legend:
-            ax.legend(bbox_to_anchor=(1, 1), loc="upper left") 
+            ax.legend(title_fontsize=20, bbox_to_anchor=(0., 1.02, 2/3, .102), mode="expand", loc="lower left", title="Tasks", labelspacing=.05)  
+            
 
         ##########################
         # Y - Axis Format
@@ -465,20 +459,36 @@ def get_plt_params():
     return params, [fig_width, fig_height]
 
 
-def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True):
+def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True, model="mnist"):
     
-    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
-
+    
+    if legend_type not in [None, "tootight", "ideal", "tooloose"]:
+        raise ValueError(f"legend type not supported: {legend_type}")
 
     window_size = 20
 
-    l2_bound_tootight = "e41_clipl2_0_01_evaluation"
-    l2_bound_ideal = "e41_clipl2_1_evaluation"
-    l2_bound_tooloose = "e41_clipl2_35_evaluation" #e41_clipl2_100_evaluation
+    if model == "mnist":
 
-    l8_bound_tootight = "e41_clipinf_0_0001_evaluation"
-    l8_bound_ideal = "e41_clipinf_0_00100_evaluation"
-    l8_bound_tooloose = "e41_clipinf_0.15_evaluation"
+        df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
+
+        l2_bound_tootight = "e41_clipl2_0_01_evaluation"
+        l2_bound_ideal = "e41_clipl2_1_evaluation"
+        l2_bound_tooloose = "e41_clipl2_35_evaluation" #e41_clipl2_100_evaluation
+
+        l8_bound_tootight = "e41_clipinf_0_0001_evaluation"
+        l8_bound_ideal = "e41_clipinf_0_00100_evaluation"
+        l8_bound_tooloose = "e41_emnist_clipinf_0_075_evaluation"
+    elif model == "cifar":
+        df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
+
+        l2_bound_tootight = None
+        l2_bound_ideal = "e58_lr1_cifar_clipl2_evaluation"
+        l2_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" # TODO maybe replace baseline
+
+        l8_bound_tootight = None
+        l8_bound_ideal = None
+        l8_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" # TODO maybe replace baseline
+
 
 
     def build_df(df, norm, bound_tootight_key, bound_ideal_key,bound_tooloose_key, window_size):
@@ -506,7 +516,7 @@ def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True)
 
 
     name = plotname
-    setup_plt(square=True)
+    setup_plt(square=False)
     
 
     with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
@@ -531,19 +541,31 @@ def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True)
         plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2)
 
 
-        if add_legend:
-            lines = ax.get_lines()
-            labels = ["bound too tight", "bound ideal", "bound too loose"]
-            legend1 = plt.legend(lines[:3], labels, bbox_to_anchor=(1, 1), loc="upper left", title="Glob. Accuracy", labelspacing=.05)                                                                                                                  
-            ax.add_artist(legend1)
+        lines = ax.get_lines()
 
-            legend2 = plt.legend(lines[3:], labels, bbox_to_anchor=(1, 0), loc="lower left", title="Adv. Success", labelspacing=.05)
-            ax.add_artist(legend2)
+        labels = ["Main Task", "Backdoor Task"]
+        empty_patch = mpatches.Patch(color='none')
+    
+        if legend_type == "tootight":
+            title = "Bound too tight"
+            labels = ["($L_2 \leq 10^{-2}$, $L_{\infty} \leq 10^{-4}$)"] + labels
+            handles = [empty_patch, lines[0], lines[3]]
+        elif legend_type == "ideal":
+            title = "Bound ideal"
+            labels = ["($L_2 \leq 1$, $L_{\infty} \leq 10^{-3}$)"] + labels
+            handles = [empty_patch, lines[1], lines[4]]
+        elif legend_type == "tooloose":
+            title = "Bound too loose"
+            labels = ["($L_2 \leq 35$, $L_{\infty} \leq 0.075$)"] + labels
+            handles = [empty_patch, lines[2], lines[5]]
+
         
+        if legend_type is not None:
+            ax.legend(handles, labels, title_fontsize=20, bbox_to_anchor=(0., 1.02, 2/3, .102), mode="expand", loc="lower left", title=title, labelspacing=.05)  
+            
 
         if use_error:
         
-        # TODO [nku] think if want to include this error
             ax.fill_between(df["Round"], 
                     df[f"{norm}_bound_tootight_advsuccess"]-df[f"{norm}_bound_tootight_advsuccess_std"],
                     df[f"{norm}_bound_tootight_advsuccess"]+df[f"{norm}_bound_tootight_advsuccess_std"],
@@ -576,21 +598,6 @@ def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True)
         ##########################
         #ax.set_title("Hello World")
 
-
-        #h, l = ax.get_legend_handles_labels()
-
-        # adjust handles
-        #ph = [ax.plot([],marker="", ls="")[0]]*6
-        #handles = ph + h
-
-        # adjust labels
-
-
-
-        #handles = ph[:4] + h[:2]+ [ph[4]] + h[2:4] + [ph[5]] + h[4:]
-        #labels = ["", r"\textbf{Global Obj.:}", r"\textbf{Adv. Success:}", r"\textbf{Bound too Tight}: $(\leq 10^{-4})$"] + l[:2] + [r"\textbf{Bound Ideal:} $(\leq 10^{-3})$"] + l[2:4] + [r"\textbf{Bound too Loose:} $(\leq 0.15)$"] + l[4:]
-        
-        
         ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
 
 
@@ -614,7 +621,7 @@ def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True)
         #ax.set_xticks(xticks)
         #ax.set_xticklabels(labels, fontsize=16, rotation=345)
 
-        if add_legend:
+        if legend_type is not None:
             ax.axis('off')
             for line in plines:
                 line.set_visible(False)
@@ -626,51 +633,6 @@ def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True)
     
     
     
-    
-    # TODO [nku] remove: old
-    
-    f, ax1 = plt.subplots()
-
-    start = 0
-    end = 700
-
-    for id, (type, val) in enumerate(plot_types_obj.items()):
-        # df.plot(x='Round', y=plot_legend[type], style='o', label=plot_legend[type], color=colors[id], linestyle=linestyles[id], linewidth=2)
-        plt.plot(df.Round[start:end], df[type][start:end], label=val, color=colors[id], linestyle=linestyles[id], linewidth=2)
-    for id, (type, val) in enumerate(plot_types_mal.items()):
-        # df.plot(x='Round', y=plot_legend[type], style='o', label=plot_legend[type], color=colors[id], linestyle=linestyles[id], linewidth=2)
-        plt.plot(df.Round[start:end], df[type][start:end], color=colors[id], linestyle=":", linewidth=2)
-
-    # Additional, custom legend
-
-    plt.xlabel('Round')
-    plt.xlim(start, end)
-    # ax1.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0fk' % (y * 1e-3)))
-
-    plt.ylabel("Accuracy")
-    # plt.legend(bbox_to_anchor=(1., 0., 1., .102), loc=3, ncol=1, columnspacing=0.75)
-
-    bottom_offset = [0.05, -0.25] if norm is "L2" else [0.20, -0.10]
-
-    # Additional, custom legend
-    custom_lines_colors = [Line2D([0], [0], linestyle="-", lw=4, color=colors[id]) for id, _ in enumerate(plot_types_mal.items())]
-    custom_lines = [Line2D([0], [0], linestyle="-", lw=4, color=COLOR_GRAY),
-                    Line2D([0], [0], linestyle=":", lw=4, color=COLOR_GRAY)]
-    leg1 = Legend(ax1, custom_lines_colors, [val for _, val in plot_types_obj.items()],
-                 loc='lower left', bbox_to_anchor=(1.02, bottom_offset[0], 1., 1.), title="Bound")
-    leg1._legend_box.align = "left"
-    leg2 = Legend(ax1, custom_lines, ["Benign", "Malicious"],
-                 loc='lower left', bbox_to_anchor=(1.02, bottom_offset[1], 1., 1.))
-    ax1.add_artist(leg1)
-    ax1.add_artist(leg2)
-
-    plt.grid(True, linestyle=':', color='0.8', zorder=0)
-    F = plt.gcf()
-    F.set_size_inches(fig_size)
-    pdf_pages.savefig(F, bbox_inches='tight')
-    plt.clf()
-    pdf_pages.close()
-
 
 def norm_per_round(plotname):
     fig_height, fig_size, fig_width = get_large_figsize()
