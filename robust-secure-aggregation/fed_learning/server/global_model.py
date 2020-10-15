@@ -129,8 +129,10 @@ class GlobalModel(object):
 
     def load_existing_model_if_exists(self):
         import keras
-        model = keras.models.load_model('models')
-        if model is not None:
+        import os.path
+        model_name = 'models'
+        if os.path.isfile(model_name):
             logger.info("Loading existing model weights")
+            model = keras.models.load_model(model_name)
             weights = model.get_weights()
             self.set_weights(weights)
