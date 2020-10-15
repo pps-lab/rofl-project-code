@@ -3,6 +3,7 @@
 import math
 import sys
 import os
+import re
 
 import matplotlib
 import numpy as np
@@ -16,8 +17,12 @@ from matplotlib.legend import Legend
 from matplotlib.lines import Line2D
 import seaborn as sns
 from matplotlib.patches import Patch
+import matplotlib.patches as mpatches    
 
-from plotting.report.extract_histogram import extract_histogram
+#from plotting.report.extract_histogram import extract_histogram
+from extract_histogram import extract_histogram
+
+
 
 plot_data_save_path = "./data/"
 plots = "./images/"
@@ -95,6 +100,77 @@ DATA_KEYS = {
 
 
 # Theming !
+output_dir = "."
+
+def setup_plt(square=False):
+
+    fig_width_pt = 240.0  # Get this from LaTeX using \showthe
+    inches_per_pt = 1.0 / 72.27 * 2  # Convert pt to inches
+    golden_mean = ((np.math.sqrt(5) - 1.0) / 2.0) * .8  # Aesthetic ratio
+    fig_width = fig_width_pt * inches_per_pt  # width in inches
+    fig_height = (fig_width * golden_mean)  # height in inches
+    fig_size =  [fig_width, fig_height]
+
+    if square:
+        fig_size = [fig_height, fig_height]
+
+    plt_params = {
+        'backend': 'ps',
+        'axes.labelsize': 20,
+        'legend.fontsize': 16,
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'font.size': 18,
+        'figure.figsize': fig_size,
+        'font.family': 'Times New Roman'
+    }
+
+    plt.rcParams.update(plt_params)
+    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
+
+
+def get_task_styling():
+    task = {
+            # Attacks
+            "a2" : {
+                "label": "A2-WALL",
+                "color": "0.1"
+            },
+            "a3" : {
+                "label": "A3-GREEN",
+                "color": "0.3"
+            },
+            "a4": {
+                "label": "A4-STRIPES",
+                "color": "0.6"
+            },
+
+            # Metrics
+            "main": { # accuracy
+                "label": "Main Task",
+                "linestyle": "dashdot"
+            },
+            "bdoor": { # accuracy
+                "label": "Backdoor Task",
+                "linestyle": "solid"  
+            },
+            "norm": {
+                "label": "Norm",
+                "linestyle": "dashdot"
+            },
+
+
+            # clients
+
+            "benign_client": {
+                "color": "black",
+                "label": "Benign clients"
+            }
+    }
+    return task
+
+
+
 def get_grayscale_styles():
     colors = ['0.1', '0.3', '0.6']
     linestyles = ['-', '--', '-']
@@ -196,99 +272,183 @@ def cifar_lenet_wr_plot(plotname):
     plt.clf()
     pdf_pages.close()
 
-def norm_accuracy_tradeoff_plot(plotname, norm):
-    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_3.csv'))
-    # print(df)
-    adv = 'adv_success'
-    suc = 'test_accuracy'
-    baseline_success = f'{DATA_KEYS["CLIP_DEFENSE"][norm]["BASELINE"]}/{suc}'
+def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, add_legend=True):
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
 
-    evaluate = DATA_KEYS["CLIP_DEFENSE"][norm]["ATTACK"]
-    accuracies = {}
-    adversaries = {}
+    def build_df(df, norm, window_size, selected_round, pattern):
 
-    noattack_compare = DATA_KEYS["CLIP_DEFENSE"][norm]["NO_ATTACK"]
-    pgd_compare = DATA_KEYS["CLIP_DEFENSE"][norm]["PGD_ATTACK"]
+        lst = []
+        used = []
+        notused = []
 
-    last_runs_count = 25
+        col_baseline = "e41_google_tasks_noconstrain_evaluation/test_accuracy"
+        df["baseline_mean"] = df[col_baseline].rolling(window_size).mean()
+        df["baseline_std"] = df[col_baseline].rolling(window_size).std()
+        df_baseline = df[df["Round"]==selected_round]
+        df_baseline = df_baseline[["Round", "baseline_mean", "baseline_std"]]
+        df_baseline = df_baseline.rename(columns={"Round": "round"})
 
-    def calcMean(s, last_valid_index=670):
-        avg = s[last_valid_index - last_runs_count:last_valid_index].mean()
-        return avg
+        bounds = {}
 
-    for key in evaluate.keys():
-        # calculate average accuracy over last 10 runs ?
+        ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"]
 
-        avg_eval = calcMean(df[f"{key}/{suc}"])
-        avg_adv = calcMean(df[f"{key}/{adv}"])
+        for col in df.columns:
 
-        accuracies[key] = avg_eval
-        adversaries[key] = avg_adv
+            match = re.search(pattern, col, re.IGNORECASE)
+            if match:
+                if col in ignored_cols:
+                    print(f"Skipped (ignored): {col}")
+                    notused.append(col)
+                    continue
 
-    # plot_legend = {'e41_clipl2_3_evaluation/adv_success': '3',
-    #                'e41_clipl2_5_evaluation/adv_success': '5',
-    #                 'femnist_norm_inspect_data_poison_l2_total/mal': 'Mal. (DP)',
-    #                'femnist_norm_inspect_scaled_l2_total/mal': 'Mal. (LM, scaled)'}
-    #
-    params, fig_size = get_plt_params()
 
-    plt.rcParams.update(params)
-    matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-    matplotlib.rc('text', usetex=True)
+                try:
+                    bound = float(match.group(2).replace("_", "."))
+                except ValueError:
+                    print(f"Skipped: {col}")
+                    notused.append(col)
+                    continue
 
-    pdf_pages = PdfPages('./plots/%s' % plotname)
+                col_type = match.group(3)
 
-    plt.axes([0.12, 0.32, 0.85, 0.63], frameon=True)
-    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
+                if f"{bound}_{col_type}" in bounds:
+                    print(f"Skipped (Duplicate Bound): {col}")
+                    notused.append(col)
+                    continue
+                else:
+                    bounds[f"{bound}_{col_type}"] = True
 
-    f, ax1 = plt.subplots()
 
-    keys = evaluate.keys()
-    norms = [evaluate[k] for k in keys]
-    ben_success = [accuracies[k] for k in keys]
-    adv_success = [adversaries[k] for k in keys]
+                
+                if col_type not in ["adv_success", "test_accuracy"]:
+                    raise ValueError(f"Unknown col type: {col_type}")
 
-    baseline_mean = calcMean(df[baseline_success])
-    noattack_keys = noattack_compare.keys()
-    compare_mean = [calcMean(df[f"{a}/{suc}"]) for a in noattack_keys]
-    compare_pgd_mean = [calcMean(df[f"{a}/{adv}"], df[f"{a}/{adv}"].last_valid_index()) for a in pgd_compare.keys()]
+                df[col + "_rmean"] = df[col].rolling(window_size).mean()
+                df[col + "_rstd"] = df[col].rolling(window_size).std()
 
-    plt.plot([0, 1000], [baseline_mean, baseline_mean], label="Baseline (no constraint)", color=colors[0],
-             linestyle='--',
-             linewidth=2, alpha=0.5)
-    # plt.plot([noattack_compare[a] for a in noattack_keys], compare_mean, label="Baseline (no adversary)",
-    #          color=colors[2],
-    #          linestyle='--', alpha=0.5)
+                row = df[df["Round"]==selected_round]
 
-    # print(ben_success)
-    # print(norms)
+                d = {
+                    "round": row["Round"].values[0],
+                    "norm": norm,
+                    "bound": bound,
+                    col_type + "_mean": row[col + "_rmean"].values[0],
+                    col_type + "_std": row[col + "_rstd"].values[0],
+                }
+                lst.append(d)
+                used.append(col)
 
-    plt.scatter(norms, ben_success, label="Global objective", color=colors[0], linestyle=linestyles[1], linewidth=2)
-    plt.scatter(norms, adv_success, label="Adv. success", color=colors[1], linestyle=linestyles[0], linewidth=2)
-    # plt.scatter(pgd_compare.values(), [compare_pgd_mean], label="PGD", color=colors[3])
+            else:
+                notused.append(col)
 
-    # print(df[f"e41_clipl2_0_05_noattack_evaluation/{suc}"].last_valid_index())
-    # for id, (key, norm) in enumerate(evaluate.items()):
-    #     # df.plot(x='Round', y=plot_legend[type], style='o', label=plot_legend[type], color=colors[id], linestyle=linestyles[id], linewidth=2)
-    #     plt.plot(norm, df[type], label=key, color=colors[id], linestyle=linestyles[id], linewidth=2)
+        #print(f"Norm={norm}  - Ignored Columns: {notused}")
 
-    if norm == "L2":
-        plt.xlabel('$L_2$-norm')
-    else:
-        plt.xlabel('$L_{\infty}$-norm')
-    plt.xscale('log')
-    plt.xlim(DATA_KEYS["CLIP_DEFENSE"][norm]["XMIN"], DATA_KEYS["CLIP_DEFENSE"][norm]["XMAX"])
-    # ax1.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0fk' % (y * 1e-3)))
+        df1 = pd.DataFrame(lst)
 
-    plt.ylabel("Accuracy")
-    plt.legend(bbox_to_anchor=(-0.016, 1.00, 1., .102), loc=3, ncol=2, columnspacing=0.75)
+        # group together test accuracy and adv success
+        df1 = df1.fillna(0)    
+        df1 = df1.groupby(["round", "norm", "bound"]).agg({"test_accuracy_mean":"sum", "test_accuracy_std":"sum", "adv_success_mean": "sum", "adv_success_std": "sum"})
+        # remove hierarchical index
+        df1 = pd.DataFrame(df1.to_records())
 
-    plt.grid(True, linestyle=':', color='0.8', zorder=0)
-    F = plt.gcf()
-    F.set_size_inches(fig_size)
-    pdf_pages.savefig(F, bbox_inches='tight')
-    plt.clf()
-    pdf_pages.close()
+        df1 = df1.merge(df_baseline)
+        return df1
+
+
+
+    setup_plt(square=True)
+    name = plotname
+
+    if norm == "l2":
+        norm_label = "$L_2$"
+        df = build_df(df, norm="l2", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipl2_([0-9_\.]+)_evaluation/(.*)")
+        df = df[df["bound"]<100]
+    elif norm == "l8":
+        norm_label = "$L_{\infty}$"
+        df = build_df(df, norm="l8", window_size=20, selected_round=670, pattern="e41_(emnist_)?clipinf_([0-9_\.]+)_evaluation/(.*)")
+        df = df[df["bound"]<=0.075]
+        
+
+
+    
+    else: raise ValueError("unknown norm")
+
+    colors = ["0.1", "0.3", "0.6"]
+    ecolor=None #"0.6"
+    linestyles = ["solid", "dotted"] #dashdot
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+   
+        fig, ax = plt.subplots()
+
+        ##########################
+        # Draw all the lines         
+        ##########################
+
+
+
+    
+        baseline= ax.plot(df["bound"], df["baseline_mean"], label="Baseline (no bound)", color=colors[0],
+             linestyle='dashdot', linewidth=2, alpha=0.5)
+
+        testacc =  ax.errorbar(df["bound"], df["test_accuracy_mean"], yerr=df["test_accuracy_std"], label="Glob. Accuracy", color=colors[0], linewidth=2, capsize=5, ecolor=ecolor, marker="o")
+        advsucc = ax.errorbar(df["bound"], df["adv_success_mean"], yerr=df["adv_success_std"], label="Adv. Success", color=colors[1], linestyle="dashed", linewidth=2, capsize=5, ecolor=ecolor, marker="o")
+
+
+
+
+
+        ##########################
+        # General Format         
+        ##########################
+        #ax.set_title("Hello World")
+          # 'best', 'upper right', 'upper left', 'lower left', 
+                                # 'lower right', 'right', 'center left',  'center right', 
+                                # 'lower center', 'upper center', 'center'
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+        if add_legend:
+            ax.legend(bbox_to_anchor=(1, 1), loc="upper left") 
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=1.02)
+        ax.set_ylabel("Accuracy")
+        ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=xmax)
+        ax.set_xlabel(f"{norm_label} norm bound")
+
+        import matplotlib.ticker as ticker
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(xtickspacing))
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        if add_legend:
+            ax.axis('off')
+
+            baseline[0].set_visible(False)
+            testacc[0].set_visible(False)
+            testacc[1][0].set_visible(False)
+            testacc[1][1].set_visible(False)
+            testacc[2][0].set_visible(False)
+
+            advsucc[0].set_visible(False)
+            advsucc[1][0].set_visible(False)
+            advsucc[1][1].set_visible(False)
+            advsucc[2][0].set_visible(False)        
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+    return fig, df
+
+
 
 
 def get_plt_params():
@@ -305,62 +465,170 @@ def get_plt_params():
     return params, [fig_width, fig_height]
 
 
-def norm_accuracy_compare_plot(plotname, norm):
-    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds.csv'))
-    LOCAL_DATA_KEYS = {
-        "CLIP_DEFENSE": {
-            "L2": {
-                "BASELINE": 'e41_google_tasks_noconstrain_evaluation',
-                "XMAX": 50,
-                "XMIN": 0.01,
-                "ATTACK": {
-                    'e41_clipl2_0_01_evaluation': 0.01,
-                    'e41_clipl2_0_1_evaluation': 0.1,
-                    'e41_clipl2_0_5_evaluation': 0.5,
-                    'e41_clipl2_1_evaluation': 1,
-                    'e41_clipl2_3_5_evaluation': 3.5,
-                    'e41_clipl2_5_evaluation': 5,
-                    'e41_clipl2_10_evaluation': 10
-                }
-            },
-            "LINF": {
-                "BASELINE": 'e41_google_tasks_noconstrain_evaluation',
-                "XMAX": 0.2,
-                "XMIN": 0.001,
-                "ATTACK": {
-                    'e41_clipinf_0_00100_evaluation': 0.0010,
-                    # 'e41_clipinf_0.0015_evaluation': 0.0015,
-                    'e41_clipinf_0.005_evaluation': 0.005,
-                    'e41_clipinf_0.015_evaluation': 0.015,
-                    'e41_clipinf_0.010_evaluation': 0.01,
-                    # 'e41_clipinf_0.020_evaluation': 0.02,
-                    # 'e41_clipinf_0.025_evaluation': 0.025,
-                    'e41_clipinf_0_03_evaluation': 0.03,
-                    # 'e41_clipinf_0.15_evaluation': 0.15
-                },
-            }
-        }
-    }
-    # print(df)
-    plot_types_obj = {f"{key}/test_accuracy": val for (key, val) in LOCAL_DATA_KEYS["CLIP_DEFENSE"][norm]["ATTACK"].items()}
-    plot_types_mal = {f"{key}/adv_success": val for (key, val) in LOCAL_DATA_KEYS["CLIP_DEFENSE"][norm]["ATTACK"].items()}
-    #
-    # plot_legend = {'e41_clipl2_3_evaluation/adv_success': '3',
-    #                'e41_clipl2_5_evaluation/adv_success': '5',
-    #                'femnist_norm_inspect_data_poison_l2_total/mal': 'Mal. (DP)',
-    #                'femnist_norm_inspect_scaled_l2_total/mal': 'Mal. (LM, scaled)'}
+def norm_accuracy_compare_plot(plotname, norm, add_legend=False, use_error=True):
+    
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
 
-    pdf_pages = PdfPages('./plots/%s' % plotname)
-    params, fig_size = get_plt_params()
 
-    plt.rcParams.update(params)
-    matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-    matplotlib.rc('text', usetex=True)
-    plt.axes([0.12, 0.32, 0.85, 0.63], frameon=True)
-    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
+    window_size = 20
 
-    colors, linestyles = get_colorful_styles()
-    colors = get_progressive_colors(len(plot_types_obj.keys()))
+    l2_bound_tootight = "e41_clipl2_0_01_evaluation"
+    l2_bound_ideal = "e41_clipl2_1_evaluation"
+    l2_bound_tooloose = "e41_clipl2_35_evaluation" #e41_clipl2_100_evaluation
+
+    l8_bound_tootight = "e41_clipinf_0_0001_evaluation"
+    l8_bound_ideal = "e41_clipinf_0_00100_evaluation"
+    l8_bound_tooloose = "e41_clipinf_0.15_evaluation"
+
+
+    def build_df(df, norm, bound_tootight_key, bound_ideal_key,bound_tooloose_key, window_size):
+
+        df[f"{norm}_bound_tootight_advsuccess"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).mean()
+        df[f"{norm}_bound_tootight_testaccuracy"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).mean()
+        df[f"{norm}_bound_tootight_advsuccess_std"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).std()
+        df[f"{norm}_bound_tootight_testaccuracy_std"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).std()
+     
+        df[f"{norm}_bound_ideal_advsuccess"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).mean()
+        df[f"{norm}_bound_ideal_testaccuracy"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).mean()
+        df[f"{norm}_bound_ideal_advsuccess_std"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).std()
+        df[f"{norm}_bound_ideal_testaccuracy_std"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).std()
+        
+        df[f"{norm}_bound_tooloose_advsuccess"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).mean()
+        df[f"{norm}_bound_tooloose_testaccuracy"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).mean()
+        df[f"{norm}_bound_tooloose_advsuccess_std"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).std()
+        df[f"{norm}_bound_tooloose_testaccuracy_std"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).std()
+        
+        return df
+
+    
+    df = build_df(df, norm="l8", bound_tootight_key=l8_bound_tootight, bound_ideal_key=l8_bound_ideal, bound_tooloose_key=l8_bound_tooloose, window_size=window_size)
+    df = build_df(df, norm="l2", bound_tootight_key=l2_bound_tootight, bound_ideal_key=l2_bound_ideal, bound_tooloose_key=l2_bound_tooloose, window_size=window_size)
+
+
+    name = plotname
+    setup_plt(square=True)
+    
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+   
+        fig, ax = plt.subplots()
+
+        ##########################
+        # Draw all the lines         
+        ##########################
+        error_color = "0.85"
+        colors = ["0.1", "0.3", "0.6"]
+        linestyles = ["solid", "dotted"] #dashdot
+
+
+        plines = []
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_testaccuracy"], color=colors[0], linestyle=linestyles[0], linewidth=2)
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_testaccuracy"], color=colors[1], linestyle=linestyles[0], linewidth=2)
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_testaccuracy"], color=colors[2], linestyle=linestyles[0], linewidth=2)
+
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_advsuccess"], color=colors[0], linestyle=linestyles[1], linewidth=2)
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_advsuccess"], color=colors[1], linestyle=linestyles[1], linewidth=2)
+        plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2)
+
+
+        if add_legend:
+            lines = ax.get_lines()
+            labels = ["bound too tight", "bound ideal", "bound too loose"]
+            legend1 = plt.legend(lines[:3], labels, bbox_to_anchor=(1, 1), loc="upper left", title="Glob. Accuracy", labelspacing=.05)                                                                                                                  
+            ax.add_artist(legend1)
+
+            legend2 = plt.legend(lines[3:], labels, bbox_to_anchor=(1, 0), loc="lower left", title="Adv. Success", labelspacing=.05)
+            ax.add_artist(legend2)
+        
+
+        if use_error:
+        
+        # TODO [nku] think if want to include this error
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_tootight_advsuccess"]-df[f"{norm}_bound_tootight_advsuccess_std"],
+                    df[f"{norm}_bound_tootight_advsuccess"]+df[f"{norm}_bound_tootight_advsuccess_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_tooloose_advsuccess"]-df[f"{norm}_bound_tooloose_advsuccess_std"],
+                    df[f"{norm}_bound_tooloose_advsuccess"]+df[f"{norm}_bound_tooloose_advsuccess_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_ideal_advsuccess"]-df[f"{norm}_bound_ideal_advsuccess_std"],
+                    df[f"{norm}_bound_ideal_advsuccess"]+df[f"{norm}_bound_ideal_advsuccess_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_tootight_testaccuracy"]-df[f"{norm}_bound_tootight_testaccuracy_std"],
+                    df[f"{norm}_bound_tootight_testaccuracy"]+df[f"{norm}_bound_tootight_testaccuracy_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_tooloose_testaccuracy"]-df[f"{norm}_bound_tooloose_testaccuracy_std"],
+                    df[f"{norm}_bound_tooloose_testaccuracy"]+df[f"{norm}_bound_tooloose_testaccuracy_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            ax.fill_between(df["Round"], 
+                    df[f"{norm}_bound_ideal_testaccuracy"]-df[f"{norm}_bound_ideal_testaccuracy_std"],
+                    df[f"{norm}_bound_ideal_testaccuracy"]+df[f"{norm}_bound_ideal_testaccuracy_std"],
+                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+
+
+
+        ##########################
+        # General Format         
+        ##########################
+        #ax.set_title("Hello World")
+
+
+        #h, l = ax.get_legend_handles_labels()
+
+        # adjust handles
+        #ph = [ax.plot([],marker="", ls="")[0]]*6
+        #handles = ph + h
+
+        # adjust labels
+
+
+
+        #handles = ph[:4] + h[:2]+ [ph[4]] + h[2:4] + [ph[5]] + h[4:]
+        #labels = ["", r"\textbf{Global Obj.:}", r"\textbf{Adv. Success:}", r"\textbf{Bound too Tight}: $(\leq 10^{-4})$"] + l[:2] + [r"\textbf{Bound Ideal:} $(\leq 10^{-3})$"] + l[2:4] + [r"\textbf{Bound too Loose:} $(\leq 0.15)$"] + l[4:]
+        
+        
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=1.01)
+        ax.set_ylabel("Accuracy")
+        ax.set_yticks([0,0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+
+        ax.set_xlim(xmin=0, xmax=600)
+
+        ax.set_xlabel("Rounds")
+
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        if add_legend:
+            ax.axis('off')
+            for line in plines:
+                line.set_visible(False)
+
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+    return fig, df
+    
+    
+    
+    
+    # TODO [nku] remove: old
+    
     f, ax1 = plt.subplots()
 
     start = 0
@@ -505,93 +773,148 @@ def hypergeometric_distribution(plotname):
     pdf_pages.close()
 
 
-def scaling_factor_adv_success(plotname):
-    pdf_pages = PdfPages('./plots/%s' % plotname)
-    params, fig_size = get_plt_params()
-
-    plt.rcParams.update(params)
-    matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-    matplotlib.rc('text', usetex=True)
-
-    plt.axes([0.12, 0.32, 0.85, 0.63], frameon=True)
-    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
-
-    colors, linestyles = get_colorful_styles()
-    f, ax1 = plt.subplots()
-
-    NORM_KEY = "l2_total/mal"
-    ADV_KEY = "evaluation/adv_success"
-    RUNS = {
-        # "greencar": {10: 10, 20: 10, 40: 10},
-        # "racingstripes": {10: 10, 20: 10, 40: 10},
-        # "bgwall": {10: 10, 20: 10, 40: 10}
-        "greencar": {40: 10},
-        "racingstripes": {40: 10},
-        "bgwall": {40: 10}
-    }
+def build_df_scaling_norm_advsuccess():
     SCALING_FACTORS = {
-        10: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        20: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
-        40: [1, 5, 9, 13, 17, 23, 27, 31, 35, 40]
+        10: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], # 10 clients selected -> have 10 scaling factors
+        20: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19], # 20 client selected -> have 10 different scaling factors
+        40: [1, 5, 9, 13, 17, 23, 27, 31, 35, 40] # 40 clients -> have 10 different scaling factors
     }
 
-    # linestyles = ['-', '--', ':']
-    linestyles = ['-', ':']
+    folder = "./data/l2_comparison_attack"
 
-    ax2 = ax1.twinx()
-    for i, (attack, alphas) in enumerate(RUNS.items()):
-        for alpha_i, (alpha, cnt) in enumerate(alphas.items()):
-            mal_file = pd.read_csv(
-                os.path.join(plot_data_save_path, f'l2_comparison_attack/cifar_lenet_minloss_wr_{attack}_{alpha}.csv'))
+    df_10 = pd.DataFrame(SCALING_FACTORS[10], columns=["scaling_factor"]) 
+    df_10["n_clients"] = 10
 
-            mal = []
-            for id in range(0, cnt):
-                run = f"run-{id}"
-                val = mal_file[f"{run}_{ADV_KEY}"][4]
-                print(f"{attack} {alpha} {run}: {val}")
-                mal.append((mal_file[f"{run}_{NORM_KEY}"][4], mal_file[f"{run}_{ADV_KEY}"][4]))
+    df_20 = pd.DataFrame(SCALING_FACTORS[20], columns=["scaling_factor"]) 
+    df_20["n_clients"] = 20
 
-            mal_norm, malY = zip(*mal)
-            ax2.plot(SCALING_FACTORS[alpha], malY, 'o', label=f"{attack},{alpha}", color=colors[i],
-                     linestyle=linestyles[alpha_i], linewidth=2)
-            ax1.plot(SCALING_FACTORS[alpha], mal_norm, color=colors[i], linestyle=':', linewidth=2)
+    df_40 = pd.DataFrame(SCALING_FACTORS[40], columns=["scaling_factor"]) 
+    df_40["n_clients"] = 40
 
-    ax2.set_ylabel("Adversarial success")
-    ax2.set_ylim(0, 1.0)
 
-    ax1.set_xlabel('Scaling factor')
-    # ax1.set_xlim(left=1)
+    task_translation = {
+        "bgwall": "a2-wall",
+        "greencar": "a3-green",
+        "racingstripes": "a4-stripes"
+    }
 
-    ax1.set_ylabel("$L_2$-norm")
-    # plt.legend(bbox_to_anchor=(-0.016, 1.00, 1., .102), loc=3, ncol=4, columnspacing=0.75)
+    for filename in os.listdir(folder):
+        pattern = "cifar_lenet_minloss_wr_([a-z]+)_([0-9]+).csv"
+        match = re.search(pattern, filename, re.IGNORECASE)
+        if match:
+            attack_task = match.group(1)
+            n_clients = int(match.group(2))
 
-    custom_lines_colors = [Line2D([0], [0], linestyle="-", lw=2, color=colors[0]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[1]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[2])]
-    custom_lines_styles = [Line2D([0], [0], linestyle=ls, lw=2, color=COLOR_GRAY) for ls in linestyles[::-1]]
-    custom_benign = [Patch(facecolor=COLOR_BENIGN, label="Benign clients")]
-    leg1 = plt.legend(custom_lines_colors, ["Green cars", "Racing stripes", "Background wall"],
-                      bbox_to_anchor=(1.12, 0.46, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-                      title="Attack")
-    leg2 = plt.legend(custom_lines_styles, ["Distance", "Accuracy"],
-                      bbox_to_anchor=(1.12, 0.16, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-                      )
-    # leg3 = plt.legend(handles=custom_benign, bbox_to_anchor=(1.12, -0.26, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-    #                   )
-    leg1._legend_box.align = "left"
-    leg2._legend_box.align = "left"
-    # leg3._legend_box.align = "left"
-    ax2.add_artist(leg1)
-    ax2.add_artist(leg2)
-    # ax2.add_artist(leg3)
 
-    # plt.title("Comparison of $L_2$-norm of attacks under different participation rates", y=1.04, fontsize=FONT_SIZE)
-    plt.grid(True, linestyle=':', color='0.8', zorder=0)
-    F = plt.gcf()
-    F.set_size_inches(fig_size)
-    pdf_pages.savefig(F, bbox_inches='tight')
-    plt.clf()
-    pdf_pages.close()
+            df1 = pd.read_csv(f"{folder}/{filename}")
+            df1 = df1.tail(n=1) # attack happens only in last round (round 5)
+
+            # select and sort all backdoor columns and all norm columns
+            advsucc_cols = [col for col in df1.columns if "/adv_success" in col]
+            l2norm_cols = [col for col in df1.columns if "_l2_total/mal"in col]
+            advsucc_cols.sort()
+            l2norm_cols.sort()
+
+            # extract two columns and merge them into df
+            df_advsucc = pd.DataFrame(df1[advsucc_cols].transpose().values, columns=[f"{task_translation[attack_task]}_bdoor"])
+            df_l2norm = pd.DataFrame(df1[l2norm_cols].transpose().values, columns=[f"{task_translation[attack_task]}_l2norm"])
+            
+            if n_clients == 10:
+                df_10 = pd.concat([df_10, df_advsucc, df_l2norm], axis=1)
+            elif n_clients == 20:
+                df_20 = pd.concat([df_20, df_advsucc, df_l2norm], axis=1)
+            elif n_clients == 40:
+                df_40  = pd.concat([df_40, df_advsucc, df_l2norm], axis=1)
+            else:
+                print(f"Ignore file: {filename} with n_clients={n_clients}")
+
+
+        else:
+            print(f"no match: {filename}")
+
+    df = pd.concat([df_10, df_20, df_40])
+
+
+    df["alpha_fracadv"] = 1 / df["n_clients"]
+    return df
+
+
+
+
+def scaling_factor_adv_success(plotname):
+
+    df = build_df_scaling_norm_advsuccess()
+
+    df = df[df["n_clients"]==40]
+    
+
+    setup_plt()
+    task = get_task_styling()
+    name = plotname
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+   
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+        ##########################
+        # Draw all the lines         
+        ##########################
+
+        linewidth = 1.5
+        ax2.plot(df["scaling_factor"], df["a2-wall_bdoor"], marker="o", color=task["a2"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax2.plot(df["scaling_factor"], df["a3-green_bdoor"], marker="o", color=task["a3"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax2.plot(df["scaling_factor"], df["a4-stripes_bdoor"], marker="o", color=task["a4"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+
+        ax.plot(df["scaling_factor"], df["a2-wall_l2norm"], color=task["a2"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["scaling_factor"], df["a3-green_l2norm"], color=task["a3"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["scaling_factor"], df["a4-stripes_l2norm"], color=task["a4"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+
+        ##########################
+        # General Format         
+        ##########################
+
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+        ## Additional, custom legend                   
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+        
+        custom_lines_styles = [Line2D([0], [0], linestyle=task["norm"]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=task["bdoor"]["linestyle"], lw=2, color=COLOR_GRAY)]
+        
+        height = 0
+        width = 0.48
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                          mode="expand", title="Attack Tasks", bbox_to_anchor=(1.15, 1, width, height), loc="upper left", labelspacing=0.2)
+        
+        leg2 = ax.legend(custom_lines_styles, [task["norm"]["label"], task["bdoor"]["label"]],
+                          mode="expand", title="Metrics", bbox_to_anchor=(1.15, 0, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=None)
+        ax.set_ylabel("$L_2$ Norm of Update")
+
+        ax2.set_ylim(ymin=0, ymax=1.02)
+        ax2.set_ylabel("Task Accuracy")
+        ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=None)
+        ax.set_xlabel("Scaling factor")
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+    return fig, df
+
+
 
 def accuracy_pgd(plotname):
     pdf_pages = PdfPages('./plots/%s' % plotname)
@@ -736,89 +1059,133 @@ def endtoend_timing_bar(plotname, bound):
 
 
 def norm_distribution_benign(plotname):
-    pdf_pages = PdfPages('./plots/%s' % plotname)
-    params, fig_size = get_plt_params()
 
-    plt.rcParams.update(params)
-    matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-    matplotlib.rc('text', usetex=True)
+    df = build_df_scaling_norm_advsuccess()
 
-    plt.axes([0.12, 0.32, 0.85, 0.63], frameon=True)
-    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
+    name = plotname
+    setup_plt()
 
-    colors, linestyles = get_colorful_styles()
-    f, ax1 = plt.subplots()
+    task = get_task_styling()
 
-    NORM_KEY = "l2_total/mal"
-    ADV_KEY = "evaluation/adv_success"
-    RUNS = {
-        "greencar": {10: 10, 40: 9},
-        "racingstripes": {10: 10, 40: 7},
-        "bgwall": {10: 10, 40: 7}
-    }
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+   
+        fig, ax = plt.subplots()
 
-    linestyles = ['-', '--']
-    benign_avg = []  # debug
-    for i in [6]:
-        file = np.load(f'../../experiments_set/cifar_lenet/cifar_lenet_noniid_norms_oldlr/norms/round_{i}.npy',
-                       allow_pickle=True)
-        # file = np.load(f'../../experiments_set/norm/normround/round_{i}.npy', allow_pickle=True)
-        benign_norms_l2, benign_norms_l1, mal_norms_l2, mal_norms_l1 = file[0], file[1], file[2], file[3]
-        sns.distplot(benign_norms_l2, hist=False, kde=True,
-                     kde_kws={'shade': True, 'linewidth': 0}, ax=ax1)
+        ##########################
+        # Draw all the lines         
+        ##########################
 
-    ax2 = ax1.twinx()
-    for i, (attack, alphas) in enumerate(RUNS.items()):
-        for alpha_i, (alpha, cnt) in enumerate(alphas.items()):
-            mal_file = pd.read_csv(
-                os.path.join(plot_data_save_path, f'l2_comparison_attack/cifar_lenet_minloss_wr_{attack}_{alpha}.csv'))
+        for i in [6]:
+            file = np.load(f'./data/cifar_lenet/noniid_norms/round_{i}.npy',
+                           allow_pickle=True)
+            # file = np.load(f'../../experiments_set/norm/normround/round_{i}.npy', allow_pickle=True)
+            benign_norms_l2, benign_norms_l1, mal_norms_l2, mal_norms_l1 = file[0], file[1], file[2], file[3]
+            sns.distplot(benign_norms_l2, hist=False, kde=True, color="black", norm_hist=True,
 
-            mal = []
-            for id in range(0, cnt):
-                run = f"run-{id}"
-                val = mal_file[f"{run}_{ADV_KEY}"][4]
-                print(f"{attack} {alpha} {run}: {val}")
-                mal.append((mal_file[f"{run}_{NORM_KEY}"][4], mal_file[f"{run}_{ADV_KEY}"][4]))
+                         kde_kws={'shade': True, 'linewidth': 2, "alpha":0, "hatch": "///"}, ax=ax)
 
-            malX, malY = zip(*mal)
-            ax2.plot(malX, malY, 'o', label=f"{attack},{alpha}", color=colors[i], linestyle=linestyles[alpha_i],
-                     linewidth=2)
+        ax2 = ax.twinx()
 
-    ax2.set_ylabel("Adversarial success")
-    ax2.set_ylim(0, 1.0)
+        alphas = {
+            0.025: {
+                "label": "2.5 %",
+                "linestyle": "dashed"
+            },
+            0.05: {
+                "label": "5 %",
+                "linestyle": "dashdot"
+            },
 
-    ax1.set_xlabel('$L_2$-norm')
+            0.1:{
+                "label": "10 %",
+                "linestyle": "solid"
+            }
+        }
 
-    ax1.set_ylabel("Percentage of benign users")
-    # plt.legend(bbox_to_anchor=(-0.016, 1.00, 1., .102), loc=3, ncol=4, columnspacing=0.75)
+        for alpha in df["alpha_fracadv"].unique():
+            df1 = df[df["alpha_fracadv"]==alpha]
 
-    custom_lines_colors = [Line2D([0], [0], linestyle="-", lw=2, color=colors[0]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[1]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[2])]
-    custom_lines_styles = [Line2D([0], [0], linestyle=ls, lw=2, color=COLOR_GRAY) for ls in linestyles[::-1]]
-    custom_benign = [Patch(facecolor=COLOR_BENIGN, label="Benign clients")]
-    leg1 = plt.legend(custom_lines_colors, ["Green cars", "Racing stripes", "Background wall"],
-                      bbox_to_anchor=(1.12, 0.46, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-                      title="Attack")
-    leg2 = plt.legend(custom_lines_styles, ["$2.5\\%$", "$10\\%$"],
-                      bbox_to_anchor=(1.12, -0.08, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-                      title="$\\alpha$")
-    leg3 = plt.legend(handles=custom_benign, bbox_to_anchor=(1.12, -0.26, 1., .102), loc=3, ncol=1, columnspacing=0.75,
-                      )
-    leg1._legend_box.align = "left"
-    leg2._legend_box.align = "left"
-    leg3._legend_box.align = "left"
-    ax2.add_artist(leg1)
-    ax2.add_artist(leg2)
-    ax2.add_artist(leg3)
+            df1.sort_values("a2-wall_l2norm", inplace=True)
+            ax2.plot(df1["a2-wall_l2norm"], df1["a2-wall_bdoor"], linestyle=alphas[alpha]["linestyle"], marker="o", color=task["a2"]["color"])
+            
+            df1.sort_values("a3-green_l2norm", inplace=True)
+            ax2.plot(df1["a3-green_l2norm"], df1["a3-green_bdoor"], linestyle=alphas[alpha]["linestyle"], marker="o", color=task["a3"]["color"])
 
-    # plt.title("Comparison of $L_2$-norm of attacks under different participation rates", y=1.04, fontsize=FONT_SIZE)
-    plt.grid(True, linestyle=':', color='0.8', zorder=0)
-    F = plt.gcf()
-    F.set_size_inches(fig_size)
-    pdf_pages.savefig(F, bbox_inches='tight')
-    plt.clf()
-    pdf_pages.close()
+            df1.sort_values("a4-stripes_l2norm", inplace=True)
+            ax2.plot(df1["a4-stripes_l2norm"], df1["a4-stripes_bdoor"], linestyle=alphas[alpha]["linestyle"], marker="o", color=task["a4"]["color"])
+
+        
+
+        ##########################
+        # General Format         
+        ##########################
+
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+
+
+        ## Additional, custom legend                   
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+        
+        
+
+
+        matplotlib.rcParams['hatch.linewidth'] = 2
+        custom_lines_styles = [Line2D([0], [0], linestyle=alphas[0.025]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=alphas[0.05]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=alphas[0.1]["linestyle"], lw=2, color=COLOR_GRAY)]
+        
+        height = 0
+        width = 0.48
+
+
+        leg0 = ax.legend([mpatches.Patch(facecolor="white" , edgecolor="black", hatch="///", linewidth=2)], [task["benign_client"]["label"]], loc="lower right")
+
+
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                          mode="expand", title="Attack Tasks", bbox_to_anchor=(1.15, 1.05, width, height), loc="upper left", labelspacing=0.2)
+        
+        leg2 = ax.legend(custom_lines_styles, [alphas[0.025]["label"], alphas[0.05]["label"], alphas[0.1]["label"]],
+                          mode="expand", title=r"$\alpha$ (attackers)", bbox_to_anchor=(1.15, -0.05, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg0)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+
+        ax.set_ylabel("Density (KDE)")
+
+        ax2.set_ylim(ymin=0, ymax=1.02)
+        ax2.set_ylabel("Backdoor Accuracy")
+        ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=None)
+        ax.set_xlabel("$L_2$ Norm of Updates")
+        #ax.set_xticks(yticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+    return fig, df
+
+
+
+
+
+
+
+
+
+
+
 
 
 def norm_distribution_iid_noniid(plotname):
@@ -1261,84 +1628,94 @@ def inspect_norm_plot(plotname):
     plt.clf()
     pdf_pages.close()
 
-
+# TODO [nku] adjust color scheme
 def modelreplacement_cifar_plot(plotname):
     df = pd.read_csv(os.path.join(plot_data_save_path, 'e44_cifar_resnet.csv'))
-    df["Round"] = df["Round"].apply(lambda x: x - 5)
-    # print(df)
-    plot_types = [
-        'e44_cifar_attack_400_0.0001_full_evaluation',
-                  'e44_cifar_attack_400_0.0001_full_greencars_evaluation',
-                  'e44_cifar_resnet_racing_stripes_evaluation'
-                  ]
 
-    params, fig_size = get_plt_params()
+    # NEW
 
-    pdf_pages = PdfPages('./plots/%s' % plotname)
+    df1 = df[["Round"]]
+    df1 = df1.rename(columns={"Round": "round"})
 
-    plt.rcParams.update(params)
-    plt.axes([0.12, 0.32, 0.85, 0.63], frameon=True)
-    plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
+    # rename cols
+    for suffix, short in [("test_accuracy", "testacc"), ("adv_success", "advsucc")]:
+        
+        df1[f"a2-wall_{short}"] = df[f"e44_cifar_attack_400_0.0001_full_evaluation/{suffix}"]
+        df1[f"a3-green_{short}"] = df[f"e44_cifar_attack_400_0.0001_full_greencars_evaluation/{suffix}"]
+        df1[f"a4-stripes_{short}"] = df[f"e44_cifar_resnet_racing_stripes_evaluation/{suffix}"]
 
-    plt.rcParams.update(params)
-    matplotlib.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-    matplotlib.rc('text', usetex=True)
+    
+    df = df1
 
-    colors, linestyles = get_colorful_styles()
-    f, ax1 = plt.subplots()
 
-    legend_custom = {
-        'adv_success': 'Malicious objective',
-        'test_accuracy': 'Benign objective'
-    }
-    linestyles_custom = {
-        'adv_success': '-.',
-        'test_accuracy': '-'
-    }
-    colors_custom = {
-        'e44_cifar_attack_400_0.0001_full_greencars_evaluation': colors[0],
-        'e44_cifar_resnet_racing_stripes_evaluation': colors[1],
-        'e44_cifar_attack_400_0.0001_full_evaluation': colors[2]  # add colors 1
-    }
+    task = get_task_styling()
 
-    for id, type in enumerate(plot_types):
-        for suffix in ['adv_success', 'test_accuracy']:
-            # print(f"{type}/{suffix}")
-            # print(df[f"{type}/{suffix}"])
-            # df.plot(x='Round', y=plot_legend[type], style='o', label=plot_legend[type], color=colors[id], linestyle=linestyles[id], linewidth=2)
-            plt.plot(df.Round, df[f"{type}/{suffix}"], label=legend_custom[suffix], color=colors_custom[type],
-                     linestyle=linestyles_custom[suffix], linewidth=2)
+    name = plotname
+    setup_plt()
+    
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+   
+        fig, ax = plt.subplots()
 
-    plt.xlabel('Round')
-    # ax1.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0fk' % (y * 1e-3)))
+        ##########################
+        # Draw all the lines         
+        ##########################
+        linewidth = 1.5
+        ax.plot(df["round"], df[f"a2-wall_testacc"], color=task["a2"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_testacc"], color=task["a3"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_testacc"], color=task["a4"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
 
-    plt.ylabel("Accuracy")
-    plt.ylim(ymin=0, ymax=1.0)
-    plt.xlim(xmin=-5, xmax=300)
-    start, end = ax1.get_xlim()
-    xticks = np.arange(0, end + 1, 100)
-    # np.insert(xticks, 0, -5, axis=0)
-    ax1.xaxis.set_ticks(xticks)
+        ax.plot(df["round"], df[f"a2-wall_advsucc"], color=task["a2"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_advsucc"], color=task["a3"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_advsucc"], color=task["a4"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
 
-    # Additional, custom legend
-    custom_lines_colors = [Line2D([0], [0], linestyle="-", lw=2, color=colors[2]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[1]),
-                           Line2D([0], [0], linestyle="-", lw=2, color=colors[0])]
-    custom_lines_styles = [Line2D([0], [0], linestyle="-", lw=2, color=COLOR_GRAY),
-                           Line2D([0], [0], linestyle="-.", lw=2, color=COLOR_GRAY)]
-    leg1 = plt.legend(custom_lines_colors, ["Background wall", "Racing stripes", "Green cars"],
-                      bbox_to_anchor=(1., 0.57, 1., .102), loc=3, ncol=1, columnspacing=0.75)
-    leg2 = plt.legend(custom_lines_styles, ["Benign objective", "Malicious objective"],
-                      bbox_to_anchor=(1., 0.27, 1., .102), loc=3, ncol=1, columnspacing=0.75)
-    ax1.add_artist(leg1)
-    ax1.add_artist(leg2)
 
-    plt.grid(True, linestyle=':', color='0.8', zorder=0)
-    F = plt.gcf()
-    F.set_size_inches(fig_size)
-    pdf_pages.savefig(F, bbox_inches='tight')
-    plt.clf()
-    pdf_pages.close()
+        ##########################
+        # General Format         
+        ##########################
+            
+        ## Additional, custom legend                   
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+        
+
+        custom_lines_styles = [Line2D([0], [0], linestyle=task["main"]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=task["bdoor"]["linestyle"], lw=2, color=COLOR_GRAY)]
+        
+        height = 0
+        width = 0.48
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                          mode="expand", title="Attack Tasks", bbox_to_anchor=(1, 1, width, height), loc="upper left", labelspacing=0.2)
+
+        
+        leg2 = ax.legend(custom_lines_styles, [task["main"]["label"], task["bdoor"]["label"]],
+                          mode="expand", title="Metrics", bbox_to_anchor=(1, 0, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+        
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=1.02)
+        ax.set_ylabel("Task Accuracy")
+        ax.set_yticks([0,0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=300)
+        ax.set_xlabel("Rounds")
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return fig, df
 
 
 def modelreplacement_subspacepoisoning_attack_compare(plotname):
@@ -2154,7 +2531,8 @@ def plot_accuracy_round(plotname, df, plot_types, plot_legend, customize=None):
     pdf_pages.close()
 
 
-if __name__ == "__main__":
+def main():
+    return
     # e2e Plots
     selection = 'all'
     if len(sys.argv) > 1:
@@ -2190,6 +2568,7 @@ if __name__ == "__main__":
     if selection == 'constant_attack_lenet_bound_plot' or selection == 'all':
         constant_attack_lenet_bound_plot("constant_attack_lenet_bound_plot.pdf")
 
+    # TODO [nku] adjust to new style
     if selection == 'l2_norm_accuracy_compare_plot' or selection == 'all':
         norm_accuracy_compare_plot("l2_norm_accuracy_compare_plot.pdf", "L2")
     if selection == 'linf_norm_accuracy_compare_plot' or selection == 'all':
@@ -2253,3 +2632,6 @@ if __name__ == "__main__":
 
     if selection == 'cifar_lenet_wr_plot' or selection == 'all':
         cifar_lenet_wr_plot("cifar_lenet_wr_plot.pdf")
+
+if __name__ == "__main__":
+    main()
