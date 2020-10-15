@@ -58,6 +58,7 @@ def extract_histogram(experiment_name, tags, wanted_steps=None):
 
 
 if __name__ == '__main__':
+    
     def param_list(param):
         p_list = ast.literal_eval(param)
         if type(p_list) is not list:
@@ -87,4 +88,5 @@ if __name__ == '__main__':
     # if args.output not in ['summary', 'csv']:
     #     raise argparse.ArgumentTypeError("Parameter {} is not summary or csv".format(args.output))
 
-    extract_histogram(path, args.tags, wanted_steps=None)
+    #extract_histogram(path, args.tags, wanted_steps=None)
+

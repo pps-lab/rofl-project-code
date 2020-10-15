@@ -273,9 +273,9 @@ def cifar_lenet_wr_plot(plotname):
     pdf_pages.close()
 
 def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, add_legend=True, model="mnist"):
-    #df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
 
-    df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
+    #df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
 
     def build_df(df, norm, window_size, selected_round, pattern, col_baseline="e41_google_tasks_noconstrain_evaluation/test_accuracy", ignored_cols = ["e41_clipinf_0_03_evaluation/adv_success","e41_clipinf_0_03_evaluation/test_accuracy"]):
 
@@ -459,7 +459,7 @@ def get_plt_params():
     return params, [fig_width, fig_height]
 
 
-def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True, model="mnist"):
+def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True, model="mnist", xmax=600):
     
     
     if legend_type not in [None, "tootight", "ideal", "tooloose"]:
@@ -478,6 +478,11 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
         l8_bound_tootight = "e41_clipinf_0_0001_evaluation"
         l8_bound_ideal = "e41_clipinf_0_00100_evaluation"
         l8_bound_tooloose = "e41_emnist_clipinf_0_075_evaluation"
+
+        tootight_bound = (r"10^{-2}", r"10^{-4}") #(L2, L8)
+        ideal_bound = ("1", r"10^{-3}") #(L2, L8)
+        tooloose_bound = ("35", "0.075") #(L2, L8)
+
     elif model == "cifar":
         df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
 
@@ -489,24 +494,30 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
         l8_bound_ideal = None
         l8_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" # TODO maybe replace baseline
 
+        tootight_bound = ("-", "-") #(L2, L8)
+        ideal_bound = ("1", "-") #(L2, L8)
+        tooloose_bound = ("\infty", "\infty") #(L2, L8)
 
 
-    def build_df(df, norm, bound_tootight_key, bound_ideal_key,bound_tooloose_key, window_size):
 
-        df[f"{norm}_bound_tootight_advsuccess"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).mean()
-        df[f"{norm}_bound_tootight_testaccuracy"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).mean()
-        df[f"{norm}_bound_tootight_advsuccess_std"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).std()
-        df[f"{norm}_bound_tootight_testaccuracy_std"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).std()
+    def build_df(df, norm, bound_tootight_key, bound_ideal_key, bound_tooloose_key, window_size):
+        if bound_tootight_key is not None:
+            df[f"{norm}_bound_tootight_advsuccess"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).mean()
+            df[f"{norm}_bound_tootight_testaccuracy"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).mean()
+            df[f"{norm}_bound_tootight_advsuccess_std"] = df[f"{bound_tootight_key}/adv_success"].rolling(window_size).std()
+            df[f"{norm}_bound_tootight_testaccuracy_std"] = df[f"{bound_tootight_key}/test_accuracy"].rolling(window_size).std()
      
-        df[f"{norm}_bound_ideal_advsuccess"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).mean()
-        df[f"{norm}_bound_ideal_testaccuracy"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).mean()
-        df[f"{norm}_bound_ideal_advsuccess_std"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).std()
-        df[f"{norm}_bound_ideal_testaccuracy_std"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).std()
+        if bound_ideal_key is not None:
+            df[f"{norm}_bound_ideal_advsuccess"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).mean()
+            df[f"{norm}_bound_ideal_testaccuracy"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).mean()
+            df[f"{norm}_bound_ideal_advsuccess_std"] = df[f"{bound_ideal_key}/adv_success"].rolling(window_size).std()
+            df[f"{norm}_bound_ideal_testaccuracy_std"] = df[f"{bound_ideal_key}/test_accuracy"].rolling(window_size).std()
         
-        df[f"{norm}_bound_tooloose_advsuccess"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).mean()
-        df[f"{norm}_bound_tooloose_testaccuracy"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).mean()
-        df[f"{norm}_bound_tooloose_advsuccess_std"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).std()
-        df[f"{norm}_bound_tooloose_testaccuracy_std"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).std()
+        if bound_tooloose_key is not None:
+            df[f"{norm}_bound_tooloose_advsuccess"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).mean()
+            df[f"{norm}_bound_tooloose_testaccuracy"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).mean()
+            df[f"{norm}_bound_tooloose_advsuccess_std"] = df[f"{bound_tooloose_key}/adv_success"].rolling(window_size).std()
+            df[f"{norm}_bound_tooloose_testaccuracy_std"] = df[f"{bound_tooloose_key}/test_accuracy"].rolling(window_size).std()
         
         return df
 
@@ -530,66 +541,88 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
         colors = ["0.1", "0.3", "0.6"]
         linestyles = ["solid", "dotted"] #dashdot
 
-
+        line_d = {}
         plines = []
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_testaccuracy"], color=colors[0], linestyle=linestyles[0], linewidth=2)
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_testaccuracy"], color=colors[1], linestyle=linestyles[0], linewidth=2)
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_testaccuracy"], color=colors[2], linestyle=linestyles[0], linewidth=2)
-
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_advsuccess"], color=colors[0], linestyle=linestyles[1], linewidth=2)
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_advsuccess"], color=colors[1], linestyle=linestyles[1], linewidth=2)
-        plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2)
-
+        if f"{norm}_bound_tootight_testaccuracy" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_testaccuracy"], color=colors[0], linestyle=linestyles[0], linewidth=2)
+            line_d["tootight_tacc"] = len(plines)-1
+        if f"{norm}_bound_ideal_testaccuracy" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_testaccuracy"], color=colors[1], linestyle=linestyles[0], linewidth=2)
+            line_d["ideal_tacc"] = len(plines)-1
+        if f"{norm}_bound_tooloose_testaccuracy" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_testaccuracy"], color=colors[2], linestyle=linestyles[0], linewidth=2)
+            line_d["tooloose_tacc"] = len(plines)-1
+        if f"{norm}_bound_tootight_advsuccess" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_advsuccess"], color=colors[0], linestyle=linestyles[1], linewidth=2)
+            line_d["tootight_advs"] = len(plines)-1
+        if f"{norm}_bound_ideal_advsuccess" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_advsuccess"], color=colors[1], linestyle=linestyles[1], linewidth=2)
+            line_d["ideal_advs"] = len(plines)-1
+        if f"{norm}_bound_tooloose_advsuccess" in df.columns:
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2)
+            line_d["tooloose_advs"] = len(plines)-1
 
         lines = ax.get_lines()
 
         labels = ["Main Task", "Backdoor Task"]
         empty_patch = mpatches.Patch(color='none')
-    
-        if legend_type == "tootight":
-            title = "Bound too tight"
-            labels = ["($L_2 \leq 10^{-2}$, $L_{\infty} \leq 10^{-4}$)"] + labels
-            handles = [empty_patch, lines[0], lines[3]]
-        elif legend_type == "ideal":
-            title = "Bound ideal"
-            labels = ["($L_2 \leq 1$, $L_{\infty} \leq 10^{-3}$)"] + labels
-            handles = [empty_patch, lines[1], lines[4]]
-        elif legend_type == "tooloose":
-            title = "Bound too loose"
-            labels = ["($L_2 \leq 35$, $L_{\infty} \leq 0.075$)"] + labels
-            handles = [empty_patch, lines[2], lines[5]]
 
-        
-        if legend_type is not None:
+        handles=None
+    
+        if legend_type == "tootight" and "tootight_tacc" in line_d:
+            title = "Bound too tight"
+            labels = [f"($L_2 \leq {tootight_bound[0]}$, $L_{{\infty}} \leq {tootight_bound[1]}$)"] + labels
+            handles = [empty_patch, lines[line_d["tootight_tacc"]], lines[line_d["tootight_advs"]]]
+        elif legend_type == "ideal" and "ideal_tacc" in line_d:
+            title = "Bound ideal"
+            labels = [f"($L_2 \leq {ideal_bound[0]}$, $L_{{\infty}} \leq {ideal_bound[1]}$)"] + labels
+            handles = [empty_patch, lines[line_d["ideal_tacc"]], lines[line_d["ideal_advs"]]]
+        elif legend_type == "tooloose" and "tooloose_tacc" in line_d:
+            title = "Bound too loose"
+            labels = [f"($L_2 \leq {tooloose_bound[0]}$, $L_{{\infty}} \leq {tooloose_bound[1]}$)"] + labels
+            handles = [empty_patch, lines[line_d["tooloose_tacc"]], lines[line_d["tooloose_advs"]]]
+ 
+        if legend_type is not None and handles is not None:
             ax.legend(handles, labels, title_fontsize=20, bbox_to_anchor=(0., 1.02, 2/3, .102), mode="expand", loc="lower left", title=title, labelspacing=.05)  
             
 
         if use_error:
-        
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_tootight_advsuccess"]-df[f"{norm}_bound_tootight_advsuccess_std"],
-                    df[f"{norm}_bound_tootight_advsuccess"]+df[f"{norm}_bound_tootight_advsuccess_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_tooloose_advsuccess"]-df[f"{norm}_bound_tooloose_advsuccess_std"],
-                    df[f"{norm}_bound_tooloose_advsuccess"]+df[f"{norm}_bound_tooloose_advsuccess_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_ideal_advsuccess"]-df[f"{norm}_bound_ideal_advsuccess_std"],
-                    df[f"{norm}_bound_ideal_advsuccess"]+df[f"{norm}_bound_ideal_advsuccess_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_tootight_testaccuracy"]-df[f"{norm}_bound_tootight_testaccuracy_std"],
-                    df[f"{norm}_bound_tootight_testaccuracy"]+df[f"{norm}_bound_tootight_testaccuracy_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_tooloose_testaccuracy"]-df[f"{norm}_bound_tooloose_testaccuracy_std"],
-                    df[f"{norm}_bound_tooloose_testaccuracy"]+df[f"{norm}_bound_tooloose_testaccuracy_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-            ax.fill_between(df["Round"], 
-                    df[f"{norm}_bound_ideal_testaccuracy"]-df[f"{norm}_bound_ideal_testaccuracy_std"],
-                    df[f"{norm}_bound_ideal_testaccuracy"]+df[f"{norm}_bound_ideal_testaccuracy_std"],
-                    alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            
+            if f"{norm}_bound_tootight_advsuccess" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_tootight_advsuccess"]-df[f"{norm}_bound_tootight_advsuccess_std"],
+                        df[f"{norm}_bound_tootight_advsuccess"]+df[f"{norm}_bound_tootight_advsuccess_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            
+            if f"{norm}_bound_tooloose_advsuccess" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_tooloose_advsuccess"]-df[f"{norm}_bound_tooloose_advsuccess_std"],
+                        df[f"{norm}_bound_tooloose_advsuccess"]+df[f"{norm}_bound_tooloose_advsuccess_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+                
+            if f"{norm}_bound_ideal_advsuccess" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_ideal_advsuccess"]-df[f"{norm}_bound_ideal_advsuccess_std"],
+                        df[f"{norm}_bound_ideal_advsuccess"]+df[f"{norm}_bound_ideal_advsuccess_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+                
+            if f"{norm}_bound_tootight_testaccuracy" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_tootight_testaccuracy"]-df[f"{norm}_bound_tootight_testaccuracy_std"],
+                        df[f"{norm}_bound_tootight_testaccuracy"]+df[f"{norm}_bound_tootight_testaccuracy_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            
+            if f"{norm}_bound_tooloose_testaccuracy" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_tooloose_testaccuracy"]-df[f"{norm}_bound_tooloose_testaccuracy_std"],
+                        df[f"{norm}_bound_tooloose_testaccuracy"]+df[f"{norm}_bound_tooloose_testaccuracy_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
+            
+            if f"{norm}_bound_ideal_testaccuracy" in df.columns:
+                ax.fill_between(df["Round"], 
+                        df[f"{norm}_bound_ideal_testaccuracy"]-df[f"{norm}_bound_ideal_testaccuracy_std"],
+                        df[f"{norm}_bound_ideal_testaccuracy"]+df[f"{norm}_bound_ideal_testaccuracy_std"],
+                        alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
 
 
 
@@ -614,7 +647,7 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
         # X - Axis Format
         ##########################
 
-        ax.set_xlim(xmin=0, xmax=600)
+        ax.set_xlim(xmin=0, xmax=xmax)
 
         ax.set_xlabel("Rounds")
 
