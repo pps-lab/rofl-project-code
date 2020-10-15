@@ -7,7 +7,7 @@ import time
 
 from keras import Model
 from keras import backend as K
-
+import tensorflow as tf
 
 from fed_learning.server.global_model_config import GlobalModelConfig
 from fed_learning.client.local_model_config import LocalModelConfig
@@ -41,6 +41,9 @@ logger.setLevel(logging.INFO)
 class GlobalModel(object):
 
     def __init__(self, model_config: GlobalModelConfig, test_data):
+
+        seed = 420
+        tf.set_random_seed(seed)
 
         self.model_config = model_config
         self.model = self.build_model()

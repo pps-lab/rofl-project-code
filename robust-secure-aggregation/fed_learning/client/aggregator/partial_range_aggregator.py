@@ -35,7 +35,8 @@ class PartialRangeAggregator(SecureAggregator):
 
 
         np.random.seed(random_seed)
-        selected_indices = np.random.choice(range(0, total_commitments), int(total_commitments * 0.005), replace=False)
+        select_num = 3370 # int(total_commitments * 0.005)
+        selected_indices = np.random.choice(range(0, total_commitments), select_num, replace=False)
 
         training_finished_msg = super().generate_training_finished_msg(update_clipped, msg)
         
