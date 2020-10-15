@@ -7,7 +7,7 @@ import time
 
 from keras import Model
 from keras import backend as K
-
+import tensorflow as tf
 
 from fed_learning.server.global_model_config import GlobalModelConfig
 from fed_learning.client.local_model_config import LocalModelConfig
@@ -42,6 +42,9 @@ class GlobalModel(object):
 
     def __init__(self, model_config: GlobalModelConfig, test_data):
 
+        seed = 420
+        tf.set_random_seed(seed)
+
         self.model_config = model_config
         self.model = self.build_model()
         self.round_ids = []
@@ -52,6 +55,7 @@ class GlobalModel(object):
                 optimizer=self.model_config.optimizer,
                 metrics=self.model_config.metrics)
         logger.info('Number of parameters: %s' % self.model.count_params())
+        self.load_existing_model_if_exists()
         self.model.summary(print_fn=logger.info)
 
     def evaluate(self):
@@ -123,3 +127,12 @@ class GlobalModel(object):
         update_list = [np.reshape(u, s) for s, u in zip (shapes, update_ravelled)]
         return update_list
 
+    def load_existing_model_if_exists(self):
+        import keras
+        import os.path
+        model_name = 'models'
+        if os.path.isfile(model_name):
+            logger.info("Loading existing model weights")
+            model = keras.models.load_model(model_name)
+            weights = model.get_weights()
+            self.set_weights(weights)

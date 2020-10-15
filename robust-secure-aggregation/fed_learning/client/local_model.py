@@ -23,6 +23,8 @@ logger.setLevel(logging.INFO)
 class LocalModel(object):
 
     def __init__(self, model_config: LocalModelConfig, dataset: DataSet):
+        seed = 420
+        tf.set_random_seed(seed)
         self.model_config = model_config
         self.dataset = dataset
         self.round_ids = []
