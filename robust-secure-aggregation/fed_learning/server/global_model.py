@@ -62,6 +62,11 @@ class GlobalModel(object):
 
         end = time.time()
         results_writer.append(self.get_round_nr(), score[0], score[1], end - self.round_start_time)
+
+        if self.get_round_nr() % 5 == 0:
+            logger.info(f"Saving model at models")
+            self.model.save(f"models")
+
         return score
 
     def build_model(self, seed=None) -> Model:
