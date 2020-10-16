@@ -100,7 +100,7 @@ DATA_KEYS = {
 
 
 # Theming !
-output_dir = "."
+#output_dir = "."
 
 def setup_plt(square=False):
 
@@ -272,7 +272,7 @@ def cifar_lenet_wr_plot(plotname):
     plt.clf()
     pdf_pages.close()
 
-def norm_accuracy_tradeoff_plot(plotname, norm, xtickspacing=None, xmax=None, add_legend=True, model="mnist"):
+def norm_accuracy_tradeoff_plot(plotname, norm, output_dir, xtickspacing=None, xmax=None, add_legend=True, model="mnist"):
     df = pd.read_csv(os.path.join(plot_data_save_path, 'femnist_bounds_4.csv'))
 
     #df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
@@ -459,7 +459,7 @@ def get_plt_params():
     return params, [fig_width, fig_height]
 
 
-def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True, model="mnist", xmax=600):
+def norm_accuracy_compare_plot(plotname, norm, output_dir, legend_type=None, use_error=True, model="mnist", xmax=600, ignore_error=[], markevery=50):
     
     
     if legend_type not in [None, "tootight", "ideal", "tooloose"]:
@@ -486,16 +486,16 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
     elif model == "cifar":
         df = pd.read_csv(os.path.join(plot_data_save_path, 'cifar_bounds.csv'))
 
-        l2_bound_tootight = None
-        l2_bound_ideal = "e58_lr1_cifar_clipl2_evaluation"
-        l2_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" # TODO maybe replace baseline
+        l2_bound_tootight = "e58_lr1_cifar_clipl2_0.5_evaluation"
+        l2_bound_ideal = "e58_lr1_cifar_clipl2_10_evaluation"
+        l2_bound_tooloose = "e58_lr1_cifar_baseline_evaluation"
 
-        l8_bound_tootight = None
-        l8_bound_ideal = None
-        l8_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" # TODO maybe replace baseline
+        l8_bound_tootight = "e58_lr1_cifar_clip_0.004_evaluation"
+        l8_bound_ideal = "e58_lr1_cifar_clip_0.0055_evaluation"
+        l8_bound_tooloose = "e58_lr1_cifar_baseline_evaluation" 
 
-        tootight_bound = ("-", "-") #(L2, L8)
-        ideal_bound = ("1", "-") #(L2, L8)
+        tootight_bound = ("0.5", "0.004") #(L2, L8)
+        ideal_bound = ("10", "0.0055") #(L2, L8)
         tooloose_bound = ("\infty", "\infty") #(L2, L8)
 
 
@@ -544,22 +544,22 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
         line_d = {}
         plines = []
         if f"{norm}_bound_tootight_testaccuracy" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_testaccuracy"], color=colors[0], linestyle=linestyles[0], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_testaccuracy"], color=colors[0], linestyle=linestyles[0], linewidth=2, marker="s", markevery=markevery)
             line_d["tootight_tacc"] = len(plines)-1
         if f"{norm}_bound_ideal_testaccuracy" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_testaccuracy"], color=colors[1], linestyle=linestyles[0], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_testaccuracy"], color=colors[1], linestyle=linestyles[0], linewidth=2, marker="o", markevery=markevery)
             line_d["ideal_tacc"] = len(plines)-1
         if f"{norm}_bound_tooloose_testaccuracy" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_testaccuracy"], color=colors[2], linestyle=linestyles[0], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_testaccuracy"], color=colors[2], linestyle=linestyles[0], linewidth=2, marker="v", markevery=markevery)
             line_d["tooloose_tacc"] = len(plines)-1
         if f"{norm}_bound_tootight_advsuccess" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_advsuccess"], color=colors[0], linestyle=linestyles[1], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tootight_advsuccess"], color=colors[0], linestyle=linestyles[1], linewidth=2, marker="s", markevery=markevery)
             line_d["tootight_advs"] = len(plines)-1
         if f"{norm}_bound_ideal_advsuccess" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_advsuccess"], color=colors[1], linestyle=linestyles[1], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_ideal_advsuccess"], color=colors[1], linestyle=linestyles[1], linewidth=2, marker="o", markevery=markevery)
             line_d["ideal_advs"] = len(plines)-1
         if f"{norm}_bound_tooloose_advsuccess" in df.columns:
-            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2)
+            plines += ax.plot(df["Round"], df[f"{norm}_bound_tooloose_advsuccess"], color=colors[2], linestyle=linestyles[1], linewidth=2, marker="v", markevery=markevery)
             line_d["tooloose_advs"] = len(plines)-1
 
         lines = ax.get_lines()
@@ -594,12 +594,16 @@ def norm_accuracy_compare_plot(plotname, norm, legend_type=None, use_error=True,
                         df[f"{norm}_bound_tootight_advsuccess"]+df[f"{norm}_bound_tootight_advsuccess_std"],
                         alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
             
-            if f"{norm}_bound_tooloose_advsuccess" in df.columns:
+            if f"{norm}_bound_tooloose_advsuccess" in df.columns and f"{norm}_bound_tooloose_advsuccess" not in ignore_error:
                 ax.fill_between(df["Round"], 
                         df[f"{norm}_bound_tooloose_advsuccess"]-df[f"{norm}_bound_tooloose_advsuccess_std"],
                         df[f"{norm}_bound_tooloose_advsuccess"]+df[f"{norm}_bound_tooloose_advsuccess_std"],
                         alpha=1, edgecolor='#3F7F4C', facecolor=error_color, linewidth=0)
-                
+
+            elif f"{norm}_bound_tooloose_advsuccess" in ignore_error:
+                ax.annotate('* std large', xy=(500, 0.32), color=colors[2], xycoords='data', xytext=(0, 0), textcoords='offset points', horizontalalignment='right', verticalalignment='bottom')
+
+
             if f"{norm}_bound_ideal_advsuccess" in df.columns:
                 ax.fill_between(df["Round"], 
                         df[f"{norm}_bound_ideal_advsuccess"]-df[f"{norm}_bound_ideal_advsuccess_std"],
@@ -836,7 +840,7 @@ def build_df_scaling_norm_advsuccess():
 
 
 
-def scaling_factor_adv_success(plotname):
+def scaling_factor_adv_success(plotname, output_dir):
 
     df = build_df_scaling_norm_advsuccess()
 
@@ -1053,7 +1057,7 @@ def endtoend_timing_bar(plotname, bound):
     pdf_pages.close()
 
 
-def norm_distribution_benign(plotname):
+def norm_distribution_benign(plotname, output_dir):
 
     df = build_df_scaling_norm_advsuccess()
 
@@ -1624,7 +1628,7 @@ def inspect_norm_plot(plotname):
     pdf_pages.close()
 
 # TODO [nku] adjust color scheme
-def modelreplacement_cifar_plot(plotname):
+def modelreplacement_cifar_plot(plotname, output_dir):
     df = pd.read_csv(os.path.join(plot_data_save_path, 'e44_cifar_resnet.csv'))
 
     # NEW
