@@ -772,11 +772,12 @@ def hypergeometric_distribution(plotname):
     pdf_pages.close()
 
 
-def build_df_scaling_norm_advsuccess():
+def build_df_scaling_norm_advsuccess(prefix):
     SCALING_FACTORS = {
         10: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], # 10 clients selected -> have 10 scaling factors
         20: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19], # 20 client selected -> have 10 different scaling factors
         40: [1, 5, 9, 13, 17, 23, 27, 31, 35, 40] # 40 clients -> have 10 different scaling factors
+        # 40: [1, 10, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100]
     }
 
     folder = "./data/l2_comparison_attack"
@@ -798,7 +799,7 @@ def build_df_scaling_norm_advsuccess():
     }
 
     for filename in os.listdir(folder):
-        pattern = "cifar_lenet_minloss_wr_([a-z]+)_([0-9]+).csv"
+        pattern = f"{prefix}_([a-z]+)_([0-9]+).csv"
         match = re.search(pattern, filename, re.IGNORECASE)
         if match:
             attack_task = match.group(1)
@@ -811,25 +812,30 @@ def build_df_scaling_norm_advsuccess():
             # select and sort all backdoor columns and all norm columns
             advsucc_cols = [col for col in df1.columns if "/adv_success" in col]
             l2norm_cols = [col for col in df1.columns if "_l2_total/mal"in col]
+
             advsucc_cols.sort()
             l2norm_cols.sort()
 
             # extract two columns and merge them into df
             df_advsucc = pd.DataFrame(df1[advsucc_cols].transpose().values, columns=[f"{task_translation[attack_task]}_bdoor"])
             df_l2norm = pd.DataFrame(df1[l2norm_cols].transpose().values, columns=[f"{task_translation[attack_task]}_l2norm"])
-            
+
+            df_cc = pd.concat([df_advsucc, df_l2norm], axis=1)
+            df_sorted = df_cc.sort_values(f"{task_translation[attack_task]}_l2norm").reset_index(drop=True)
+
             if n_clients == 10:
-                df_10 = pd.concat([df_10, df_advsucc, df_l2norm], axis=1)
+                df_10 = pd.concat([df_10, df_sorted], axis=1)
             elif n_clients == 20:
-                df_20 = pd.concat([df_20, df_advsucc, df_l2norm], axis=1)
+                df_20 = pd.concat([df_20, df_sorted], axis=1)
             elif n_clients == 40:
-                df_40  = pd.concat([df_40, df_advsucc, df_l2norm], axis=1)
+                df_40  = pd.concat([df_40, df_sorted], axis=1)
             else:
                 print(f"Ignore file: {filename} with n_clients={n_clients}")
 
 
         else:
             print(f"no match: {filename}")
+
 
     df = pd.concat([df_10, df_20, df_40])
 
@@ -840,9 +846,10 @@ def build_df_scaling_norm_advsuccess():
 
 
 
-def scaling_factor_adv_success(plotname, output_dir):
+def scaling_factor_adv_success(plotname, output_dir, prefix=None, df=None):
 
-    df = build_df_scaling_norm_advsuccess()
+    if prefix is not None:
+        df = build_df_scaling_norm_advsuccess(prefix)
 
     df = df[df["n_clients"]==40]
     
@@ -1059,7 +1066,7 @@ def endtoend_timing_bar(plotname, bound):
 
 def norm_distribution_benign(plotname, output_dir):
 
-    df = build_df_scaling_norm_advsuccess()
+    df = build_df_scaling_norm_advsuccess("cifar_lenet_minloss_wr")
 
     name = plotname
     setup_plt()
@@ -1628,7 +1635,7 @@ def inspect_norm_plot(plotname):
     pdf_pages.close()
 
 # TODO [nku] adjust color scheme
-def modelreplacement_cifar_plot(plotname, output_dir):
+def modelreplacement_cifar_resnet56_plot(plotname, output_dir):
     df = pd.read_csv(os.path.join(plot_data_save_path, 'e44_cifar_resnet.csv'))
 
     # NEW
@@ -1691,6 +1698,182 @@ def modelreplacement_cifar_plot(plotname, output_dir):
         ax.add_artist(leg1)
         ax.add_artist(leg2)
         
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=1.02)
+        ax.set_ylabel("Task Accuracy")
+        ax.set_yticks([0,0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=300)
+        ax.set_xlabel("Rounds")
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return fig, df
+
+def modelreplacement_cifar_resnet18_plot(plotname, output_dir):
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'e44_cifar_resnet18.csv'))
+
+    # NEW
+
+    df1 = df[["Round"]]
+    df1 = df1.rename(columns={"Round": "round"})
+
+    # rename cols
+    for suffix, short in [("test_accuracy", "testacc"), ("adv_success", "advsucc")]:
+
+        df1[f"a2-wall_{short}"] = df[f"e3_cifar_resnet18_long_WALL_lrlow10_evaluation/{suffix}"]
+        df1[f"a3-green_{short}"] = df[f"e3_cifar_resnet18_long_GREEN_lrlow10_evaluation/{suffix}"]
+        df1[f"a4-stripes_{short}"] = df[f"e3_cifar_resnet18_long_STRIPES_lrlow10_evaluation/{suffix}"]
+
+
+    df = df1
+
+
+    task = get_task_styling()
+
+    name = plotname
+    setup_plt()
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+
+        fig, ax = plt.subplots()
+
+        ##########################
+        # Draw all the lines
+        ##########################
+        linewidth = 1.5
+        ax.plot(df["round"], df[f"a2-wall_testacc"], color=task["a2"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_testacc"], color=task["a3"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_testacc"], color=task["a4"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+
+        ax.plot(df["round"], df[f"a2-wall_advsucc"], color=task["a2"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_advsucc"], color=task["a3"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_advsucc"], color=task["a4"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+
+
+        ##########################
+        # General Format
+        ##########################
+
+        ## Additional, custom legend
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+
+
+        custom_lines_styles = [Line2D([0], [0], linestyle=task["main"]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=task["bdoor"]["linestyle"], lw=2, color=COLOR_GRAY)]
+
+        height = 0
+        width = 0.48
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                         mode="expand", title="Attack Tasks", bbox_to_anchor=(1, 1, width, height), loc="upper left", labelspacing=0.2)
+
+
+        leg2 = ax.legend(custom_lines_styles, [task["main"]["label"], task["bdoor"]["label"]],
+                         mode="expand", title="Metrics", bbox_to_anchor=(1, 0, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=1.02)
+        ax.set_ylabel("Task Accuracy")
+        ax.set_yticks([0,0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=20)
+        ax.set_xlabel("Rounds")
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return fig, df
+
+def modelreplacement_cifar_resnet18_lowerlr_plot(plotname, output_dir):
+    df = pd.read_csv(os.path.join(plot_data_save_path, 'e44_cifar_resnet18.csv'))
+
+    # NEW
+
+    df1 = df[["Round"]]
+    df1 = df1.rename(columns={"Round": "round"})
+
+    # rename cols
+    for suffix, short in [("test_accuracy", "testacc"), ("adv_success", "advsucc")]:
+
+        df1[f"a2-wall_{short}"] = df[f"e3_cifar_resnet18_long_WALL_lrlow_evaluation/{suffix}"]
+        df1[f"a3-green_{short}"] = df[f"e3_cifar_resnet18_long_GREEN_lrlow100_evaluation/{suffix}"]
+        df1[f"a4-stripes_{short}"] = df[f"e3_cifar_resnet18_long_STRIPES_lrlow100_evaluation/{suffix}"]
+
+
+    df = df1
+
+
+    task = get_task_styling()
+
+    name = plotname
+    setup_plt()
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+
+        fig, ax = plt.subplots()
+
+        ##########################
+        # Draw all the lines
+        ##########################
+        linewidth = 1.5
+        ax.plot(df["round"], df[f"a2-wall_testacc"], color=task["a2"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_testacc"], color=task["a3"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_testacc"], color=task["a4"]["color"], linestyle=task["main"]["linestyle"], linewidth=linewidth)
+
+        ax.plot(df["round"], df[f"a2-wall_advsucc"], color=task["a2"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a3-green_advsucc"], color=task["a3"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax.plot(df["round"], df[f"a4-stripes_advsucc"], color=task["a4"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+
+
+        ##########################
+        # General Format
+        ##########################
+
+        ## Additional, custom legend
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+
+
+        custom_lines_styles = [Line2D([0], [0], linestyle=task["main"]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=task["bdoor"]["linestyle"], lw=2, color=COLOR_GRAY)]
+
+        height = 0
+        width = 0.48
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                         mode="expand", title="Attack Tasks", bbox_to_anchor=(1, 1, width, height), loc="upper left", labelspacing=0.2)
+
+
+        leg2 = ax.legend(custom_lines_styles, [task["main"]["label"], task["bdoor"]["label"]],
+                         mode="expand", title="Metrics", bbox_to_anchor=(1, 0, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+
         ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
 
 
@@ -2538,7 +2721,7 @@ def main():
         selection = sys.argv[1]
 
     if selection == 'modelreplacement_cifar' or selection == 'all':
-        modelreplacement_cifar_plot("modelreplacement_cifar.pdf")
+        modelreplacement_cifar_resnet56_plot("modelreplacement_cifar.pdf")
 
     if selection == 'modelreplacement_subspacepoisoning_attack_compare' or selection == 'all':
         modelreplacement_subspacepoisoning_attack_compare("modelreplacement_subspacepoisoning_attack_compare.pdf")
@@ -2597,8 +2780,8 @@ def main():
     if selection == 'cifar_client_comparison_unbounded' or selection == 'all':
         cifar_client_comparison_unbounded("cifar_client_comparison_unbounded.pdf")
 
-    if selection == 'scaling_factor_adv_success' or selection == 'all':
-        scaling_factor_adv_success("scaling_factor_adv_success.pdf")
+    if selection == 'scaling_factor_adv_success_lenet' or selection == 'all':
+        scaling_factor_adv_success("scaling_factor_adv_success_lenet.pdf")
 
     if selection == 'endtoend_mnist_cnn_range' or selection == 'all':
         endtoend_accuracy_plot("endtoend_mnist_cnn_range.pdf", "mnist", "$L_\\infty$-norm bound for the MNIST task.",
