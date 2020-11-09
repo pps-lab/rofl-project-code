@@ -921,6 +921,76 @@ def scaling_factor_adv_success(plotname, output_dir, prefix=None, df=None):
     return fig, df
 
 
+def scaling_factor_adv_success_benign_norms(plotname, output_dir, df_adv, df_stats):
+
+    setup_plt()
+    task = get_task_styling()
+    name = plotname
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+        ##########################
+        # Draw all the lines
+        ##########################
+
+        linewidth = 1.5
+        ax2.plot(df_adv["scaling_factor"], df_adv["a2-wall_bdoor"], marker="o", color=task["a2"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax2.plot(df_adv["scaling_factor"], df_adv["a3-green_bdoor"], marker="o", color=task["a3"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+        ax2.plot(df_adv["scaling_factor"], df_adv["a4-stripes_bdoor"], marker="o", color=task["a4"]["color"], linestyle=task["bdoor"]["linestyle"], linewidth=linewidth)
+
+        ax.plot(df_adv["scaling_factor"], df_adv["a2-wall_l2norm"], color=task["a2"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+        ax.plot(df_adv["scaling_factor"], df_adv["a3-green_l2norm"], color=task["a3"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+        ax.plot(df_adv["scaling_factor"], df_adv["a4-stripes_l2norm"], color=task["a4"]["color"], linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+
+        num_points = len(df_adv["scaling_factor"])
+        ax.plot(df_adv["scaling_factor"], np.repeat(df_stats[df_stats["Round"] == '1']["max"], [num_points]), color="red", linestyle=task["norm"]["linestyle"], linewidth=linewidth)
+        ##########################
+        # General Format
+        ##########################
+
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+
+        ## Additional, custom legend
+        patches = [mpatches.Patch(color=task["a2"]["color"]), mpatches.Patch(color=task["a3"]["color"]), mpatches.Patch(color=task["a4"]["color"])]
+
+        custom_lines_styles = [Line2D([0], [0], linestyle=task["norm"]["linestyle"], lw=2, color=COLOR_GRAY),
+                               Line2D([0], [0], linestyle=task["bdoor"]["linestyle"], lw=2, color=COLOR_GRAY)]
+
+        height = 0
+        width = 0.48
+        leg1 = ax.legend(patches, [task["a2"]["label"], task["a3"]["label"], task["a4"]["label"]],
+                         mode="expand", title="Attack Tasks", bbox_to_anchor=(1.15, 1, width, height), loc="upper left", labelspacing=0.2)
+
+        leg2 = ax.legend(custom_lines_styles, [task["norm"]["label"], task["bdoor"]["label"]],
+                         mode="expand", title="Metrics", bbox_to_anchor=(1.15, 0, width, height), loc="lower left", labelspacing=0.2)
+        ax.add_artist(leg1)
+        ax.add_artist(leg2)
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        ax.set_ylim(ymin=0, ymax=None)
+        ax.set_ylabel("$L_2$ Norm of Update")
+
+        ax2.set_ylim(ymin=0, ymax=1.02)
+        ax2.set_ylabel("Task Accuracy")
+        ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        #ax.set_yticklabels(labels, fontsize=16, rotation=345)
+
+        ##########################
+        # X - Axis Format
+        ##########################
+        ax.set_xlim(xmin=0, xmax=None)
+        ax.set_xlabel("Scaling factor")
+        #ax.set_xticks(xticks)
+        #ax.set_xticklabels(labels, fontsize=16, rotation=345)
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.close()
+    return fig, df_adv
+
 
 def accuracy_pgd(plotname):
     pdf_pages = PdfPages('./plots/%s' % plotname)
