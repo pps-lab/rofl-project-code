@@ -7,7 +7,7 @@ This removes the requirement to first extract using command line
 """
 
 import os
-from os.path import isfile
+from os.path import isfile, isdir
 
 import pandas as pd
 import numpy as np
@@ -98,6 +98,21 @@ def create_df_benign_norms_statistics(directory):
     return df
 
 
-create_df_benign_norms_statistics("scaling_factor/benign_norms")
+def create_df_directory_test_adv(directory):
+    PATH = os.path.join(EXPERIMENTS_PATH, directory)
+
+    df = pd.DataFrame(list(range(1000)), columns=["Round"])
+
+    df1 = aggregate(PATH, 'df', ['events'], ["e63_*"],
+                    ['evaluation/test_accuracy', 'evaluation/adv_success'])
+
+    df = pd.concat([df, df1], axis=1)
+
+    return df
+
+
+create_df_directory_test_adv("edge_cases")
+
+# create_df_benign_norms_statistics("scaling_factor/benign_norms")
 
 # create_df_scaling_factor_resnet18()
