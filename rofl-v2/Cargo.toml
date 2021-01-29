@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "rofl_crypto",
+    "rofl_service"
+]

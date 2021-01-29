@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package flservice;
+
+
+service Flservice {
+
+    rpc TrainModel(stream TrainRequest) returns (stream TrainResponse);
+
+    rpc TerminateModelTraining(ModelSelection) returns (StatusMessage);
+
+    rpc ObserverModelTraining(stream ModelSelection) returns (stream ServerModelData);
+}
+
+message ModelConfig {
+    int32 num_of_clients = 1;
+    int32 client_batch_size = 2;
+    int32 num_local_epochs = 3;
+    string optimizer = 4;
+    float learning_rate = 5;
+    string loss = 6;
+    string metrics = 7;
+    bool image_augmentation = 8;
+    float lr_decay = 9;
+    int32 model_id = 10;
+    bool probabilistic_quantization = 11;
+    int32 fp_bits = 12;
+    int32 fp_frac = 13;
+    int32 range_bits = 14;
+}
+
+message CryptoConfig {
+    int32 value_range = 1;
+    int32 n_partition = 2;
+    int32 l2_value_range = 3;
+}
+        
+
+message DataBlock {
+    uint32 block_number = 1;
+    bytes data = 2;
+}
+
+message Config {
+    ModelConfig model_config = 1;
+    CryptoConfig crypto_config = 2;
+}
+
+message ServerModelData {
+    oneof model_message {
+        Config config = 1;
+        ModelParameters model_block = 2;
+        StatusMessage done_message = 3;
+    }
+}
+
+message WorkerRegisterMessage {
+    int32 model_id = 1;
+    int32 client_id = 2;
+}
+
+message ModelRegisterResponse {
+    bool success = 1;
+    int32 model_id = 2;
+}
+
+message StatusMessage {
+    enum Status {
+        OK = 0;
+        NOK = 1;
+        LATE = 2;
+        DONE = 3;
+    }
+    Status status = 1;
+}
+
+message ErrorMessage {
+    int32 version = 1;
+    string msg = 2;
+}
+
+message ModelParameters {
+    message ModelParametersMeta {
+        int32 model_id = 1;
+        int32 round_id = 2;
+        int32 num_blocks = 3;
+    }
+    oneof param_message {
+        ModelParametersMeta param_meta = 1;
+        DataBlock param_block = 2;
+    }
+}
+
+message TrainRequest {
+    oneof param_message {
+        WorkerRegisterMessage start_message = 1;
+        ModelParameters params = 2;
+        StatusMessage status_message = 3;
+    }
+}
+
+message TrainResponse {
+    oneof param_message {
+        ServerModelData params = 1;
+        ErrorMessage error_message = 2;
+    }
+}
+
+message ModelSelection {
+    int32 model_id = 1;
+}
