@@ -1,8 +1,31 @@
 
+pub const PLAIN_TYPE : u8 = 1;
+
 #[derive(Clone, Debug)]
 pub enum EncModelParamType {
     Plain
 }
+
+impl EncModelParamType {
+    pub fn get_type_int(&self) -> u8 {
+        match *self {
+            EncModelParamType::Plain => {
+                PLAIN_TYPE
+            }
+        }
+    }
+
+    pub fn get_type_from_int(int_type : &i32) -> Option<Self> {
+        let int_type_u8 = *int_type as u8;
+        match int_type_u8 {
+            PLAIN_TYPE => Some(EncModelParamType::Plain),
+            _ => None
+        }
+    }
+}
+
+
+
 #[derive(Clone)]
 pub enum EncModelParams {
     Plain(PlainParams)
@@ -80,6 +103,16 @@ impl EncModelParams {
             EncModelParamType::Plain => {
                 return EncModelParams::Plain(PlainParams {
                     content : bincode::deserialize(data).unwrap(),
+                });
+            }
+        }
+    }
+
+    pub fn encrypt(param_type : &EncModelParamType, plain_params : &PlainParams) -> Self {
+        match param_type {
+            EncModelParamType::Plain => {
+                return EncModelParams::Plain(PlainParams {
+                    content : plain_params.content.clone(),
                 });
             }
         }

@@ -37,6 +37,8 @@ pub struct CryptoConfig {
     pub n_partition: i32,
     #[prost(int32, tag = "3")]
     pub l2_value_range: i32,
+    #[prost(int32, tag = "4")]
+    pub enc_type: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DataBlock {
@@ -61,7 +63,7 @@ pub mod server_model_data {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ModelMessage {
         #[prost(message, tag = "1")]
-        CryptoConfig(super::Config),
+        Config(super::Config),
         #[prost(message, tag = "2")]
         ModelBlock(super::ModelParameters),
         #[prost(message, tag = "3")]

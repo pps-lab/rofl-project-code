@@ -29,6 +29,20 @@ pub struct TrainingState {
 
 impl TrainingState {
 
+    pub fn new(model_id : i32, model_config : ModelConfig, crypto_config : CryptoConfig, num_parmas : i32) -> Self {
+        TrainingState {
+            model_id : model_id,
+            model_config : model_config,
+            num_params : num_parmas,
+            in_training :  Arc::new(AtomicBool::new(true)),
+            crypto_config : crypto_config.clone(),
+            aggregation_type : EncModelParamType::get_type_from_int(&crypto_config.enc_type).unwrap(),
+            round_counter : Arc::new(AtomicI16::new(0)), 
+            channels :  Arc::new(RwLock::new(HashMap::new())),
+            rounds :  Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
     fn register_channel(&self, client_id : i32, sender : Sender<Result<TrainResponse, Status>>) -> usize {
         let tmp = Arc::clone(&self.channels);
         let mut tmp = tmp.write().unwrap();
@@ -85,7 +99,7 @@ impl TrainingState {
         let channels = self.get_channels_to_broadcast();
         let config_message = TrainResponse {
             param_message : Some(train_response::ParamMessage::Params(ServerModelData {
-                model_message : Some(server_model_data::ModelMessage::CryptoConfig(Config { 
+                model_message : Some(server_model_data::ModelMessage::Config(Config { 
                     model_config: Some(self.model_config.clone()), 
                     crypto_config : Some(self.crypto_config.clone())
                 }))
@@ -238,7 +252,19 @@ pub struct DefaultFlService {
 }
 
 impl DefaultFlService {
-    fn get_training_state_for_model(&self, model_id : i32) -> Option<TrainingState> {
+    pub fn new() -> Self {
+        DefaultFlService {
+            training_states : Arc::new(RwLock::new(Vec::new()))
+        }
+    }
+
+    pub fn register_new_trainig_state(&self, state : TrainingState) {
+        let tmp = Arc::clone(&self.training_states);
+        let mut list = tmp.write().unwrap(); 
+        list.push(state);
+    }
+
+    pub fn get_training_state_for_model(&self, model_id : i32) -> Option<TrainingState> {
         let tmp = Arc::clone(&self.training_states);
         let tmp = tmp.read().unwrap();
         for state in &*tmp {

@@ -23,3 +23,11 @@ tonic-build = "0.3"
 
 [profile.dev]
 opt-level = 2   
+
+[[bin]]
+name = "flserver"
+path = "src/bin/basic_server.rs"
+
+[[bin]]
+name = "flclients"
+path = "src/bin/basic_client.rs"

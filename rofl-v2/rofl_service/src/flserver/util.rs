@@ -46,4 +46,8 @@ impl DataBlockStorage {
     pub fn verify_round(&self, round_id : u32) -> bool {
         self.round_id == round_id
     }
+
+    pub fn get_round_id(&self) -> u32 {
+        self.round_id
+    }
 }

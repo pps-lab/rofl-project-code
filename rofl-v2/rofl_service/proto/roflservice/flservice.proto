@@ -33,6 +33,7 @@ message CryptoConfig {
     int32 value_range = 1;
     int32 n_partition = 2;
     int32 l2_value_range = 3;
+    int32 enc_type = 4;
 }
         
 
