@@ -24,7 +24,8 @@ impl DataBlockStorage {
         if data_block_msg.block_number != self.block_counter {
             return false;
         }
-        self.data.extend_from_slice(&data_block_msg.data[..]);       
+        self.data.extend_from_slice(&data_block_msg.data[..]); 
+        self.block_counter += 1;      
         true
     }
 

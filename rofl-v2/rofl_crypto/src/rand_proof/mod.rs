@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::ristretto::RistrettoPoint;
 use merlin::Transcript;
 use serde::{self, Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::Visitor;
@@ -19,7 +20,7 @@ pub use self::el_gamal::{ElGamalGens, ElGamalPair};
 mod errors;
 pub use self::errors::ProofError;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct RandProof {
     C_prime: ElGamalPair,
     Z_m: Scalar,
@@ -34,6 +35,23 @@ impl RandProof {
         r: Scalar) -> Result<(RandProof, ElGamalPair), ProofError> {
         
         let (party, c, c_prime) = Party::new(&eg_gens, m, r)?;
+        let dealer = Dealer::new(eg_gens, transcript, c);
+        
+        let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
+        let (z_m, z_r) = party.apply_challenge(challenge);
+
+        let rand_proof = dealer.receive_challenge_response(z_m, z_r)?;
+        Ok((rand_proof, c))
+    }
+
+    pub fn prove_existing(
+        eg_gens: &ElGamalGens,
+        transcript: &mut Transcript,
+        m: Scalar,
+        m_com: RistrettoPoint,
+        r: Scalar) -> Result<(RandProof, ElGamalPair), ProofError> {
+        
+        let (party, c, c_prime) = PartyExisting::new(&eg_gens, m, m_com, r)?;
         let dealer = Dealer::new(eg_gens, transcript, c);
         
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;

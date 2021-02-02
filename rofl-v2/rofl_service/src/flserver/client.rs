@@ -52,6 +52,13 @@ pub struct FlServiceClient {
 
 impl FlServiceClient {
 
+    pub fn new(client_id: i32, channel : tonic::transport::Channel) -> Self {
+        FlServiceClient {
+            client_id : client_id,
+            grpc : Box::new(FlserviceClient::new(channel)),
+        }
+    }
+
     pub fn train_model_locally(&self, params : PlainParams, conifg : &Config) -> Option<PlainParams> {
         Some(params)
     }
@@ -104,23 +111,31 @@ impl FlServiceClient {
     }
 
     pub async fn train_model(&mut self, model_id : i32, verbose: bool) -> () {
+        println!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+       
+        let client_id =  self.client_id;
+        let mut outbound_local = outbound.clone();
+        tokio::spawn(async move {
+            println!("Client {} registers to train model {}", client_id, model_id);
+            // Register phase
+            let request = TrainRequest {
+                param_message : Some(train_request::ParamMessage::StartMessage(WorkerRegisterMessage {
+                    model_id : model_id,
+                    client_id : client_id,
+                }))
+            };
+            let _res = outbound_local.send(request).await;
+        });
+
         let response = self.grpc.train_model(Request::new(rx)).await.unwrap();
         let mut inbound = response.into_inner();
-        
-        
-        // Register phase
-        let request = TrainRequest {
-            param_message : Some(train_request::ParamMessage::StartMessage(WorkerRegisterMessage {
-                model_id : model_id,
-                client_id : self.client_id,
-            }))
-        };
-        let _res = outbound.send(request).await;
 
         let mut state = ServerModelDataState::new();
         // Protocol loop
+        println!("Client {} starts protocol loop for model {}", client_id, model_id);
         while let Some(response) = inbound.message().await.unwrap() {
+           
             match response.param_message.unwrap() {
                 train_response::ParamMessage::Params(msg) => {
                     match msg.model_message.unwrap() {
@@ -141,7 +156,8 @@ impl FlServiceClient {
                                         let current_config_ref = state.get_current_config().unwrap();
                                         let trained_params = self.train_model_locally(params, current_config_ref);
                                         let encrypted_params = self.encrypt_data(&trained_params.unwrap(), current_config_ref);
-                                        self.handle_send_data(encrypted_params.unwrap(), &mut outbound, model_id, round_id).await
+                                        let _res = self.handle_send_data(encrypted_params.unwrap(), &mut outbound, model_id, round_id).await;
+                                        println!("Client {} finished training for round {}", client_id, round_id);
                                     }
                                 }
                             }

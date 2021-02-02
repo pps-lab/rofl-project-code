@@ -2,10 +2,38 @@
 #![allow(non_snake_case)]
 
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::ristretto::RistrettoPoint;
 use clear_on_drop::clear::Clear;
 
 use super::errors::*;
 use super::el_gamal::{ElGamalGens, ElGamalPair};
+
+pub struct PartyExisting {}
+
+impl PartyExisting {
+    pub fn new<'a>(
+        eg_gens: &'a ElGamalGens,
+        m: Scalar,
+        m_com: RistrettoPoint, 
+        r: Scalar
+    ) -> Result<(PartyAwaitingChallenge, ElGamalPair, ElGamalPair), ProofError> {
+        let c: ElGamalPair = eg_gens.complete_existing(m_com, r);
+        let mut rng = rand::thread_rng();
+
+        let m_prime: Scalar = Scalar::random(&mut rng);
+        let r_prime: Scalar = Scalar::random(&mut rng);
+
+        let c_prime: ElGamalPair = eg_gens.commit(m_prime, r_prime);
+
+        Ok((PartyAwaitingChallenge{
+            eg_gens: eg_gens,
+            m: m,
+            r: r,
+            m_prime: m_prime,
+            r_prime: r_prime,
+        }, c, c_prime))
+    }
+}
 
 pub struct Party {}
 

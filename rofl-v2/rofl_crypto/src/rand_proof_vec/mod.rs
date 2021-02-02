@@ -1,4 +1,5 @@
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::ristretto::RistrettoPoint;
 use merlin::Transcript;
 use rayon::prelude::*;
 
@@ -31,6 +32,41 @@ pub fn create_randproof_vec(
     
     let res_vec: Vec<Result<(RandProof, ElGamalPair), ProofError>> = 
     randproof_args.par_iter().map(|(x, r)| RandProof::prove(&eg_gens, &mut Transcript::new(b"RandProof"), **x, **r)).collect();
+    
+    let mut randproof_vec: Vec<RandProof> = Vec::with_capacity(value_vec.len());
+    let mut eg_pair_vec: Vec<ElGamalPair> = Vec::with_capacity(value_vec.len());
+    for r in res_vec {
+        match r {
+            Ok((rp, eg_par)) => {
+                randproof_vec.push(rp);
+                eg_pair_vec.push(eg_par);
+            }
+            Err(e) => return Err(e.into())
+        }
+    }
+    Ok((randproof_vec, eg_pair_vec))
+}
+
+pub fn create_randproof_vec_existing(
+    value_vec: &Vec<f32>,
+    existing_value_com_vec: Vec<RistrettoPoint>,
+    random_vec: &Vec<Scalar>,
+    ) -> Result<(Vec<RandProof>, Vec<ElGamalPair>), RandProofError> {
+    
+    if value_vec.len() != random_vec.len() {
+        return Err(RandProofError::WrongNumBlindingFactors);
+    }
+
+    let value_scalar_vec: Vec<Scalar> = f32_to_scalar_vec(&value_vec);
+    // let value_fp_vec: Vec<URawFix> = f32_to_fp_vec(&value_vec);
+    // let value_scalar_vec: Vec<Scalar> = value_fp_vec.iter().map(|x| Scalar::from(*x as u64)).collect();
+
+    let eg_gens: ElGamalGens = ElGamalGens::default();
+
+    let randproof_args: Vec<((&Scalar, &Scalar), &RistrettoPoint)> = value_scalar_vec.iter().zip(random_vec).zip(&existing_value_com_vec).collect();
+    
+    let res_vec: Vec<Result<(RandProof, ElGamalPair), ProofError>> = 
+    randproof_args.par_iter().map(|((x, r), p)| RandProof::prove_existing(&eg_gens, &mut Transcript::new(b"RandProof"), **x, **p, **r)).collect();
     
     let mut randproof_vec: Vec<RandProof> = Vec::with_capacity(value_vec.len());
     let mut eg_pair_vec: Vec<ElGamalPair> = Vec::with_capacity(value_vec.len());

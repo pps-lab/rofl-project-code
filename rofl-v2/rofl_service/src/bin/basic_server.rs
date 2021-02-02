@@ -2,6 +2,7 @@
 use rofl_service::flserver::server::DefaultFlService;
 use rofl_service::flserver::server::TrainingState;
 use rofl_service::flserver::params;
+use rofl_service::flserver::flservice::flservice_server::FlserviceServer;
 use rofl_service::flserver::flservice::{ModelConfig, CryptoConfig};
 use tonic::{transport::Server};
 use clap::{Arg, App};
@@ -11,10 +12,10 @@ fn dummy_training_state(num_clients : i32, num_params : i32) -> TrainingState {
           num_of_clients: num_clients,
           client_batch_size: 10,
           num_local_epochs: 1,
-          optimizer: String::form("sgd"),
+          optimizer: "sgd".to_string(),
           learning_rate: 0.5,
-          loss:  String::form("crossentropy"),
-          metrics: String::form("accuracy"),
+          loss:  "crossentropy".to_string(),
+          metrics: "accuracy".to_string(),
           image_augmentation: false,
           lr_decay: 0.5,
           model_id: 1,
@@ -53,7 +54,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                           .get_matches();
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
-    //let addr : &str = format!("{}:{}",ip, port).parse().unwrap();
+    let addr = format!("{}:{}",ip, port).parse().unwrap();
     let service = DefaultFlService::new();
+    service.register_new_trainig_state(dummy_training_state(10, 100));
+    Server::builder()
+        .tcp_nodelay(true)
+        .add_service(FlserviceServer::new(service))
+        .serve(addr)
+        .await?;
     Ok(())
 }

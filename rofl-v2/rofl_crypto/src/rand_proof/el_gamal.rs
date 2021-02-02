@@ -9,7 +9,7 @@ use curve25519_dalek::traits::MultiscalarMul;
 use bulletproofs::PedersenGens;
 
 use core::fmt::Debug;
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, AddAssign};
 use sha3::Sha3_512;
 use serde::{self, Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::Visitor;
@@ -53,6 +53,13 @@ impl ElGamalGens {
             R: (&blinding*&self.B),
         }
     }
+
+    pub fn complete_existing(&self, value: RistrettoPoint, blinding: Scalar) -> ElGamalPair {
+        ElGamalPair{ 
+            L: value,
+            R: (&blinding*&self.B),
+        }
+    }
 }
 
 // ElGamalPair -------------------------------------------------
@@ -66,6 +73,13 @@ pub struct ElGamalPair {
 }
 
 impl ElGamalPair {
+    pub fn unity() -> Self {
+        ElGamalPair {
+            L: RISTRETTO_BASEPOINT_POINT,
+            R: RISTRETTO_BASEPOINT_POINT
+        }
+    }
+    
     pub fn serialized_size(&self) -> usize {
         2*32
     }
@@ -99,6 +113,14 @@ impl<'a, 'b> Add<&'b ElGamalPair> for &'a ElGamalPair {
         }
     }
 }
+
+impl<'b> AddAssign<&'b ElGamalPair> for ElGamalPair {
+    fn add_assign(&mut self, _rhs: &ElGamalPair) {
+        self.L += _rhs.L;
+        self.R += _rhs.R;
+    }
+}
+
 
 impl Add<ElGamalPair> for ElGamalPair {
     type Output = ElGamalPair;

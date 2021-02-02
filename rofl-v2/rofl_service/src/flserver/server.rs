@@ -1,3 +1,4 @@
+use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
@@ -22,7 +23,6 @@ pub struct TrainingState {
     in_training :  Arc<AtomicBool>,
     crypto_config : CryptoConfig,
     aggregation_type : EncModelParamType,
-    round_counter : Arc<AtomicI16>, 
     channels :  Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
     rounds :  Arc<RwLock<Vec<TrainingRoundState>>>,
 }
@@ -34,10 +34,9 @@ impl TrainingState {
             model_id : model_id,
             model_config : model_config,
             num_params : num_parmas,
-            in_training :  Arc::new(AtomicBool::new(true)),
+            in_training :  Arc::new(AtomicBool::new(false)),
             crypto_config : crypto_config.clone(),
             aggregation_type : EncModelParamType::get_type_from_int(&crypto_config.enc_type).unwrap(),
-            round_counter : Arc::new(AtomicI16::new(0)), 
             channels :  Arc::new(RwLock::new(HashMap::new())),
             rounds :  Arc::new(RwLock::new(Vec::new())),
         }
@@ -78,7 +77,16 @@ impl TrainingState {
     }
 
     fn get_round(&self) -> i32 {
-       todo!();
+        let state = self.get_current_round_state();
+        if state.is_none() {
+            return 0;
+        }
+        state.unwrap().round_id
+    }
+
+    fn set_traning_running(&self) {
+        let tmp = Arc::clone(&self.in_training);
+        tmp.store(true, Ordering::SeqCst);
     }
 
     fn init_params(&self) -> PlainParams {
@@ -86,10 +94,15 @@ impl TrainingState {
     }
 
     fn init_round(&self) {
+        self.start_new_round(0);
+    }
+
+    fn start_new_round(&self, round_id : i32) {
         let tmp = Arc::clone(&self.rounds);
         let mut tmp = tmp.write().unwrap();
+
         tmp.push(TrainingRoundState::new(
-            0,
+            round_id,
             self.model_config.num_of_clients,
             EncModelParams::unity(&self.aggregation_type, self.num_params as usize),
         ));
@@ -172,7 +185,7 @@ enum RoundState {
 pub struct TrainingRoundState {
     round_id : i32,
     expected_clients : i32,
-    param_aggr : Arc<RwLock<EncModelParams>>,
+    param_aggr : Arc<RwLock<EncModelParamsAccumulator>>,
     verifed_counter : Arc<AtomicI16>, 
     done_counter : Arc<AtomicI16>, 
     state : Arc<RwLock<RoundState>>,
@@ -180,7 +193,7 @@ pub struct TrainingRoundState {
 }
 
 impl TrainingRoundState {
-    pub fn new( round_id : i32, expected_clients : i32, param_aggr : EncModelParams) -> Self {
+    pub fn new( round_id : i32, expected_clients : i32, param_aggr : EncModelParamsAccumulator) -> Self {
         return TrainingRoundState {
             round_id : round_id,
             expected_clients : expected_clients,
@@ -287,6 +300,7 @@ impl Flservice for DefaultFlService {
         ) -> Result<Response<Self::TrainModelStream>, Status> {
             let mut streamer = request.into_inner();
             let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+            //println!("", client_id, init.model_id);
 
             // Handle Register Message verifed_counter
             let req = streamer.message().await.unwrap();
@@ -328,6 +342,7 @@ impl Flservice for DefaultFlService {
             // Are all clients registered?
             if (num_channels == training_state.get_num_clients() as usize) {
                println!("Initialize model and broadcast it to clients");
+               training_state.set_traning_running();
                training_state.init_round();
                training_state.broadcast_models(&training_state.init_params()).await;
                println!("First training round has started");
@@ -369,8 +384,10 @@ impl Flservice for DefaultFlService {
                                         let local_enc_params = EncModelParams::deserialize(&training_state_local.aggregation_type, block_storage.data_ref());
                                         block_storage.reset_mem();
                                         let res = tokio::task::spawn_blocking(move || {  
+                                            
                                             if local_group_state.accumulate(&local_enc_params) {
                                                 let done = local_group_state.increment_done_counter();
+                                                println!("Aggregate Model of client {} for round {}", client_id, local_group_state.round_id);
                                                 let mut model = None;
                                                 if done + 1 == local_group_state.expected_clients as i16 {
                                                     // Aggregation has finished for this round, start the next round
@@ -391,8 +408,10 @@ impl Flservice for DefaultFlService {
                                             let res = tokio::task::spawn_blocking(move || {  
                                                 let ok = local_enc_params.verify();
                                                 if ok {
+                                                    println!("Model of client {} for round {} is valid!", client_id, local_blocking_group_state.round_id);
                                                     local_blocking_group_state.verifaction_done();
                                                 } else {
+                                                    println!("Model of client {} for round {} is not valid!", client_id, local_blocking_group_state.round_id);
                                                     local_blocking_group_state.verifaction_error(format!("Verification for client {} round {} failed", client_id, local_blocking_group_state.round_id));
                                                 }
                                             });
@@ -406,7 +425,9 @@ impl Flservice for DefaultFlService {
                                             local_group_state.wait_for_verif_completion().await;
                                             // round is done, broadcast the new model
                                             println!("All client models received for round {}", local_group_state.round_id);
-                                            training_state_local.broadcast_models(&model.unwrap()).await;
+                                            let params = model.unwrap();
+                                            training_state_local.start_new_round(local_group_state.round_id + 1);
+                                            training_state_local.broadcast_models(&params).await;
                                         }
 
                                     }
