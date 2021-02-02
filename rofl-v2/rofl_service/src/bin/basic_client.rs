@@ -1,3 +1,4 @@
+use rofl_crypto::pedersen_ops::zero_scalar_vec;
 use rofl_service::flserver::client::FlServiceClient;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -6,7 +7,8 @@ use std::time::Duration;
 
 async fn start_dummy_client(client_id : i32, model_id : i32, verbose : bool) {
     let channel = tonic::transport::Channel::from_static("http://[::1]:50051").connect().await.unwrap();
-    let mut client =  FlServiceClient::new(client_id, channel);
+    let blindings = zero_scalar_vec(100);
+    let mut client =  FlServiceClient::new(client_id, channel, blindings);
     client.train_model(model_id, verbose).await;
 }
 

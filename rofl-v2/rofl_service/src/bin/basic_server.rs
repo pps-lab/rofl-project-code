@@ -20,15 +20,15 @@ fn dummy_training_state(num_clients : i32, num_params : i32) -> TrainingState {
           lr_decay: 0.5,
           model_id: 1,
           probabilistic_quantization: false,
-          fp_bits: 12,
-          fp_frac: 12,
+          fp_bits: 16,
+          fp_frac: 5,
           range_bits: 2,
      };
      let crypto_config = CryptoConfig {
-          value_range: 12,
-          n_partition: 2,
-          l2_value_range: 4,
-          enc_type: params::PLAIN_TYPE as i32,
+          value_range: 8,
+          n_partition: 1,
+          l2_value_range: 8,
+          enc_type: params::ENC_RANGE_TYPE as i32,
      };
      TrainingState::new(model_confing.model_id, model_confing, crypto_config, num_params)
 }

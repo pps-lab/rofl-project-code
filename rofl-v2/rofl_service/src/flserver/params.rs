@@ -201,7 +201,7 @@ impl EncModelParams {
         }
     }
 
-    pub fn encrypt(param_type : &EncModelParamType, plain_params : &PlainParams, config : &CryptoConfig, blindings : Option<&Vec<Scalar>>) -> Option<Self> {
+    pub fn encrypt(param_type : &EncModelParamType, plain_params : &PlainParams, config : &CryptoConfig, blindings : &Vec<Scalar>) -> Option<Self> {
         match param_type {
             EncModelParamType::Plain => {
                 return Some(EncModelParams::Plain(PlainParams {
@@ -209,14 +209,12 @@ impl EncModelParams {
                 }));
             }
             EncModelParamType::EncRange => {
-                if let Some(scalar_ref) = blindings {
-                    return Some(EncModelParams::EncRange(EncParamsRange::encrypt(
-                        &plain_params.content, 
-                        scalar_ref, 
-                        config.value_range as usize, 
-                        config.n_partition as usize)));
-                }
-                return None;
+                return Some(EncModelParams::EncRange(EncParamsRange::encrypt(
+                    &plain_params.content, 
+                    blindings, 
+                    config.value_range as usize, 
+                    config.n_partition as usize)));
+
             }
         }
     }

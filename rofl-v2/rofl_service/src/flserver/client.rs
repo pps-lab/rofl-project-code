@@ -1,4 +1,6 @@
+use bincode::Options;
 use tokio::sync::mpsc::Sender;
+use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
 use crate::flserver::util::DataBlockStorage;
 use super::flservice::flservice_client::FlserviceClient;
@@ -55,14 +57,16 @@ fn get_crypto_config(config : &Config) -> Option<&CryptoConfig> {
 pub struct FlServiceClient {
     client_id : i32,
     grpc : Box<FlserviceClient<tonic::transport::Channel>>,
+    blindings : Vec<Scalar>
 }
 
 impl FlServiceClient {
 
-    pub fn new(client_id: i32, channel : tonic::transport::Channel) -> Self {
+    pub fn new(client_id: i32, channel : tonic::transport::Channel, scalars : Vec<Scalar>) -> Self {
         FlServiceClient {
             client_id : client_id,
             grpc : Box::new(FlserviceClient::new(channel)),
+            blindings : scalars
         }
     }
 
@@ -72,8 +76,9 @@ impl FlServiceClient {
 
     pub fn encrypt_data(&self, params : &PlainParams, conifg : &Config) -> Option<EncModelParams> {
         let enc_type_opt = get_enc_type_from_config(conifg);
+        let crypto_config = get_crypto_config(conifg).unwrap();
         if let Some(enc_type) = enc_type_opt {
-            return Some(EncModelParams::encrypt(&enc_type, params));
+            return Some(EncModelParams::encrypt(&enc_type, params, crypto_config, &self.blindings).unwrap());
         }
         None
     }
