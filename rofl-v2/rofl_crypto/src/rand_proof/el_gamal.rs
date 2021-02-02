@@ -80,12 +80,12 @@ impl ElGamalPair {
         }
     }
     
-    pub fn serialized_size(&self) -> usize {
+    pub fn serialized_size() -> usize {
         2*32
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(self.serialized_size());
+        let mut buf = Vec::with_capacity(Self::serialized_size());
         buf.extend_from_slice(self.L.compress().as_bytes());
         buf.extend_from_slice(self.R.compress().as_bytes());
         buf

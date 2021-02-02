@@ -3,6 +3,6 @@ pub mod client;
 pub mod params;
 pub mod util;
 
-pub mod flservice; /*{
+pub mod flservice {
     tonic::include_proto!("flservice");
-}*/
+}

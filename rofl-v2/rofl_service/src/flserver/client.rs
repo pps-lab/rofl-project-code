@@ -45,6 +45,13 @@ fn get_enc_type_from_config(config : &Config) -> Option<EncModelParamType> {
     None
 }
 
+fn get_crypto_config(config : &Config) -> Option<&CryptoConfig> {
+    if let Some(crypto_config) = &config.crypto_config {
+        return  Some(crypto_config);
+    }
+    None
+}
+
 pub struct FlServiceClient {
     client_id : i32,
     grpc : Box<FlserviceClient<tonic::transport::Channel>>,

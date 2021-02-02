@@ -84,6 +84,10 @@ impl RandProof {
         Ok(())
     }
 
+    pub fn serialized_size() -> usize {
+        4*32
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = Vec::with_capacity(4*32);
         buf.extend_from_slice(&self.C_prime.to_bytes());

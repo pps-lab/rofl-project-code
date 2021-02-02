@@ -42,6 +42,13 @@ message DataBlock {
     bytes data = 2;
 }
 
+message EncRangeData {
+    bytes enc_values = 1;
+    bytes rand_proof = 2;
+    repeated bytes range_proof = 3;
+    int32 range_bits = 4;
+}
+
 message Config {
     ModelConfig model_config = 1;
     CryptoConfig crypto_config = 2;
