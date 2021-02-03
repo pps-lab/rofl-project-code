@@ -22,7 +22,7 @@ pub use self::errors::ProofError;
 use crate::square_rand_proof::pedersen::{SquareRandProofCommitments, PedersenCommitment};
 use crate::square_rand_proof::constants::{LABEL_COMMIT_REAL_PEDERSEN, LABEL_COMMIT_REAL_ELGAMAL, LABEL_COMMIT_PRIME_PEDERSEN, LABEL_CHALLENGE_SCALAR, LABEL_COMMIT_PRIME_ELGAMAL, LABEL_RESPONSE_Z_M, LABEL_RESPONSE_R_1, LABEL_RESPONSE_R_2};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct SquareRandProof {
     C_prime: SquareRandProofCommitments,
     Z_m: Scalar,
@@ -34,6 +34,24 @@ pub struct SquareRandProof {
  * Implements a RandProof as well as a commitment to the square of m
  */
 impl SquareRandProof {
+    pub fn prove_existing (
+        eg_gens: &ElGamalGens,
+        transcript: &mut Transcript,
+        m: Scalar,
+        m_com: RistrettoPoint,
+        r_1: Scalar,
+        r_2: Scalar) -> Result<(SquareRandProof, SquareRandProofCommitments), ProofError> {
+        
+        let (party, c, c_prime) = PartyExisting::new(&eg_gens, m, m_com, r_1, r_2)?;
+        let dealer = Dealer::new(eg_gens, transcript, c);
+        
+        let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
+        let (z_m, z_r_1, z_r_2) = party.apply_challenge(challenge);
+
+        let rand_proof = dealer.receive_challenge_response(z_m, z_r_1, z_r_2)?;
+        Ok((rand_proof, c))
+    }
+
     pub fn prove(
         eg_gens: &ElGamalGens,
         transcript: &mut Transcript,
@@ -88,6 +106,12 @@ impl SquareRandProof {
 
         Ok(())
     }
+
+    pub fn serialized_size() -> usize {
+        SquareRandProofCommitments::serialized_size() + 3 * 32
+    }
+
+
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = Vec::with_capacity(6*32);

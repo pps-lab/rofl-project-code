@@ -16,6 +16,50 @@ use reduce::Reduce;
 use bulletproofs::{RangeProof, PedersenGens, BulletproofGens};
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 
+pub fn create_l2rangeproof_vec_existing(
+    value_vec: &Vec<f32>,
+    value_com_vec: Vec<RistrettoPoint>,
+    random_vec: &Vec<Scalar>,
+    random_vec_2: &Vec<Scalar>,
+    ) -> Result<(Vec<SquareRandProof>, Vec<SquareRandProofCommitments>), L2RangeProofError> {
+    
+    if value_vec.len() != random_vec.len() {
+        return Err(L2RangeProofError::WrongNumBlindingFactors);
+    }
+
+    let value_scalar_vec: Vec<Scalar> = f32_to_scalar_vec(&value_vec);
+
+    let eg_gens: ElGamalGens = ElGamalGens::default();
+
+    // Concatenate togeter
+    let randproof_args_1: Vec<(((&Scalar, &Scalar), &Scalar), &RistrettoPoint)> = value_scalar_vec.iter()
+        .zip(random_vec)
+        .zip(random_vec_2)
+        .zip(&value_com_vec).collect();
+
+    // Add random vector
+    // let rand_2_vec = rnd_scalar_vec(random_vec.len());
+    //let randproof_args_2: Vec<((&Scalar, &Scalar), &Scalar)> = randproof_args_1.into_iter().zip_eq(random_vec_2).collect();
+
+    // Actual randproof, item-wise
+    let res_vec: Vec<Result<(SquareRandProof, SquareRandProofCommitments), ProofError>> =
+    randproof_args_1.par_iter().map(|(((x, r_1), r_2), m_com)| SquareRandProof::prove_existing(&eg_gens, &mut Transcript::new(b"SquareRandProof"), **x, **m_com, **r_1, **r_2)).collect();
+
+    // Add to vector and concatenate
+    let mut randproof_vec: Vec<SquareRandProof> = Vec::with_capacity(value_vec.len());
+    let mut commitments_pair_vec: Vec<SquareRandProofCommitments> = Vec::with_capacity(value_vec.len());
+    for r in res_vec {
+        match r {
+            Ok((rp, eg_par)) => {
+                randproof_vec.push(rp);
+                commitments_pair_vec.push(eg_par);
+            }
+            Err(e) => return Err(e.into())
+        }
+    }
+    Ok((randproof_vec, commitments_pair_vec))
+}
+
 pub fn create_l2rangeproof_vec(
     value_vec: &Vec<f32>,
     random_vec: &Vec<Scalar>,

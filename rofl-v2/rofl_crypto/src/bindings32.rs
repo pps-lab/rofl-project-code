@@ -463,7 +463,7 @@ pub extern fn verify_l2proof(
     }
 
     let v_rand = square_rand_proof_vec::verify_l2rangeproof_vec(&rand_proof_vec, &eg_pair_vec);
-    let v_range = l2_range_proof_vec::verify_rangeproof_l2(range_proof, square_commit, prove_range);
+    let v_range = l2_range_proof_vec::verify_rangeproof_l2(&range_proof, &square_commit, prove_range);
 
     match (v_rand, v_range) {
         (Ok(v1), Ok(v2)) => {

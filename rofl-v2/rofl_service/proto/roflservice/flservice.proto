@@ -49,6 +49,15 @@ message EncRangeData {
     int32 range_bits = 4;
 }
 
+message EncNormData {
+    bytes enc_values = 1;
+    bytes square_proof = 2;
+    repeated bytes range_proof = 3;
+    bytes square_range_proof = 4;
+    int32 range_bits = 5;
+    int32 l2_range_bits = 6;
+}
+
 message Config {
     ModelConfig model_config = 1;
     CryptoConfig crypto_config = 2;

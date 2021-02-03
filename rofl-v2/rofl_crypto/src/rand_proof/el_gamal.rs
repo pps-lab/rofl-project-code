@@ -84,6 +84,10 @@ impl ElGamalPair {
         2*32
     }
 
+    pub fn right_elem_is_unity(&self) -> bool {
+        self.R == RISTRETTO_BASEPOINT_POINT
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(Self::serialized_size());
         buf.extend_from_slice(self.L.compress().as_bytes());

@@ -13,6 +13,57 @@ use bulletproofs::range_proof_mpc::messages::BitCommitment;
 use crate::commit;
 use crate::conversion32::square;
 
+pub struct PartyExisting {}
+
+impl PartyExisting {
+    pub fn new<'a>(
+        eg_gens: &'a ElGamalGens,
+        m: Scalar,
+        m_com : RistrettoPoint,
+        r_1: Scalar,
+        r_2: Scalar
+    ) -> Result<(PartyAwaitingChallenge, SquareRandProofCommitments, SquareRandProofCommitments), ProofError> {
+
+        // Construct corresponding pedersen generators
+        let c_eg: ElGamalPair = eg_gens.complete_existing(m_com, r_1);
+        let p_gens = PedersenGens{B: eg_gens.B, B_blinding: eg_gens.B_blinding};
+
+        let m_sq = m * m; // TODO lhidde: Can this overflow?
+        let c_p: RistrettoPoint = p_gens.commit(m_sq, r_2);
+
+        let mut rng = rand::thread_rng();
+
+        let m_prime: Scalar = Scalar::random(&mut rng);
+        let r_1_prime: Scalar = Scalar::random(&mut rng);
+        let r_2_prime: Scalar = Scalar::random(&mut rng);
+
+        let c_prime: ElGamalPair = eg_gens.commit(m_prime, r_1_prime);
+
+        let p_gens_prime = PedersenGens{B: c_eg.L, B_blinding: eg_gens.B_blinding};
+        let c_sq_prime: RistrettoPoint = p_gens_prime.commit(m_prime, r_2_prime);
+
+        let commitments = SquareRandProofCommitments {
+            c: c_eg,
+            c_sq: c_p
+        };
+        let commitments_prime = SquareRandProofCommitments {
+            c: c_prime,
+            c_sq: c_sq_prime
+        };
+
+        Ok((PartyAwaitingChallenge{
+            eg_gens: eg_gens,
+            m: m,
+            r_1: r_1,
+            r_2: r_2,
+
+            m_prime: m_prime,
+            r_1_prime: r_1_prime,
+            r_2_prime: r_2_prime
+        }, commitments, commitments_prime))
+    }
+}
+
 pub struct Party {}
 
 impl Party {

@@ -1,4 +1,3 @@
-use bincode::Options;
 use tokio::sync::mpsc::Sender;
 use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
@@ -7,7 +6,6 @@ use super::flservice::flservice_client::FlserviceClient;
 use super::{flservice::flservice_server::Flservice, params::{EncModelParamType, EncModelParams, PlainParams}};
 use super::flservice::{DataBlock, Config, ModelConfig, CryptoConfig, ServerModelData, WorkerRegisterMessage, ModelRegisterResponse, StatusMessage, ModelParameters, TrainRequest, TrainResponse, ModelSelection};
 use super::flservice::{train_request, train_response, server_model_data, model_parameters};
-use std::sync::Arc;
 use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tonic::{Request};
@@ -162,7 +160,7 @@ impl FlServiceClient {
                                     state.data.init(meta);
                                 }
                                 ParamMessage::ParamBlock(data_block) => {
-                                    let ok = state.data.apply(&data_block);
+                                    let _ok = state.data.apply(&data_block);
                                     if state.data.done() {
                                         let params = PlainParams::deserialize(state.data.data_ref());
                                         let round_id = state.data.get_round_id();

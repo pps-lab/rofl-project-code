@@ -143,12 +143,12 @@ pub fn convert_sym_range_to_asym_fp_range(range_exp: usize) -> usize {
 }
 
 
-pub fn verify_rangeproof_l2(range_proof: RangeProof, commit: RistrettoPoint, prove_range: usize)
+pub fn verify_rangeproof_l2(range_proof: &RangeProof, commit: &RistrettoPoint, prove_range: usize)
 -> Result<bool, ProofError>{
 
     // TODO lhidde: Make efficient
-    let range_proof_vec = vec![range_proof];
-    let commit_vec = vec![commit];
+    let range_proof_vec = vec![range_proof.clone()];
+    let commit_vec = vec![commit.clone()];
 
     // shift up
     let pc_gens = PedersenGens::default();
@@ -254,7 +254,7 @@ mod tests {
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![1.25], prove_range);
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
         let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
-        let res = verify_rangeproof_l2(range_proof, commit, N_BITS);
+        let res = verify_rangeproof_l2(&range_proof, &commit, N_BITS);
         assert!(res.unwrap());
     }
 
@@ -265,7 +265,7 @@ mod tests {
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![1.25, 0.5, 0.25], prove_range);
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
         let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
-        let res = verify_rangeproof_l2(range_proof, commit, N_BITS);
+        let res = verify_rangeproof_l2(&range_proof, &commit, N_BITS);
         assert!(res.unwrap());
     }
 
@@ -282,7 +282,7 @@ mod tests {
         // println!("bb {:?} {:?}", bb, scalar_to_f32(&mul));
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
         let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
-        let res = verify_rangeproof_l2(range_proof, commit, prove_range);
+        let res = verify_rangeproof_l2(&range_proof, &commit, prove_range);
         assert!(res.unwrap());
     }
 
@@ -292,7 +292,7 @@ mod tests {
         let values: Vec<f32> = vec![-7.9];
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
         let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
-        let res = verify_rangeproof_l2(range_proof, commit, prove_range);
+        let res = verify_rangeproof_l2(&range_proof, &commit, prove_range);
         assert!(res.unwrap());
     }
 
@@ -326,7 +326,7 @@ mod tests {
         let fake_blinding: Scalar = Scalar::random(&mut rng);
         let pcs = PedersenGens::default();
         let fake_commit: RistrettoPoint = pcs.commit(Scalar::from(fake_value), fake_blinding);
-        assert!(!verify_rangeproof_l2(range_proof_vec, fake_commit, N_BITS).unwrap());
+        assert!(!verify_rangeproof_l2(&range_proof_vec, &fake_commit, N_BITS).unwrap());
     }
 
     #[test]
@@ -343,7 +343,7 @@ mod tests {
 
         let (rangeproof_vec, commit_vec) =
             create_rangeproof_l2(&value_vec, &blinding_vec, prove_range, n_partition).unwrap();
-        assert!(verify_rangeproof_l2(rangeproof_vec, commit_vec, prove_range).unwrap());
+        assert!(verify_rangeproof_l2(&rangeproof_vec, &commit_vec, prove_range).unwrap());
     }
 
     #[test]
@@ -389,7 +389,7 @@ mod tests {
         let fake_commit: RistrettoPoint = pcs.commit(fake_value, fake_blinding);
         let mut fake_commit_vec = commit_vec_vec.clone();
 
-        assert!(!verify_rangeproof_l2(rangeproof_vec, fake_commit_vec, prove_range).unwrap());
+        assert!(!verify_rangeproof_l2(&rangeproof_vec, &fake_commit_vec, prove_range).unwrap());
     }
 
     #[test]
@@ -417,9 +417,9 @@ mod tests {
         let (range_proof_y, commitments_y) = create_rangeproof_l2(&y_vec, &blindings[1], range_exp, n_partition).unwrap();
         let (range_proof_z, commitments_z) = create_rangeproof_l2(&z_vec, &blindings[2], range_exp, n_partition).unwrap();
 
-        assert!(verify_rangeproof_l2(range_proof_x, commitments_x, range_exp).unwrap());
-        assert!(verify_rangeproof_l2(range_proof_y, commitments_y, range_exp).unwrap());
-        assert!(verify_rangeproof_l2(range_proof_z, commitments_z, range_exp).unwrap());
+        assert!(verify_rangeproof_l2(&range_proof_x, &commitments_x, range_exp).unwrap());
+        assert!(verify_rangeproof_l2(&range_proof_y, &commitments_y, range_exp).unwrap());
+        assert!(verify_rangeproof_l2(&range_proof_z, &commitments_z, range_exp).unwrap());
         let sum_vec_rp: Vec<RistrettoPoint> = vec![commitments_x, commitments_y, commitments_z];
         let sum_vec_scalar = default_discrete_log_vec(&sum_vec_rp);
         let sum_vec = scalar_to_f32_vec(&sum_vec_scalar);

@@ -20,15 +20,15 @@ fn dummy_training_state(num_clients : i32, num_params : i32, num_in_memory : i32
           lr_decay: 0.5,
           model_id: 1,
           probabilistic_quantization: false,
-          fp_bits: 16,
-          fp_frac: 5,
-          range_bits: 2,
+          fp_bits: 32,
+          fp_frac: 7,
+          range_bits: 8,
      };
      let crypto_config = CryptoConfig {
           value_range: 8,
           n_partition: 1,
-          l2_value_range: 8,
-          enc_type: params::ENC_RANGE_TYPE as i32,
+          l2_value_range: 32,
+          enc_type: params::ENC_L2_TYPE as i32,
      };
      TrainingState::new(model_confing.model_id, model_confing, crypto_config, num_params, num_in_memory)
 }
@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}",ip, port).parse().unwrap();
     let service = DefaultFlService::new();
-    service.register_new_trainig_state(dummy_training_state(10, 100, 5));
+    service.register_new_trainig_state(dummy_training_state(10, 1000, 5));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

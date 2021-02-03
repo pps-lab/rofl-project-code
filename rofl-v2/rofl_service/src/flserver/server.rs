@@ -118,7 +118,7 @@ impl TrainingState {
 
         let to_keep =  self.in_memory_rounds as usize;
         if tmp.len() > to_keep {
-            for it in 0..(tmp.len() - to_keep) {
+            for _it in 0..(tmp.len() - to_keep) {
                 if tmp.first().unwrap().is_done() {
                     tmp.remove(0);
                 } else {
@@ -415,7 +415,7 @@ impl Flservice for DefaultFlService {
                                         //TODO: maybe use a seperate thread pool for verification
                                         let blocking_enc_params = Arc::clone(&local_enc_params);
                                         if blocking_enc_params.verifiable() {
-                                            let res = tokio::task::spawn_blocking(move || {  
+                                            let _res = tokio::task::spawn_blocking(move || {  
                                                 let ok = blocking_enc_params.verify();
                                                 if ok {
                                                     println!("Model of client {} for round {} is valid!", client_id, local_blocking_group_state.round_id);
@@ -457,6 +457,7 @@ impl Flservice for DefaultFlService {
                                             println!("All client models received for round {}", local_group_state.round_id);
                                             let params = model.unwrap();
                                             training_state_local.start_new_round(local_group_state.round_id + 1);
+                                            println!("Broadcast new model for round {}", local_group_state.round_id + 1);
                                             training_state_local.broadcast_models(&params).await;
                                         }
 

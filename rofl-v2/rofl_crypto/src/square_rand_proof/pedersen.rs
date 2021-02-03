@@ -19,12 +19,12 @@ pub struct SquareRandProofCommitments {
 }
 
 impl SquareRandProofCommitments {
-    pub fn serialized_size(&self) -> usize {
+    pub fn serialized_size() -> usize {
         3 * 32
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(self.serialized_size());
+        let mut buf = Vec::with_capacity(SquareRandProofCommitments::serialized_size());
         buf.extend_from_slice(self.c.to_bytes().as_slice());
         buf.extend_from_slice(self.c_sq.compress().as_bytes());
         buf

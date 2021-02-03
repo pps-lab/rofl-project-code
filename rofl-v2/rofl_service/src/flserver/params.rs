@@ -1,5 +1,5 @@
 use prost::Message;
-use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
+use rofl_crypto::{l2_range_proof_vec, pedersen_ops::rnd_scalar_vec, rand_proof::{ElGamalPair, RandProof}, square_rand_proof::{SquareRandProof, pedersen::SquareRandProofCommitments}, square_rand_proof_vec};
 use rofl_crypto::rand_proof_vec;
 use rofl_crypto::range_proof_vec;
 use rofl_crypto::pedersen_ops::default_discrete_log_vec;
@@ -8,18 +8,20 @@ use bulletproofs::RangeProof;
 use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::MultiscalarMul;
-use super::flservice::{EncRangeData, CryptoConfig};
-use std::io::Cursor;
+use super::flservice::{EncRangeData, CryptoConfig, EncNormData};
+use std::{collections::btree_map::Range, io::Cursor, todo};
 
 
 
 pub const PLAIN_TYPE : u8 = 1;
 pub const ENC_RANGE_TYPE : u8 = 2;
+pub const ENC_L2_TYPE : u8 = 3;
 
 #[derive(Clone, Debug)]
 pub enum EncModelParamType {
     Plain,
-    EncRange
+    EncRange,
+    EncL2
 }
 
 impl EncModelParamType {
@@ -31,6 +33,9 @@ impl EncModelParamType {
             EncModelParamType::EncRange => {
                 ENC_RANGE_TYPE
             }
+            EncModelParamType::EncL2 => {
+                ENC_L2_TYPE
+            }
         }
     }
 
@@ -39,6 +44,7 @@ impl EncModelParamType {
         match int_type_u8 {
             PLAIN_TYPE => Some(EncModelParamType::Plain),
             ENC_RANGE_TYPE => Some(EncModelParamType::EncRange),
+            ENC_L2_TYPE => Some(EncModelParamType::EncL2),
             _ => None
         }
     }
@@ -46,6 +52,10 @@ impl EncModelParamType {
 
 fn extract_pedersen_vec(gamal_vec : &Vec<ElGamalPair>) -> Vec<RistrettoPoint> {
     return gamal_vec.iter().map(|x| x.L).collect();
+}
+
+fn extract_pedersen_vec_l2(gamal_vec : &[SquareRandProofCommitments]) -> Vec<RistrettoPoint> {
+    return gamal_vec.iter().map(|x| x.c.L).collect();
 }
 
 #[derive(Clone)]
@@ -64,6 +74,14 @@ impl EncModelParamsAccumulator {
         false
     }
 
+    fn l2_vec_accumulate(&mut self, other : &Vec<SquareRandProofCommitments>) -> bool {
+        if let EncModelParamsAccumulator::Enc(gamal_vector) = self {
+            gamal_vector.iter_mut().zip(other).for_each(|(a, b)| *a += &b.c);
+            return true;
+        }
+        false
+    }
+
     pub fn accumulate_other(&mut self, other: &EncModelParams) -> bool {
         match other {
             EncModelParams::Plain(params) => {
@@ -75,6 +93,9 @@ impl EncModelParamsAccumulator {
             EncModelParams::EncRange(params) => {
                 return self.gamal_accumulate(&params.enc_values);
             }
+            EncModelParams::EncL2(params) => {
+                return self.l2_vec_accumulate(&params.enc_values);
+            }
         }
     }
 
@@ -84,6 +105,14 @@ impl EncModelParamsAccumulator {
                 return Some(params.content.clone());
             }
             EncModelParamsAccumulator::Enc(enc_params) => {
+                // Check if aggregation is correct
+                for pair in enc_params {
+                    if !pair.right_elem_is_unity() {
+                        //Todo: error with result would be nicer instead of option 
+                        return None;
+                    }
+                }
+
                 let rp_vec = extract_pedersen_vec(enc_params);
                 let scalar_vec: Vec<Scalar> = default_discrete_log_vec(&rp_vec);
                 let f32_vec: Vec<f32> = scalar_to_f32_vec(&scalar_vec);
@@ -97,7 +126,8 @@ impl EncModelParamsAccumulator {
 #[derive(Clone)]
 pub enum EncModelParams {
     Plain(PlainParams),
-    EncRange(EncParamsRange)
+    EncRange(EncParamsRange),
+    EncL2(EncParamsL2)
 }
 
 
@@ -117,26 +147,15 @@ impl EncModelParams {
             EncModelParamType::EncRange => {
                 return EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size]);
             }
-        }
-    }
-
-    /*pub fn accumulate_other(&mut self, other: &Self) -> bool {
-        match self {
-            EncModelParams::Plain(params) => {
-                if let EncModelParams::Plain(other_plain) = other {
-                    return params.accumulate_other(&other_plain);
-                }
-                false
-            }
-            EncModelParamType::EncRange => {
+            EncModelParamType::EncL2 => {
                 return EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size]);
             }
         }
-    }*/
+    }
 
     pub fn verify(&self) -> bool {
         match self {
-            EncModelParams::Plain(params) => {
+            EncModelParams::Plain(_) => {
                 return true;
             }
             EncModelParams::EncRange(params) => {
@@ -152,15 +171,34 @@ impl EncModelParams {
                 }
                 return false;
             }
+            EncModelParams::EncL2(params) => {
+                //Check rand proof 
+                let res = square_rand_proof_vec::verify_l2rangeproof_vec(&params.square_proofs, &params.enc_values);
+                if let Ok(ok) = res {
+                     //Check range proof 
+                    let vec_tmp = extract_pedersen_vec_l2(&params.enc_values);
+                    let range_res = range_proof_vec::verify_rangeproof(&params.range_proofs, &vec_tmp, params.prove_range);
+                    if let Ok(ok_range) = range_res {
+                         //Check square
+                        let sum = params.enc_values.iter().map(|x| x.c_sq).sum();
+                        let res_sum = l2_range_proof_vec::verify_rangeproof_l2(&params.square_range_proof, &sum, params.l2_prove_range);
+                        if let Ok(ok_sum) = res_sum {
+                            return ok && ok_range && ok_sum;
+                        }
+                       
+                    }
+                }
+                return false;
+            }
         }
     }
 
     pub fn verifiable(&self) -> bool {
         match self {
-            EncModelParams::Plain(params) => {
+            EncModelParams::Plain(_) => {
                 return false;
             }
-            EncModelParams::EncRange(params) => {
+            _ => {
                 return true;
             }
         }
@@ -174,6 +212,9 @@ impl EncModelParams {
             EncModelParams::EncRange(params) => {
                 return params.enc_values.len()
             }
+            EncModelParams::EncL2(params) => {
+                return params.enc_values.len()
+            }
         }
     }
 
@@ -183,6 +224,9 @@ impl EncModelParams {
                 return bincode::serialize(&params.content).unwrap();
             }
             EncModelParams::EncRange(params) => {
+                return params.serialize();
+            }
+            EncModelParams::EncL2(params) => {
                 return params.serialize();
             }
         }
@@ -197,6 +241,9 @@ impl EncModelParams {
             }
             EncModelParamType::EncRange => {
                 return EncModelParams::EncRange(EncParamsRange::deserialize(data));
+            }
+            EncModelParamType::EncL2 => {
+                return EncModelParams::EncL2(EncParamsL2::deserialize(data));
             }
         }
     }
@@ -216,6 +263,14 @@ impl EncModelParams {
                     config.n_partition as usize)));
 
             }
+            EncModelParamType::EncL2 => {
+                return Some(EncModelParams::EncL2(EncParamsL2::encrypt(
+                    &plain_params.content, 
+                    blindings, 
+                    config.value_range as usize, 
+                    config.n_partition as usize,
+                    config.l2_value_range as usize)));
+            }
         }
     }
 }
@@ -233,7 +288,7 @@ fn encode_el_gamal_vec(enc_values : &Vec<ElGamalPair>) -> Vec<u8> {
     out
 }
 
-fn decode_el_gamal_vec(encoded : &Vec<u8>) -> Vec<ElGamalPair> {
+fn decode_el_gamal_vec(encoded : &[u8]) -> Vec<ElGamalPair> {
     //TODO error handling
     let num_elems = encoded.len() / ElGamalPair::serialized_size();
     let mut out = Vec::with_capacity(num_elems);
@@ -252,7 +307,7 @@ fn encode_rand_proof_vec(values : &Vec<RandProof>) -> Vec<u8> {
     out
 }
 
-fn decode_rand_proof_vec(encoded : &Vec<u8>) -> Vec<RandProof> {
+fn decode_rand_proof_vec(encoded : &[u8]) -> Vec<RandProof> {
     //TODO error handling
     let num_elems = encoded.len() / RandProof::serialized_size();
     let mut out = Vec::with_capacity(num_elems);
@@ -304,11 +359,11 @@ impl EncParamsRange {
             range_bits : self.prove_range as i32
         };
         let mut buffer = Vec::with_capacity(enc_data.encoded_len() + 1);
-        enc_data.encode_length_delimited(&mut buffer);
+        let _res = enc_data.encode_length_delimited(&mut buffer);
         buffer
     }
 
-    pub fn deserialize(data : &Vec<u8>) -> EncParamsRange {
+    pub fn deserialize(data : &[u8]) -> EncParamsRange {
         let msg = EncRangeData::decode_length_delimited(&mut Cursor::new(data)).unwrap();
         let enc_values = decode_el_gamal_vec(&msg.enc_values);
         let rand_proofs = decode_rand_proof_vec(&msg.rand_proof);
@@ -322,7 +377,111 @@ impl EncParamsRange {
     }
 }
 
+#[derive(Clone)]
+pub struct EncParamsL2 {
+    pub enc_values : Vec<SquareRandProofCommitments>,
+    pub square_proofs : Vec<SquareRandProof>,
+    pub range_proofs : Vec<RangeProof>,
+    pub square_range_proof : RangeProof,
+    pub prove_range : usize,
+    pub l2_prove_range : usize
+}
 
+fn encode_l2enc_vec(values : &Vec<SquareRandProofCommitments>) -> Vec<u8> {
+    let mut out = Vec::with_capacity(SquareRandProofCommitments::serialized_size() * values.len());
+    values.iter().for_each(|x| { out.extend(x.to_bytes().iter()) });
+    out
+}
+
+fn decode_l2enc_vec(encoded : &[u8]) -> Vec<SquareRandProofCommitments> {
+    //TODO error handling
+    let num_elems = encoded.len() / SquareRandProofCommitments::serialized_size();
+    let mut out = Vec::with_capacity(num_elems);
+    let size = SquareRandProofCommitments::serialized_size();
+    for id in 0..num_elems {
+        out.push(SquareRandProofCommitments::from_bytes(
+            &encoded[id*size..((id + 1) * size)]
+        ).unwrap());
+    }
+    out
+}
+
+fn encode_square_proof_vec(values : &Vec<SquareRandProof>) -> Vec<u8> {
+    let mut out = Vec::with_capacity(SquareRandProof::serialized_size() * values.len());
+    values.iter().for_each(|x| { out.extend(x.to_bytes().iter()) });
+    out
+}
+
+fn decode_square_proof_vec(encoded : &[u8]) -> Vec<SquareRandProof> {
+    //TODO error handling
+    let num_elems = encoded.len() / SquareRandProof::serialized_size();
+    let mut out = Vec::with_capacity(num_elems);
+    let size = SquareRandProof::serialized_size();
+    for id in 0..num_elems {
+        out.push(SquareRandProof::from_bytes(
+            &encoded[id*size..((id + 1) * size)]
+        ).unwrap());
+    }
+    out
+}
+
+impl EncParamsL2 {
+    pub fn encrypt(plaintext_vec : &Vec<f32>, blinding_vec : &Vec<Scalar>, prove_range : usize, n_partition : usize, l2_range : usize) -> Self {
+        let rand_scalars = rnd_scalar_vec(plaintext_vec.len());
+        let range_clipped = range_proof_vec::clip_f32_to_range_vec(plaintext_vec, prove_range);
+        let (range_proofs, enc_com ) =  range_proof_vec::create_rangeproof(&range_clipped, blinding_vec, prove_range, n_partition).unwrap();
+        let (sum_range_proofs, _sum_cm ) =  l2_range_proof_vec::create_rangeproof_l2(plaintext_vec, &rand_scalars, l2_range, n_partition).unwrap();
+        let (rand_proofs, enc_update) = square_rand_proof_vec::create_l2rangeproof_vec_existing(plaintext_vec, enc_com, blinding_vec, &rand_scalars).unwrap();
+        EncParamsL2 {
+            enc_values : enc_update,
+            square_proofs : rand_proofs,
+            range_proofs : range_proofs,
+            prove_range : prove_range,
+            square_range_proof : sum_range_proofs,
+            l2_prove_range : l2_range
+        }
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        let enc_values = encode_l2enc_vec(&self.enc_values);
+        let square_proofs = encode_square_proof_vec(&self.square_proofs);
+        let range_proofs = encode_range_proof_vec(&self.range_proofs);
+        let enc_data = EncNormData {
+            enc_values : enc_values,
+            square_proof : square_proofs,
+            range_proof : range_proofs,
+            square_range_proof : self.square_range_proof.to_bytes(),
+            range_bits : self.prove_range as i32,
+            l2_range_bits : self.l2_prove_range as i32
+        };
+        let mut buffer = Vec::with_capacity(enc_data.encoded_len() + 1);
+        let _res = enc_data.encode_length_delimited(&mut buffer);
+        buffer
+    }
+
+    pub fn deserialize(data : &[u8]) -> Self {
+        let msg = EncNormData::decode_length_delimited(&mut Cursor::new(data)).unwrap();
+        let enc_values = decode_l2enc_vec(&msg.enc_values);
+        let square_proofs = decode_square_proof_vec(&msg.square_proof);
+        let range_proofs = decode_range_proof_vec(&msg.range_proof);
+        EncParamsL2 {
+            enc_values : enc_values,
+            square_proofs : square_proofs,
+            range_proofs : range_proofs,
+            prove_range : msg.range_bits as usize,
+            square_range_proof : RangeProof::from_bytes(&msg.square_range_proof).unwrap(),
+            l2_prove_range : msg.l2_range_bits as usize
+        }
+    }
+
+    pub fn get_sum_proof(&self) -> &RangeProof {
+        self.range_proofs.last().unwrap()
+    }
+
+    pub fn get_range_proof_slice(&self) -> &[RangeProof] {
+        &self.range_proofs[0..(self.range_proofs.len() - 1)]
+    }
+}
 
 #[derive(Clone)]
 pub struct PlainParams {
@@ -350,7 +509,7 @@ impl PlainParams  {
         return bincode::serialize(&self.content).unwrap();
     }
 
-    pub fn deserialize(data : &Vec<u8>) -> Self {
+    pub fn deserialize(data : &[u8]) -> Self {
         return PlainParams {
             content : bincode::deserialize(data).unwrap(),
         };       
