@@ -71,7 +71,9 @@ impl FlServiceClient {
     }
 
     pub fn train_model_locally(&self, params : PlainParams, conifg : &Config) -> Option<PlainParams> {
-        Some(params)
+        Some(PlainParams {
+            content : vec![0.001; params.content.len()]
+        })
     }
 
     pub fn encrypt_data(&self, params : &PlainParams, conifg : &Config) -> Option<EncModelParams> {

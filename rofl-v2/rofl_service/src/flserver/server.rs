@@ -20,6 +20,7 @@ pub struct TrainingState {
     model_id : i32,
     model_config : ModelConfig,
     num_params : i32,
+    in_memory_rounds : i32,
     in_training :  Arc<AtomicBool>,
     crypto_config : CryptoConfig,
     aggregation_type : EncModelParamType,
@@ -29,11 +30,12 @@ pub struct TrainingState {
 
 impl TrainingState {
 
-    pub fn new(model_id : i32, model_config : ModelConfig, crypto_config : CryptoConfig, num_parmas : i32) -> Self {
+    pub fn new(model_id : i32, model_config : ModelConfig, crypto_config : CryptoConfig, num_parmas : i32, in_memory_rounds : i32) -> Self {
         TrainingState {
             model_id : model_id,
             model_config : model_config,
             num_params : num_parmas,
+            in_memory_rounds : in_memory_rounds,
             in_training :  Arc::new(AtomicBool::new(false)),
             crypto_config : crypto_config.clone(),
             aggregation_type : EncModelParamType::get_type_from_int(&crypto_config.enc_type).unwrap(),
@@ -60,7 +62,6 @@ impl TrainingState {
     }
 
     fn get_current_round_state(&self) -> Option<TrainingRoundState> {
-        
         let tmp = Arc::clone(&self.rounds);
         let tmp = tmp.read().unwrap();
         if tmp.is_empty() {
@@ -68,8 +69,16 @@ impl TrainingState {
         } else {
             Some(tmp.last().unwrap().clone())
         }
-       
-        
+    }
+
+    fn get_previous_round_state(&self) -> Option<TrainingRoundState> {
+        let tmp = Arc::clone(&self.rounds);
+        let tmp = tmp.read().unwrap();
+        if tmp.len() < 2 {
+            None
+        } else {
+            Some(tmp[tmp.len() - 2].clone())
+        }
     }
 
     fn get_num_clients(&self) -> i32 {
@@ -106,6 +115,17 @@ impl TrainingState {
             self.model_config.num_of_clients,
             EncModelParams::unity(&self.aggregation_type, self.num_params as usize),
         ));
+
+        let to_keep =  self.in_memory_rounds as usize;
+        if tmp.len() > to_keep {
+            for it in 0..(tmp.len() - to_keep) {
+                if tmp.first().unwrap().is_done() {
+                    tmp.remove(0);
+                } else {
+                    break;
+                }
+            }
+        }
     }
 
     async fn broadcast_models(&self, params : &PlainParams) {
@@ -176,6 +196,7 @@ impl TrainingState {
     }
 }
 
+#[derive(Clone, PartialEq)]
 enum RoundState {
     InProgress,
     Error(String),
@@ -246,6 +267,12 @@ impl TrainingRoundState {
             let tmp_notify = Arc::clone(&self.notify);
             tmp_notify.notify();
         }
+    }
+
+    fn is_done(&self) -> bool {
+        let tmp_state = Arc::clone(&self.state);
+        let ref_state = tmp_state.read().unwrap();
+        *ref_state == RoundState::Done
     }
 
     async fn wait_for_verif_completion(&self) {
@@ -378,35 +405,18 @@ impl Flservice for DefaultFlService {
                                             todo!();
                                         }
                                         let local_group_state= local_group_state.unwrap();
+                                        let local_blocking_group_state = local_group_state. clone();
                                         if !block_storage.verify_round(local_group_state.round_id as u32) {
                                             todo!();
                                         }
-                                        let local_enc_params = EncModelParams::deserialize(&training_state_local.aggregation_type, block_storage.data_ref());
+                                        let local_enc_params = Arc::new(EncModelParams::deserialize(&training_state_local.aggregation_type, block_storage.data_ref()));
                                         block_storage.reset_mem();
-                                        let res = tokio::task::spawn_blocking(move || {  
-                                            
-                                            if local_group_state.accumulate(&local_enc_params) {
-                                                let done = local_group_state.increment_done_counter();
-                                                println!("Aggregate Model of client {} for round {}", client_id, local_group_state.round_id);
-                                                let mut model = None;
-                                                if done + 1 == local_group_state.expected_clients as i16 {
-                                                    // Aggregation has finished for this round, start the next round
-                                                    model = local_group_state.extract_model_data();
-                                                    if model.is_none() {
-                                                        todo!();
-                                                    }
-                                                }
-                                                Some((local_enc_params, local_group_state, model))
-                                            } else {
-                                                None
-                                            }
-                                        }).await;
+
                                         //TODO: maybe use a seperate thread pool for verification
-                                        let (local_enc_params, local_group_state, model) = res.unwrap().unwrap();
-                                        let local_blocking_group_state = local_group_state. clone();
-                                        if local_enc_params.verifiable() {
+                                        let blocking_enc_params = Arc::clone(&local_enc_params);
+                                        if blocking_enc_params.verifiable() {
                                             let res = tokio::task::spawn_blocking(move || {  
-                                                let ok = local_enc_params.verify();
+                                                let ok = blocking_enc_params.verify();
                                                 if ok {
                                                     println!("Model of client {} for round {} is valid!", client_id, local_blocking_group_state.round_id);
                                                     local_blocking_group_state.verifaction_done();
@@ -419,10 +429,30 @@ impl Flservice for DefaultFlService {
                                             local_blocking_group_state.verifaction_done();
                                         }
 
+                                        let local_enc_params_aggr = Arc::clone(&local_enc_params);
+                                        let model = if local_group_state.accumulate(&local_enc_params_aggr) {
+                                            let done = local_group_state.increment_done_counter();
+                                            println!("Aggregate Model of client {} for round {}", client_id, local_group_state.round_id);
+                                            let mut model = None;
+                                            if done + 1 == local_group_state.expected_clients as i16 {
+                                                // Aggregation has finished for this round, start the next round
+                                                model = local_group_state.extract_model_data();
+                                                if model.is_none() {
+                                                    todo!();
+                                                }
+                                            }
+                                            model
+                                        } else {
+                                            None
+                                        };
+
                                         if model.is_some() {
                                             // wait for verify to complete
                                             // todo: add suport for lacy verification
-                                            local_group_state.wait_for_verif_completion().await;
+                                            let last_group_state = training_state_local.get_previous_round_state();
+                                            if last_group_state.is_some() {
+                                                last_group_state.unwrap().wait_for_verif_completion().await;
+                                            }
                                             // round is done, broadcast the new model
                                             println!("All client models received for round {}", local_group_state.round_id);
                                             let params = model.unwrap();
