@@ -1,11 +1,10 @@
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
+use crate::rand_proof::{ElGamalPair, RandProof};
 use bulletproofs::RangeProof;
-use crate::rand_proof::{RandProof, ElGamalPair};
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek::scalar::Scalar;
 // Scalars serialized into bincode have constant size
 pub const SCALAR_BINCODE_SIZE: usize = 40;
 pub const RP_BINCODE_SIZE: usize = 40;
-
 
 pub fn serialize_scalar_vec(rp_vec: &Vec<Scalar>) -> Vec<u8> {
     bincode::serialize(rp_vec).unwrap()
@@ -74,18 +73,21 @@ pub fn deserialize_rand_proof_vec(rand_proof_ser: &[u8]) -> Vec<RandProof> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bulletproofs::PedersenGens;
-    use crate::pedersen_ops::rnd_scalar_vec;
-    use crate::range_proof_vec::create_rangeproof;
     use crate::fp::N_BITS;
-    use crate::rand_proof::{ElGamalPair, ElGamalGens};
+    use crate::pedersen_ops::rnd_scalar_vec;
+    use crate::rand_proof::{ElGamalGens, ElGamalPair};
     use crate::rand_proof_vec::create_randproof_vec;
+    use crate::range_proof_vec::create_rangeproof;
+    use bulletproofs::PedersenGens;
 
     #[test]
     fn test_bincode_rp_vec_roundtrip() {
         let pc_gens = PedersenGens::default();
         let a: Vec<Scalar> = rnd_scalar_vec(5);
-        let a_rp: Vec<RistrettoPoint> = a.iter().map(|x| pc_gens.commit(*x, Scalar::zero())).collect();
+        let a_rp: Vec<RistrettoPoint> = a
+            .iter()
+            .map(|x| pc_gens.commit(*x, Scalar::zero()))
+            .collect();
         let a_ser: Vec<u8> = serialize_rp_vec(&a_rp);
         let a_de: Vec<RistrettoPoint> = deserialize_rp_vec(&a_ser);
 
@@ -123,8 +125,11 @@ mod tests {
         let values: Vec<Scalar> = rnd_scalar_vec(len);
         let blindings: Vec<Scalar> = rnd_scalar_vec(len);
         let eg_gens: ElGamalGens = ElGamalGens::default();
-        let eg_pair_vec: Vec<ElGamalPair> =
-        values.iter().zip(&blindings).map(|(&v, &b)| eg_gens.commit(v, b)).collect();
+        let eg_pair_vec: Vec<ElGamalPair> = values
+            .iter()
+            .zip(&blindings)
+            .map(|(&v, &b)| eg_gens.commit(v, b))
+            .collect();
         let eg_pair_vec_ser: Vec<u8> = serialize_eg_pair_vec(&eg_pair_vec);
         let eg_pair_vec_des: Vec<ElGamalPair> = deserialize_eg_pair_vec(&eg_pair_vec_ser);
         assert_eq!(eg_pair_vec, eg_pair_vec_des);

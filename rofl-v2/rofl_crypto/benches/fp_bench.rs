@@ -13,23 +13,22 @@ extern crate chrono;
 use chrono::prelude::*;
 
 extern crate curve25519_dalek;
-use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
 
+use rust_crypto::bsgs32::*;
+use rust_crypto::conversion32::*;
 use rust_crypto::fp::N_BITS;
 use rust_crypto::pedersen_ops::*;
 use rust_crypto::range_proof_vec::*;
-use rust_crypto::bsgs32::*;
-use rust_crypto::conversion32::*;
-use std::fs::OpenOptions;
+use std::env;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::env;
 use std::time::{Duration, Instant};
 
 use std::thread::sleep;
-
 
 // static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
 static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];
@@ -70,7 +69,7 @@ fn bench_convert_from_float_to_fixed(c: &mut Criterion) {
     //     let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
     //     let label: String = label_solve_discrete_log(*d, *ts);
     //     c.bench_function(
-    //         &label, move |b| b.iter(|| 
+    //         &label, move |b| b.iter(||
     //             discrete_log_vec(&x_vec_enc, *ts)));
     // }
 }
@@ -87,25 +86,29 @@ fn bench_convert_from_fixed_to_float(c: &mut Criterion) {
     //     let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
     //     let label: String = label_solve_discrete_log(*d, *ts);
     //     c.bench_function(
-    //         &label, move |b| b.iter(|| 
+    //         &label, move |b| b.iter(||
     //             discrete_log_vec(&x_vec_enc, *ts)));
     // }
 }
 
-fn label_solve_discrete_log(dim: usize, table_size: usize) -> String{
+fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {
     // (fp_bitsize-table_size-dim-(time))
     let t: DateTime<Local> = Local::now();
-    format!("bench_discrete_log-{}-{}-{}-({})",
+    format!(
+        "bench_discrete_log-{}-{}-{}-({})",
         N_BITS,
         table_size,
         dim,
-        t.format("%Y-%m-%d/%H:%M:%S").to_string())
+        t.format("%Y-%m-%d/%H:%M:%S").to_string()
+    )
 }
 
 fn get_bench_dir() -> PathBuf {
     let mut cwd = env::current_exe().unwrap();
     println!("current path: {}", cwd.display());
-    cwd.pop(); cwd.pop(); cwd.pop();
+    cwd.pop();
+    cwd.pop();
+    cwd.pop();
     cwd.push("criterion");
     println!("new path: {}", cwd.display());
     cwd
@@ -116,14 +119,18 @@ fn create_bench_file(label: String) -> File {
     //bench_file.push("asdf");
     bench_file.push(label);
     bench_file.set_extension("bench");
-    let file = match OpenOptions::new().append(true).create(true).open(bench_file) {
+    let file = match OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(bench_file)
+    {
         Err(err) => panic!("Could not find {}", err),
-        Ok(f) => f
+        Ok(f) => f,
     };
-    return file
+    return file;
 }
 
-criterion_group!{
+criterion_group! {
     name = fp_conversion;
     config = Criterion::default().sample_size(2);
     targets =

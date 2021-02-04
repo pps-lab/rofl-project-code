@@ -7,7 +7,7 @@ pub enum L2RangeProofError {
     /// factors does not match the number of values.
     #[fail(display = "Wrong number of blinding factors supplied.")]
     WrongNumBlindingFactors,
-    /// 
+    ///
     #[fail(display = "Number of ElGamal pairs does not match number of supplied RandProofs")]
     WrongNumberOfElGamalPairs,
     /// Error originating from the Bulletproof lib

@@ -1,16 +1,25 @@
+use super::flservice::{
+    model_parameters, server_model_data, status_message, train_request, train_response,
+};
+use super::flservice::{
+    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
+    ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
+    WorkerRegisterMessage,
+};
+use super::{
+    flservice::flservice_server::Flservice,
+    params::{EncModelParamType, EncModelParams, PlainParams},
+};
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use tokio::sync::mpsc;
-use tonic::{Request, Response, Status, Streaming};
-use super::{flservice::flservice_server::Flservice, params::{EncModelParamType, EncModelParams, PlainParams}};
-use super::flservice::{DataBlock, Config, ModelConfig, CryptoConfig, ServerModelData, WorkerRegisterMessage, ModelRegisterResponse, StatusMessage, ModelParameters, TrainRequest, TrainResponse, ModelSelection};
-use super::flservice::{train_request, train_response, server_model_data, model_parameters, status_message};
-use std::sync::{Mutex, Arc, RwLock};
-use std::sync::atomic::{AtomicI16, AtomicBool, Ordering};
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
+use tonic::{Request, Response, Status, Streaming};
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -25,36 +34,43 @@ enum TrainingStatusType {
 
 #[derive(Clone)]
 pub struct TrainingState {
-    model_id : i32,
-    model_config : ModelConfig,
-    num_params : i32,
-    in_memory_rounds : i32,
-    train_until_round : i32,
-    training_status :  Arc<RwLock<TrainingStatusType>>,
-    crypto_config : CryptoConfig,
-    aggregation_type : EncModelParamType,
-    channels :  Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
-    rounds :  Arc<RwLock<Vec<TrainingRoundState>>>,
+    model_id: i32,
+    model_config: ModelConfig,
+    num_params: i32,
+    in_memory_rounds: i32,
+    train_until_round: i32,
+    training_status: Arc<RwLock<TrainingStatusType>>,
+    crypto_config: CryptoConfig,
+    aggregation_type: EncModelParamType,
+    channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
+    rounds: Arc<RwLock<Vec<TrainingRoundState>>>,
 }
 
 impl TrainingState {
-
-    pub fn new(model_id : i32, model_config : ModelConfig, crypto_config : CryptoConfig, num_parmas : i32, in_memory_rounds : i32, train_until_round : i32) -> Self {
+    pub fn new(
+        model_id: i32,
+        model_config: ModelConfig,
+        crypto_config: CryptoConfig,
+        num_parmas: i32,
+        in_memory_rounds: i32,
+        train_until_round: i32,
+    ) -> Self {
         TrainingState {
-            model_id : model_id,
-            model_config : model_config,
-            num_params : num_parmas,
-            in_memory_rounds : in_memory_rounds,
-            train_until_round : train_until_round,
-            training_status : Arc::new(RwLock::new(TrainingStatusType::Register)),
-            crypto_config : crypto_config.clone(),
-            aggregation_type : EncModelParamType::get_type_from_int(&crypto_config.enc_type).unwrap(),
-            channels :  Arc::new(RwLock::new(HashMap::new())),
-            rounds :  Arc::new(RwLock::new(Vec::new())),
+            model_id: model_id,
+            model_config: model_config,
+            num_params: num_parmas,
+            in_memory_rounds: in_memory_rounds,
+            train_until_round: train_until_round,
+            training_status: Arc::new(RwLock::new(TrainingStatusType::Register)),
+            crypto_config: crypto_config.clone(),
+            aggregation_type: EncModelParamType::get_type_from_int(&crypto_config.enc_type)
+                .unwrap(),
+            channels: Arc::new(RwLock::new(HashMap::new())),
+            rounds: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
-    fn set_training_status(&self, status : TrainingStatusType) {
+    fn set_training_status(&self, status: TrainingStatusType) {
         let tmp_state = Arc::clone(&self.training_status);
         let mut mut_ref_state = tmp_state.write().unwrap();
         *mut_ref_state = status;
@@ -66,7 +82,11 @@ impl TrainingState {
         ref_state.clone()
     }
 
-    fn register_channel(&self, client_id : i32, sender : Sender<Result<TrainResponse, Status>>) -> usize {
+    fn register_channel(
+        &self,
+        client_id: i32,
+        sender: Sender<Result<TrainResponse, Status>>,
+    ) -> usize {
         let tmp = Arc::clone(&self.channels);
         let mut tmp = tmp.write().unwrap();
         tmp.insert(client_id, sender);
@@ -76,8 +96,8 @@ impl TrainingState {
     fn get_channels_to_broadcast(&self) -> Vec<Sender<Result<TrainResponse, Status>>> {
         let tmp = Arc::clone(&self.channels);
         let tmp = tmp.read().unwrap();
-        let mut out : Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
-        for (_key , sender) in  &*tmp {
+        let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
+        for (_key, sender) in &*tmp {
             out.push(sender.clone());
         }
         out
@@ -135,7 +155,7 @@ impl TrainingState {
         self.start_new_round(0);
     }
 
-    fn start_new_round(&self, round_id : i32) {
+    fn start_new_round(&self, round_id: i32) {
         let tmp = Arc::clone(&self.rounds);
         let mut tmp = tmp.write().unwrap();
 
@@ -145,7 +165,7 @@ impl TrainingState {
             EncModelParams::unity(&self.aggregation_type, self.num_params as usize),
         ));
 
-        let to_keep =  self.in_memory_rounds as usize;
+        let to_keep = self.in_memory_rounds as usize;
         if tmp.len() > to_keep {
             for _it in 0..(tmp.len() - to_keep) {
                 if tmp.first().unwrap().is_done() {
@@ -160,9 +180,9 @@ impl TrainingState {
     async fn broadcast_done(&self) {
         let channels = self.get_channels_to_broadcast();
         let done_message = TrainResponse {
-            param_message : Some(train_response::ParamMessage::DoneMessage(StatusMessage {
-                status : status_message::Status::Done as i32,
-            }))
+            param_message: Some(train_response::ParamMessage::DoneMessage(StatusMessage {
+                status: status_message::Status::Done as i32,
+            })),
         };
         for chan in &channels {
             let mut out = chan.clone();
@@ -170,15 +190,15 @@ impl TrainingState {
         }
     }
 
-    async fn broadcast_models(&self, params : &PlainParams) {
+    async fn broadcast_models(&self, params: &PlainParams) {
         let channels = self.get_channels_to_broadcast();
         let config_message = TrainResponse {
-            param_message : Some(train_response::ParamMessage::Params(ServerModelData {
-                model_message : Some(server_model_data::ModelMessage::Config(Config { 
-                    model_config: Some(self.model_config.clone()), 
-                    crypto_config : Some(self.crypto_config.clone())
-                }))
-            }))
+            param_message: Some(train_response::ParamMessage::Params(ServerModelData {
+                model_message: Some(server_model_data::ModelMessage::Config(Config {
+                    model_config: Some(self.model_config.clone()),
+                    crypto_config: Some(self.crypto_config.clone()),
+                })),
+            })),
         };
 
         //Encode Params
@@ -190,15 +210,19 @@ impl TrainingState {
         }
 
         let meta_packet = TrainResponse {
-            param_message : Some(train_response::ParamMessage::Params(ServerModelData {
-                model_message : Some(server_model_data::ModelMessage::ModelBlock(ModelParameters { 
-                    param_message: Some(model_parameters::ParamMessage::ParamMeta(model_parameters::ModelParametersMeta {
-                        model_id : self.model_id, 
-                        round_id : self.get_round(),
-                        num_blocks : num_packets as i32,
-                    })), 
-                }))
-            }))
+            param_message: Some(train_response::ParamMessage::Params(ServerModelData {
+                model_message: Some(server_model_data::ModelMessage::ModelBlock(
+                    ModelParameters {
+                        param_message: Some(model_parameters::ParamMessage::ParamMeta(
+                            model_parameters::ModelParametersMeta {
+                                model_id: self.model_id,
+                                round_id: self.get_round(),
+                                num_blocks: num_packets as i32,
+                            },
+                        )),
+                    },
+                )),
+            })),
         };
 
         let mut data_messages = Vec::new();
@@ -207,19 +231,23 @@ impl TrainingState {
             let end = (packet_num + 1) * NUM_PARAM_BYTES_PER_PACKET;
             let end = if end > len_buffer { len_buffer } else { end };
             let data_packet = TrainResponse {
-                param_message : Some(train_response::ParamMessage::Params(ServerModelData {
-                    model_message : Some(server_model_data::ModelMessage::ModelBlock(ModelParameters { 
-                        param_message: Some(model_parameters::ParamMessage::ParamBlock(DataBlock {
-                            block_number : packet_num as u32, 
-                            data : Vec::from_iter(buffer[begin..end].iter().cloned())
-                        })), 
-                    }))
-                }))
+                param_message: Some(train_response::ParamMessage::Params(ServerModelData {
+                    model_message: Some(server_model_data::ModelMessage::ModelBlock(
+                        ModelParameters {
+                            param_message: Some(model_parameters::ParamMessage::ParamBlock(
+                                DataBlock {
+                                    block_number: packet_num as u32,
+                                    data: Vec::from_iter(buffer[begin..end].iter().cloned()),
+                                },
+                            )),
+                        },
+                    )),
+                })),
             };
             data_messages.push(data_packet);
         }
 
-        // Broadcast Messages 
+        // Broadcast Messages
         // TODO: Too much clones happen here :(
         // Could that be improved?
         let data_messages_arc = Arc::new(data_messages);
@@ -241,10 +269,7 @@ impl TrainingState {
         for join_handler in join_handlers {
             let _res = join_handler.await;
         }
-        
     }
-
-    
 }
 
 #[derive(Clone, PartialEq)]
@@ -255,25 +280,29 @@ enum RoundState {
 }
 #[derive(Clone)]
 pub struct TrainingRoundState {
-    round_id : i32,
-    expected_clients : i32,
-    param_aggr : Arc<RwLock<EncModelParamsAccumulator>>,
-    verifed_counter : Arc<AtomicI16>, 
-    done_counter : Arc<AtomicI16>, 
-    state : Arc<RwLock<RoundState>>,
-    notify : Arc<Notify>
+    round_id: i32,
+    expected_clients: i32,
+    param_aggr: Arc<RwLock<EncModelParamsAccumulator>>,
+    verifed_counter: Arc<AtomicI16>,
+    done_counter: Arc<AtomicI16>,
+    state: Arc<RwLock<RoundState>>,
+    notify: Arc<Notify>,
 }
 
 impl TrainingRoundState {
-    pub fn new( round_id : i32, expected_clients : i32, param_aggr : EncModelParamsAccumulator) -> Self {
+    pub fn new(
+        round_id: i32,
+        expected_clients: i32,
+        param_aggr: EncModelParamsAccumulator,
+    ) -> Self {
         return TrainingRoundState {
-            round_id : round_id,
-            expected_clients : expected_clients,
-            param_aggr : Arc::new(RwLock::new(param_aggr)),
-            verifed_counter : Arc::new(AtomicI16::new(0)),
-            done_counter : Arc::new(AtomicI16::new(0)),
-            state : Arc::new(RwLock::new(RoundState::InProgress)),
-            notify : Arc::new(Notify::new())
+            round_id: round_id,
+            expected_clients: expected_clients,
+            param_aggr: Arc::new(RwLock::new(param_aggr)),
+            verifed_counter: Arc::new(AtomicI16::new(0)),
+            done_counter: Arc::new(AtomicI16::new(0)),
+            state: Arc::new(RwLock::new(RoundState::InProgress)),
+            notify: Arc::new(Notify::new()),
         };
     }
 
@@ -282,9 +311,7 @@ impl TrainingRoundState {
         let tmp = tmp.read().unwrap();
         match tmp.extract() {
             None => None,
-            Some(content) => Some(PlainParams { 
-                content : content
-            }),
+            Some(content) => Some(PlainParams { content: content }),
         }
     }
 
@@ -307,13 +334,13 @@ impl TrainingRoundState {
         }
     }
 
-    fn verifaction_error(&self, error_msg : String) -> () {
+    fn verifaction_error(&self, error_msg: String) -> () {
         let compl_counter = self.verifed_counter.clone();
         let tmp_state = Arc::clone(&self.state);
         let mut mut_ref_state = tmp_state.write().unwrap();
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         *mut_ref_state = RoundState::Error(error_msg);
-        
+
         if done + 1 == self.expected_clients as i16 {
             let tmp_notify = Arc::clone(&self.notify);
             tmp_notify.notify();
@@ -331,7 +358,7 @@ impl TrainingRoundState {
         tmp_notify.notified().await;
     }
 
-    pub fn accumulate(&self, param_aggr : &EncModelParams) -> bool {
+    pub fn accumulate(&self, param_aggr: &EncModelParams) -> bool {
         let tmp = Arc::clone(&self.param_aggr);
         let mut tmp = tmp.write().unwrap();
         tmp.accumulate_other(param_aggr)
@@ -339,23 +366,23 @@ impl TrainingRoundState {
 }
 
 pub struct DefaultFlService {
-    training_states : Arc<RwLock<Vec<TrainingState>>>,
+    training_states: Arc<RwLock<Vec<TrainingState>>>,
 }
 
 impl DefaultFlService {
     pub fn new() -> Self {
         DefaultFlService {
-            training_states : Arc::new(RwLock::new(Vec::new()))
+            training_states: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
-    pub fn register_new_trainig_state(&self, state : TrainingState) {
+    pub fn register_new_trainig_state(&self, state: TrainingState) {
         let tmp = Arc::clone(&self.training_states);
-        let mut list = tmp.write().unwrap(); 
+        let mut list = tmp.write().unwrap();
         list.push(state);
     }
 
-    pub fn get_training_state_for_model(&self, model_id : i32) -> Option<TrainingState> {
+    pub fn get_training_state_for_model(&self, model_id: i32) -> Option<TrainingState> {
         let tmp = Arc::clone(&self.training_states);
         let tmp = tmp.read().unwrap();
         for state in &*tmp {
@@ -368,197 +395,238 @@ impl DefaultFlService {
 }
 
 #[tonic::async_trait]
-impl Flservice for DefaultFlService {        
-        type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
-        type ObserverModelTrainingStream = mpsc::Receiver<Result<ServerModelData, Status>>;
+impl Flservice for DefaultFlService {
+    type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
+    type ObserverModelTrainingStream = mpsc::Receiver<Result<ServerModelData, Status>>;
 
-        async fn train_model(
-            &self,
-            request: Request<Streaming<TrainRequest>>,
-        ) -> Result<Response<Self::TrainModelStream>, Status> {
-            let mut streamer = request.into_inner();
-            let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
-            //println!("", client_id, init.model_id);
+    async fn train_model(
+        &self,
+        request: Request<Streaming<TrainRequest>>,
+    ) -> Result<Response<Self::TrainModelStream>, Status> {
+        let mut streamer = request.into_inner();
+        let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+        //println!("", client_id, init.model_id);
 
-            // Handle Register Message verifed_counter
-            let req = streamer.message().await.unwrap();
-            let req = req.unwrap();
-            // Check that the message is indeed a Register Message 
-            let init = match req.param_message.unwrap() {
-                train_request::ParamMessage::StatusMessage(_x) => None,
-                train_request::ParamMessage::Params(_x) => None,
-                train_request::ParamMessage::StartMessage(init_msg) => Some(init_msg),
-            };
-            // Error if not
-            if init.is_none() {
-                return Err(Status::invalid_argument("Should be an init message"));
-            }
-            let init = init.unwrap();
+        // Handle Register Message verifed_counter
+        let req = streamer.message().await.unwrap();
+        let req = req.unwrap();
+        // Check that the message is indeed a Register Message
+        let init = match req.param_message.unwrap() {
+            train_request::ParamMessage::StatusMessage(_x) => None,
+            train_request::ParamMessage::Params(_x) => None,
+            train_request::ParamMessage::StartMessage(init_msg) => Some(init_msg),
+        };
+        // Error if not
+        if init.is_none() {
+            return Err(Status::invalid_argument("Should be an init message"));
+        }
+        let init = init.unwrap();
 
-            let client_id = init.client_id;
+        let client_id = init.client_id;
 
-            println!("Register Messages received from from client {} for model {}", client_id, init.model_id);
+        println!(
+            "Register Messages received from from client {} for model {}",
+            client_id, init.model_id
+        );
 
-            //Add The client to the Training State
-            let training_state = self.get_training_state_for_model(init.model_id).unwrap();
+        //Add The client to the Training State
+        let training_state = self.get_training_state_for_model(init.model_id).unwrap();
 
-            // If the training is running, register is not possible
-            if !training_state.can_client_register() {
-                /*let _res = tx.send(Ok(TrainResponse {
-                    param_message : Some(train_response::ParamMessage::StatusMessage(StatusMessage {
-                        status : 0,
-                        error_msg : String::from("Session is in progress"),
-                    })),
-                })).await;*/
-                todo!();
-            } 
-            
-            // Register the client
-            let num_channels = training_state.register_channel(init.client_id, tx.clone());
+        // If the training is running, register is not possible
+        if !training_state.can_client_register() {
+            /*let _res = tx.send(Ok(TrainResponse {
+                param_message : Some(train_response::ParamMessage::StatusMessage(StatusMessage {
+                    status : 0,
+                    error_msg : String::from("Session is in progress"),
+                })),
+            })).await;*/
+            todo!();
+        }
 
-            // Are all clients registered?
-            if (num_channels == training_state.get_num_clients() as usize) {
-               println!("Initialize model and broadcast it to clients");
-               training_state.set_traning_running();
-               training_state.init_round();
-               training_state.broadcast_models(&training_state.init_params()).await;
-               println!("First training round has started");
-            }
+        // Register the client
+        let num_channels = training_state.register_channel(init.client_id, tx.clone());
 
+        // Are all clients registered?
+        if (num_channels == training_state.get_num_clients() as usize) {
+            println!("Initialize model and broadcast it to clients");
+            training_state.set_traning_running();
+            training_state.init_round();
+            training_state
+                .broadcast_models(&training_state.init_params())
+                .await;
+            println!("First training round has started");
+        }
 
-            let training_state_local = training_state.clone();
-            tokio::spawn(async move {
-                let mut block_storage = DataBlockStorage::new();
-                while let Ok(message) = streamer.message().await {
-                    if message.is_none() {
-                        continue;
+        let training_state_local = training_state.clone();
+        tokio::spawn(async move {
+            let mut block_storage = DataBlockStorage::new();
+            while let Ok(message) = streamer.message().await {
+                if message.is_none() {
+                    continue;
+                }
+                let req = message.unwrap();
+                match req.param_message.unwrap() {
+                    train_request::ParamMessage::StartMessage(_) => {
+                        panic!("This is not covered yet")
                     }
-                    let req = message.unwrap();
-                    match req.param_message.unwrap() {
-                        train_request::ParamMessage::StartMessage(_) => {
-                            panic!("This is not covered yet")
-                        }
-                        train_request::ParamMessage::Params(msg) => {
-                            match  msg.param_message.unwrap() {
-                                model_parameters::ParamMessage::ParamMeta(meta_msg) => {
-                                    block_storage.init(meta_msg)
+                    train_request::ParamMessage::Params(msg) => {
+                        match msg.param_message.unwrap() {
+                            model_parameters::ParamMessage::ParamMeta(meta_msg) => {
+                                block_storage.init(meta_msg)
+                            }
+                            model_parameters::ParamMessage::ParamBlock(block_msg) => {
+                                if !block_storage.apply(&block_msg) {
+                                    panic!("should not happen");
                                 }
-                                model_parameters::ParamMessage::ParamBlock(block_msg) => {
-                                    if !block_storage.apply(&block_msg) {
-                                        panic!("should not happen");
+                                if block_storage.done() {
+                                    // Handle a completed model transfer
+                                    println!("Received model params from Client {}", client_id);
+                                    let local_group_state =
+                                        training_state_local.get_current_round_state();
+                                    if local_group_state.is_none() {
+                                        todo!();
                                     }
-                                    if block_storage.done() {
-                                        // Handle a completed model transfer
-                                        println!("Received model params from Client {}", client_id);
-                                        let local_group_state = training_state_local.get_current_round_state();
-                                        if local_group_state.is_none() {
-                                            todo!();
-                                        }
-                                        let local_group_state= local_group_state.unwrap();
-                                        let local_blocking_group_state = local_group_state. clone();
-                                        if !block_storage.verify_round(local_group_state.round_id as u32) {
-                                            todo!();
-                                        }
-                                        let local_enc_params = Arc::new(EncModelParams::deserialize(&training_state_local.aggregation_type, block_storage.data_ref()));
-                                        block_storage.reset_mem();
+                                    let local_group_state = local_group_state.unwrap();
+                                    let local_blocking_group_state = local_group_state.clone();
+                                    if !block_storage
+                                        .verify_round(local_group_state.round_id as u32)
+                                    {
+                                        todo!();
+                                    }
+                                    let local_enc_params = Arc::new(EncModelParams::deserialize(
+                                        &training_state_local.aggregation_type,
+                                        block_storage.data_ref(),
+                                    ));
+                                    block_storage.reset_mem();
 
-                                        //TODO: maybe use a seperate thread pool for verification
-                                        let blocking_enc_params = Arc::clone(&local_enc_params);
-                                        if blocking_enc_params.verifiable() {
-                                            let _res = tokio::task::spawn_blocking(move || {  
-                                                let ok = blocking_enc_params.verify();
-                                                if ok {
-                                                    println!("Model of client {} for round {} is valid!", client_id, local_blocking_group_state.round_id);
-                                                    local_blocking_group_state.verifaction_done();
-                                                } else {
-                                                    println!("Model of client {} for round {} is not valid!", client_id, local_blocking_group_state.round_id);
-                                                    local_blocking_group_state.verifaction_error(format!("Verification for client {} round {} failed", client_id, local_blocking_group_state.round_id));
-                                                }
-                                            });
-                                        } else {
-                                            local_blocking_group_state.verifaction_done();
-                                        }
-
-                                        let local_enc_params_aggr = Arc::clone(&local_enc_params);
-                                        let model = if local_group_state.accumulate(&local_enc_params_aggr) {
-                                            let done = local_group_state.increment_done_counter();
-                                            println!("Aggregate Model of client {} for round {}", client_id, local_group_state.round_id);
-                                            let mut model = None;
-                                            if done + 1 == local_group_state.expected_clients as i16 {
-                                                // Aggregation has finished for this round, start the next round
-                                                model = local_group_state.extract_model_data();
-                                                if model.is_none() {
-                                                    todo!();
-                                                }
+                                    //TODO: maybe use a seperate thread pool for verification
+                                    let blocking_enc_params = Arc::clone(&local_enc_params);
+                                    if blocking_enc_params.verifiable() {
+                                        let _res = tokio::task::spawn_blocking(move || {
+                                            let ok = blocking_enc_params.verify();
+                                            if ok {
+                                                println!(
+                                                    "Model of client {} for round {} is valid!",
+                                                    client_id, local_blocking_group_state.round_id
+                                                );
+                                                local_blocking_group_state.verifaction_done();
+                                            } else {
+                                                println!(
+                                                    "Model of client {} for round {} is not valid!",
+                                                    client_id, local_blocking_group_state.round_id
+                                                );
+                                                local_blocking_group_state.verifaction_error(
+                                                    format!(
+                                                    "Verification for client {} round {} failed",
+                                                    client_id, local_blocking_group_state.round_id
+                                                ),
+                                                );
                                             }
-                                            model
-                                        } else {
-                                            None
-                                        };
+                                        });
+                                    } else {
+                                        local_blocking_group_state.verifaction_done();
+                                    }
 
-                                        if model.is_some() {
-                                            // wait for verify to complete
-                                            // todo: add suport for lacy verification
-                                            let last_group_state = training_state_local.get_previous_round_state();
-                                            if last_group_state.is_some() {
-                                                last_group_state.unwrap().wait_for_verif_completion().await;
+                                    let local_enc_params_aggr = Arc::clone(&local_enc_params);
+                                    let model = if local_group_state
+                                        .accumulate(&local_enc_params_aggr)
+                                    {
+                                        let done = local_group_state.increment_done_counter();
+                                        println!(
+                                            "Aggregate Model of client {} for round {}",
+                                            client_id, local_group_state.round_id
+                                        );
+                                        let mut model = None;
+                                        if done + 1 == local_group_state.expected_clients as i16 {
+                                            // Aggregation has finished for this round, start the next round
+                                            model = local_group_state.extract_model_data();
+                                            if model.is_none() {
+                                                todo!();
                                             }
-                                            // round is done, broadcast the new model
-                                            println!("All client models received for round {}", local_group_state.round_id);
+                                        }
+                                        model
+                                    } else {
+                                        None
+                                    };
 
-                                            // have we reached the end?
-                                            if training_state_local.train_until_round <= local_group_state.round_id + 1 || training_state_local.should_terminate() {
-                                                training_state_local.broadcast_done().await;
-                                                training_state_local.set_training_status(TrainingStatusType::Done);
-                                                println!("Training for model {} is done, max round reached", training_state_local.model_id);
-                                                break;
-                                            }
+                                    if model.is_some() {
+                                        // wait for verify to complete
+                                        // todo: add suport for lacy verification
+                                        let last_group_state =
+                                            training_state_local.get_previous_round_state();
+                                        if last_group_state.is_some() {
+                                            last_group_state
+                                                .unwrap()
+                                                .wait_for_verif_completion()
+                                                .await;
+                                        }
+                                        // round is done, broadcast the new model
+                                        println!(
+                                            "All client models received for round {}",
+                                            local_group_state.round_id
+                                        );
 
-                                            let params = model.unwrap();
-                                            training_state_local.start_new_round(local_group_state.round_id + 1);
-                                            println!("Broadcast new model for round {}", local_group_state.round_id + 1);
-                                            training_state_local.broadcast_models(&params).await;
+                                        // have we reached the end?
+                                        if training_state_local.train_until_round
+                                            <= local_group_state.round_id + 1
+                                            || training_state_local.should_terminate()
+                                        {
+                                            training_state_local.broadcast_done().await;
+                                            training_state_local
+                                                .set_training_status(TrainingStatusType::Done);
+                                            println!(
+                                                "Training for model {} is done, max round reached",
+                                                training_state_local.model_id
+                                            );
+                                            break;
                                         }
 
+                                        let params = model.unwrap();
+                                        training_state_local
+                                            .start_new_round(local_group_state.round_id + 1);
+                                        println!(
+                                            "Broadcast new model for round {}",
+                                            local_group_state.round_id + 1
+                                        );
+                                        training_state_local.broadcast_models(&params).await;
                                     }
                                 }
                             }
                         }
-                        train_request::ParamMessage::StatusMessage(_) => {
-                            panic!("This is not covered yet")
-                        }
+                    }
+                    train_request::ParamMessage::StatusMessage(_) => {
+                        panic!("This is not covered yet")
                     }
                 }
-            });
-
-            Ok(Response::new(rx))
-        }
-
-        async fn terminate_model_training(
-            &self,
-            request: Request<ModelSelection>,
-        ) -> Result<Response<StatusMessage>, Status> {
-            let selection = request.into_inner();
-            let training_state = self.get_training_state_for_model(selection.model_id);
-            match training_state {
-                Some(state) => {
-                    state.set_training_status(TrainingStatusType::Terminate);
-                    Ok(Response::new(StatusMessage {
-                        status : status_message::Status::Ok as i32,
-                    }))
-                }
-                None => {
-                    Ok(Response::new(StatusMessage {
-                        status : status_message::Status::Nok as i32,
-                    }))
-                }
             }
-        }
+        });
 
-        async fn observer_model_training(
-            &self,
-            request: Request<Streaming<ModelSelection>>,
-        ) -> Result<Response<Self::ObserverModelTrainingStream>, Status> {
-            todo!();
+        Ok(Response::new(rx))
+    }
+
+    async fn terminate_model_training(
+        &self,
+        request: Request<ModelSelection>,
+    ) -> Result<Response<StatusMessage>, Status> {
+        let selection = request.into_inner();
+        let training_state = self.get_training_state_for_model(selection.model_id);
+        match training_state {
+            Some(state) => {
+                state.set_training_status(TrainingStatusType::Terminate);
+                Ok(Response::new(StatusMessage {
+                    status: status_message::Status::Ok as i32,
+                }))
+            }
+            None => Ok(Response::new(StatusMessage {
+                status: status_message::Status::Nok as i32,
+            })),
         }
+    }
+
+    async fn observer_model_training(
+        &self,
+        request: Request<Streaming<ModelSelection>>,
+    ) -> Result<Response<Self::ObserverModelTrainingStream>, Status> {
+        todo!();
+    }
 }

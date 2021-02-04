@@ -4,12 +4,12 @@
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
-use super::SquareRandProof;
-use super::errors::*;
 use super::super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
 use super::constants::*;
-use crate::square_rand_proof::pedersen::{SquareRandProofCommitments, PedersenCommitment};
+use super::errors::*;
+use super::SquareRandProof;
 use crate::rand_proof::transcript::TranscriptProtocol;
+use crate::square_rand_proof::pedersen::{PedersenCommitment, SquareRandProofCommitments};
 use curve25519_dalek::ristretto::RistrettoPoint;
 
 pub struct Dealer {}
@@ -18,9 +18,8 @@ impl Dealer {
     pub fn new<'a, 'b>(
         eg_gens: &'a ElGamalGens,
         transcript: &'b mut Transcript,
-        c: SquareRandProofCommitments)
-        -> DealerAwaitingCommitment<'a, 'b> {
-
+        c: SquareRandProofCommitments,
+    ) -> DealerAwaitingCommitment<'a, 'b> {
         transcript.rand_proof_domain_sep();
         transcript.commit_eg_point(LABEL_COMMIT_REAL_ELGAMAL, &c.c);
         transcript.commit_ped_point(LABEL_COMMIT_REAL_PEDERSEN, &c.c_sq);
@@ -28,7 +27,7 @@ impl Dealer {
         DealerAwaitingCommitment {
             eg_gens: eg_gens,
             transcript: transcript,
-            C: c
+            C: c,
         }
     }
 }
@@ -36,24 +35,31 @@ impl Dealer {
 pub struct DealerAwaitingCommitment<'a, 'b> {
     eg_gens: &'a ElGamalGens,
     transcript: &'b mut Transcript,
-    C: SquareRandProofCommitments
+    C: SquareRandProofCommitments,
 }
 
 impl<'a, 'b> DealerAwaitingCommitment<'a, 'b> {
-    pub fn receive_commitment(self, c_prime: SquareRandProofCommitments) -> Result<(DealerAwaitingChallengeResponse<'a, 'b>, Scalar), ProofError> {
-        self.transcript.commit_eg_point(LABEL_COMMIT_PRIME_ELGAMAL, &c_prime.c);
-        self.transcript.commit_ped_point(LABEL_COMMIT_PRIME_PEDERSEN, &c_prime.c_sq);
+    pub fn receive_commitment(
+        self,
+        c_prime: SquareRandProofCommitments,
+    ) -> Result<(DealerAwaitingChallengeResponse<'a, 'b>, Scalar), ProofError> {
+        self.transcript
+            .commit_eg_point(LABEL_COMMIT_PRIME_ELGAMAL, &c_prime.c);
+        self.transcript
+            .commit_ped_point(LABEL_COMMIT_PRIME_PEDERSEN, &c_prime.c_sq);
 
         let challenge: Scalar = self.transcript.challenge_scalar(LABEL_CHALLENGE_SCALAR);
 
-        Ok((DealerAwaitingChallengeResponse {
-            eg_gens: self.eg_gens,
-            transcript: self.transcript,
-            C: self.C,
-            C_prime: c_prime,
-            challenge: challenge
-        },
-        challenge))
+        Ok((
+            DealerAwaitingChallengeResponse {
+                eg_gens: self.eg_gens,
+                transcript: self.transcript,
+                C: self.C,
+                C_prime: c_prime,
+                challenge: challenge,
+            },
+            challenge,
+        ))
     }
 }
 
@@ -62,11 +68,16 @@ pub struct DealerAwaitingChallengeResponse<'a, 'b> {
     transcript: &'b mut Transcript,
     C: SquareRandProofCommitments,
     C_prime: SquareRandProofCommitments,
-    challenge: Scalar
+    challenge: Scalar,
 }
 
 impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
-    pub fn receive_challenge_response(self, z_m: Scalar, z_r_1: Scalar, z_r_2: Scalar) -> Result<SquareRandProof, ProofError> {
+    pub fn receive_challenge_response(
+        self,
+        z_m: Scalar,
+        z_r_1: Scalar,
+        z_r_2: Scalar,
+    ) -> Result<SquareRandProof, ProofError> {
         self.transcript.commit_scalar(LABEL_RESPONSE_Z_M, &z_m);
         self.transcript.commit_scalar(LABEL_RESPONSE_R_1, &z_r_1);
         self.transcript.commit_scalar(LABEL_RESPONSE_R_2, &z_r_2);
@@ -83,17 +94,18 @@ impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
         let eg_base: PedersenCommitment = self.C.c.L;
         let ped_blinding: RistrettoPoint = self.eg_gens.B_blinding;
         let lhs_ped_pair: PedersenCommitment = (eg_base * z_m) + (ped_blinding * z_r_2);
-        let rhs_ped_pair: PedersenCommitment = &self.C_prime.c_sq + &(self.challenge * &self.C.c_sq);
+        let rhs_ped_pair: PedersenCommitment =
+            &self.C_prime.c_sq + &(self.challenge * &self.C.c_sq);
 
         if lhs_ped_pair != rhs_ped_pair {
-            return Err(ProofError::ProvingErrorSquare)
+            return Err(ProofError::ProvingErrorSquare);
         }
 
         Ok(SquareRandProof {
             C_prime: self.C_prime,
             Z_m: z_m,
             Z_r_1: z_r_1,
-            Z_r_2: z_r_2
+            Z_r_2: z_r_2,
         })
     }
 }

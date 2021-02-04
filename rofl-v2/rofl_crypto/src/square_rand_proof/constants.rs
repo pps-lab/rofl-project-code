@@ -1,5 +1,3 @@
-
-
 pub static LABEL_COMMIT_REAL_ELGAMAL: &[u8] = b"C_eg";
 pub static LABEL_COMMIT_REAL_PEDERSEN: &[u8] = b"C_ped";
 

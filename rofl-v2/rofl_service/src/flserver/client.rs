@@ -1,59 +1,64 @@
+use super::flservice::flservice_client::FlserviceClient;
+use super::flservice::{model_parameters, server_model_data, train_request, train_response};
+use super::flservice::{
+    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
+    ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
+    WorkerRegisterMessage,
+};
+use super::{
+    flservice::flservice_server::Flservice,
+    params::{EncModelParamType, EncModelParams, PlainParams},
+};
 use crate::flserver::trainclient::FlTraining;
-use tokio::sync::mpsc::Sender;
+use crate::flserver::util::DataBlockStorage;
 use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
-use crate::flserver::util::DataBlockStorage;
-use super::flservice::flservice_client::FlserviceClient;
-use super::{flservice::flservice_server::Flservice, params::{EncModelParamType, EncModelParams, PlainParams}};
-use super::flservice::{DataBlock, Config, ModelConfig, CryptoConfig, ServerModelData, WorkerRegisterMessage, ModelRegisterResponse, StatusMessage, ModelParameters, TrainRequest, TrainResponse, ModelSelection};
-use super::flservice::{train_request, train_response, server_model_data, model_parameters};
 use std::iter::FromIterator;
 use tokio::sync::mpsc;
-use tonic::{Request};
-
+use tokio::sync::mpsc::Sender;
+use tonic::Request;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
 
 struct ServerModelDataState {
-    config : Vec<Config>,
-    data : DataBlockStorage,
+    config: Vec<Config>,
+    data: DataBlockStorage,
 }
 
 impl ServerModelDataState {
     fn new() -> Self {
         ServerModelDataState {
-            config : Vec::new(),
-            data : DataBlockStorage::new()
+            config: Vec::new(),
+            data: DataBlockStorage::new(),
         }
     }
 
-    fn update(&mut self, config : Config) {
+    fn update(&mut self, config: Config) {
         self.config.clear();
         self.config.push(config);
     }
 
-    fn get_current_config(&self) -> Option<&Config>  {
+    fn get_current_config(&self) -> Option<&Config> {
         self.config.last()
     }
-       
 }
 
-fn get_enc_type_from_config(config : &Config) -> Option<EncModelParamType> {
+fn get_enc_type_from_config(config: &Config) -> Option<EncModelParamType> {
     if let Some(crypto_config) = &config.crypto_config {
         return EncModelParamType::get_type_from_int(&crypto_config.enc_type);
     }
     None
 }
 
-fn get_crypto_config(config : &Config) -> Option<&CryptoConfig> {
+fn get_crypto_config(config: &Config) -> Option<&CryptoConfig> {
     if let Some(crypto_config) = &config.crypto_config {
-        return  Some(crypto_config);
+        return Some(crypto_config);
     }
     None
 }
 
-fn get_model_config(config : &Config) -> Option<&ModelConfig> {
+fn get_model_config(config: &Config) -> Option<&ModelConfig> {
     if let Some(model_config) = &config.model_config {
         return Some(model_config);
     }
@@ -61,58 +66,83 @@ fn get_model_config(config : &Config) -> Option<&ModelConfig> {
 }
 
 pub struct FlServiceClient {
-    client_id : i32,
-    grpc : Box<FlserviceClient<tonic::transport::Channel>>,
-    training_client : Box<FlTraining>,
-    blindings : Vec<Scalar>
+    client_id: i32,
+    grpc: Box<FlserviceClient<tonic::transport::Channel>>,
+    training_client: Box<FlTraining>,
+    blindings: Vec<Scalar>,
 }
 
 impl FlServiceClient {
-
-    pub fn new(client_id: i32, channel : tonic::transport::Channel, scalars : Vec<Scalar>, training_client : Box<FlTraining>) -> Self {
+    pub fn new(
+        client_id: i32,
+        channel: tonic::transport::Channel,
+        scalars: Vec<Scalar>,
+        training_client: Box<FlTraining>,
+    ) -> Self {
         FlServiceClient {
-            client_id : client_id,
-            grpc : Box::new(FlserviceClient::new(channel)),
-            training_client : training_client,
-            blindings : scalars
+            client_id: client_id,
+            grpc: Box::new(FlserviceClient::new(channel)),
+            training_client: training_client,
+            blindings: scalars,
         }
     }
 
-    async fn train_model_locally(&mut self, params : PlainParams, conifg : &Config, round_id : i32, model_id : i32) -> Option<PlainParams> {
+    async fn train_model_locally(
+        &mut self,
+        params: PlainParams,
+        conifg: &Config,
+        round_id: i32,
+        model_id: i32,
+    ) -> Option<PlainParams> {
         let model_config = get_model_config(conifg).unwrap();
-        let trained_params_opt = self.training_client.train_for_round(model_config.clone(), params.into_vec(), round_id, model_id).await;
+        let trained_params_opt = self
+            .training_client
+            .train_for_round(model_config.clone(), params.into_vec(), round_id, model_id)
+            .await;
         if let Some(trained_params) = trained_params_opt {
-            Some(PlainParams {content : trained_params})
+            Some(PlainParams {
+                content: trained_params,
+            })
         } else {
             None
         }
     }
 
-    pub fn encrypt_data(&self, params : &PlainParams, conifg : &Config) -> Option<EncModelParams> {
+    pub fn encrypt_data(&self, params: &PlainParams, conifg: &Config) -> Option<EncModelParams> {
         let enc_type_opt = get_enc_type_from_config(conifg);
         let crypto_config = get_crypto_config(conifg).unwrap();
         if let Some(enc_type) = enc_type_opt {
-            return Some(EncModelParams::encrypt(&enc_type, params, crypto_config, &self.blindings).unwrap());
+            return Some(
+                EncModelParams::encrypt(&enc_type, params, crypto_config, &self.blindings).unwrap(),
+            );
         }
         None
     }
 
-    async fn handle_send_data(&self, enc_params : EncModelParams, outbound : &mut Sender<TrainRequest>, model_id : i32, round_id : u32) -> () {
+    async fn handle_send_data(
+        &self,
+        enc_params: EncModelParams,
+        outbound: &mut Sender<TrainRequest>,
+        model_id: i32,
+        round_id: u32,
+    ) -> () {
         let buffer = enc_params.serialize();
         let len_buffer = buffer.len();
         let mut num_packets = len_buffer / NUM_PARAM_BYTES_PER_PACKET;
         if len_buffer % NUM_PARAM_BYTES_PER_PACKET != 0 {
             num_packets += 1;
         }
-        
+
         let meta_message = TrainRequest {
-            param_message : Some(train_request::ParamMessage::Params(ModelParameters {
-                param_message : Some(model_parameters::ParamMessage::ParamMeta(ModelParametersMeta { 
-                    model_id : model_id,
-                    round_id : round_id as i32,
-                    num_blocks : num_packets as i32
-                }))
-            }))
+            param_message: Some(train_request::ParamMessage::Params(ModelParameters {
+                param_message: Some(model_parameters::ParamMessage::ParamMeta(
+                    ModelParametersMeta {
+                        model_id: model_id,
+                        round_id: round_id as i32,
+                        num_blocks: num_packets as i32,
+                    },
+                )),
+            })),
         };
 
         let _res = outbound.send(meta_message).await;
@@ -122,34 +152,36 @@ impl FlServiceClient {
             let begin = packet_num * NUM_PARAM_BYTES_PER_PACKET;
             let end = (packet_num + 1) * NUM_PARAM_BYTES_PER_PACKET;
             let end = if end > len_buffer { len_buffer } else { end };
-            
+
             let data_packet = TrainRequest {
-                param_message : Some(train_request::ParamMessage::Params(ModelParameters {
-                    param_message : Some(model_parameters::ParamMessage::ParamBlock(DataBlock { 
-                        block_number : packet_num as u32, 
-                        data : Vec::from_iter(buffer[begin..end].iter().cloned())
-                    }))
-                }))
+                param_message: Some(train_request::ParamMessage::Params(ModelParameters {
+                    param_message: Some(model_parameters::ParamMessage::ParamBlock(DataBlock {
+                        block_number: packet_num as u32,
+                        data: Vec::from_iter(buffer[begin..end].iter().cloned()),
+                    })),
+                })),
             };
             let _res = outbound.send(data_packet).await;
-              //TODO : handle error
+            //TODO : handle error
         }
     }
 
-    pub async fn train_model(&mut self, model_id : i32, verbose: bool) -> () {
+    pub async fn train_model(&mut self, model_id: i32, verbose: bool) -> () {
         println!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
-       
-        let client_id =  self.client_id;
+
+        let client_id = self.client_id;
         let mut outbound_local = outbound.clone();
         tokio::spawn(async move {
             println!("Client {} registers to train model {}", client_id, model_id);
             // Register phase
             let request = TrainRequest {
-                param_message : Some(train_request::ParamMessage::StartMessage(WorkerRegisterMessage {
-                    model_id : model_id,
-                    client_id : client_id,
-                }))
+                param_message: Some(train_request::ParamMessage::StartMessage(
+                    WorkerRegisterMessage {
+                        model_id: model_id,
+                        client_id: client_id,
+                    },
+                )),
             };
             let _res = outbound_local.send(request).await;
         });
@@ -159,44 +191,67 @@ impl FlServiceClient {
 
         let mut state = ServerModelDataState::new();
         // Protocol loop
-        println!("Client {} starts protocol loop for model {}", client_id, model_id);
+        println!(
+            "Client {} starts protocol loop for model {}",
+            client_id, model_id
+        );
         while let Some(response) = inbound.message().await.unwrap() {
-           
             match response.param_message.unwrap() {
-                train_response::ParamMessage::Params(msg) => {
-                    match msg.model_message.unwrap() {
-                        server_model_data::ModelMessage::Config(config) => {
-                            state.update(config);
-                        }
-                        server_model_data::ModelMessage::ModelBlock(msg) => {
-                            match msg.param_message.unwrap() {
-                                ParamMessage::ParamMeta(meta) => {
-                                    println!("Client {} receives model parameters for round {}", client_id, meta.round_id);
-                                    state.data.init(meta);
-                                }
-                                ParamMessage::ParamBlock(data_block) => {
-                                    let _ok = state.data.apply(&data_block);
-                                    if state.data.done() {
-                                        let params = PlainParams::deserialize(state.data.data_ref());
-                                        let round_id = state.data.get_round_id();
-                                        state.data.reset_mem();
-                                        let current_config_ref = state.get_current_config().unwrap();
-                                        let trained_params = self.train_model_locally(params, current_config_ref, round_id as i32, model_id).await;
-                                        let encrypted_params = self.encrypt_data(&trained_params.unwrap(), current_config_ref);
-                                        let _res = self.handle_send_data(encrypted_params.unwrap(), &mut outbound, model_id, round_id).await;
-                                        println!("Client {} finished training for round {}", client_id, round_id);
-                                    }
+                train_response::ParamMessage::Params(msg) => match msg.model_message.unwrap() {
+                    server_model_data::ModelMessage::Config(config) => {
+                        state.update(config);
+                    }
+                    server_model_data::ModelMessage::ModelBlock(msg) => {
+                        match msg.param_message.unwrap() {
+                            ParamMessage::ParamMeta(meta) => {
+                                println!(
+                                    "Client {} receives model parameters for round {}",
+                                    client_id, meta.round_id
+                                );
+                                state.data.init(meta);
+                            }
+                            ParamMessage::ParamBlock(data_block) => {
+                                let _ok = state.data.apply(&data_block);
+                                if state.data.done() {
+                                    let params = PlainParams::deserialize(state.data.data_ref());
+                                    let round_id = state.data.get_round_id();
+                                    state.data.reset_mem();
+                                    let current_config_ref = state.get_current_config().unwrap();
+                                    let trained_params = self
+                                        .train_model_locally(
+                                            params,
+                                            current_config_ref,
+                                            round_id as i32,
+                                            model_id,
+                                        )
+                                        .await;
+                                    let encrypted_params = self
+                                        .encrypt_data(&trained_params.unwrap(), current_config_ref);
+                                    let _res = self
+                                        .handle_send_data(
+                                            encrypted_params.unwrap(),
+                                            &mut outbound,
+                                            model_id,
+                                            round_id,
+                                        )
+                                        .await;
+                                    println!(
+                                        "Client {} finished training for round {}",
+                                        client_id, round_id
+                                    );
                                 }
                             }
                         }
-                        
                     }
-                }
+                },
                 train_response::ParamMessage::ErrorMessage(_) => {
                     todo!("Handle erros");
                 }
                 train_response::ParamMessage::DoneMessage(_) => {
-                    println!("Client {} terminates, server done message received", client_id);
+                    println!(
+                        "Client {} terminates, server done message received",
+                        client_id
+                    );
                     break;
                 }
             }

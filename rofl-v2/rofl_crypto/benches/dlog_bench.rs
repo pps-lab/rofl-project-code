@@ -12,15 +12,15 @@ extern crate chrono;
 use chrono::prelude::*;
 
 extern crate curve25519_dalek;
-use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
 
+use criterion::black_box;
+use rust_crypto::bsgs32::*;
+use rust_crypto::conversion32::*;
 use rust_crypto::fp::N_BITS;
 use rust_crypto::pedersen_ops::*;
 use rust_crypto::range_proof_vec::*;
-use rust_crypto::bsgs32::*;
-use rust_crypto::conversion32::*;
-use criterion::black_box;
 
 static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
 //static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];
@@ -35,30 +35,32 @@ fn bench_solve_discrete_log(c: &mut Criterion) {
     let table_size: Vec<&usize> = TABLE_SIZE.iter().filter(|x| **x <= N_BITS).collect();
 
     for (ts, d) in iproduct!(table_size, &DIM) {
-                        
         let label: String = label_solve_discrete_log(*d, *ts);
-        c.bench_function(
-            &label, move |b| {
-                let mut rng = rand::thread_rng();
-                let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
-                let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
-                let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
-                b.iter(|| discrete_log_vec(&x_vec_enc, black_box(*ts)));
-            });
+        c.bench_function(&label, move |b| {
+            let mut rng = rand::thread_rng();
+            let x_vec: Vec<f32> = (0..*d)
+                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .collect();
+            let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
+            let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
+            b.iter(|| discrete_log_vec(&x_vec_enc, black_box(*ts)));
+        });
     }
 }
 
-fn label_solve_discrete_log(dim: usize, table_size: usize) -> String{
+fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {
     // (fp_bitsize-table_size-dim-(time))
     let t: DateTime<Local> = Local::now();
-    format!("bench_discrete_log-{}-{}-{}-({})",
+    format!(
+        "bench_discrete_log-{}-{}-{}-({})",
         N_BITS,
         table_size,
         dim,
-        t.format("%Y-%m-%d/%H:%M:%S").to_string())
+        t.format("%Y-%m-%d/%H:%M:%S").to_string()
+    )
 }
 
-criterion_group!{
+criterion_group! {
     name = discrete_log;
     config = Criterion::default().sample_size(10);
     targets =

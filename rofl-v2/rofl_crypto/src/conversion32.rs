@@ -4,13 +4,17 @@ use rand::Rng;
 
 use curve25519_dalek::scalar::Scalar;
 
-use crate::fp::{Fix, IRawFix, URawFix, read_from_bytes, N_BITS};
+use crate::fp::{read_from_bytes, Fix, IRawFix, URawFix, N_BITS};
 
 // TODO mlei: quantify loss of conversion?
 // TODO lhidde: Implement prob. quantization and see how it compares
 pub fn f32_to_scalar(v_f32: &f32) -> Scalar {
     let v_scalar: Scalar = (Fix::saturating_from_float(v_f32.abs()).to_bits() as URawFix).into();
-    if *v_f32 < 0.0 {-v_scalar} else {v_scalar}
+    if *v_f32 < 0.0 {
+        -v_scalar
+    } else {
+        v_scalar
+    }
 }
 
 pub fn f32_to_scalar_vec(values_f32: &Vec<f32>) -> Vec<Scalar> {
@@ -23,8 +27,7 @@ pub fn scalar_to_f32(v_scalar: &Scalar) -> f32 {
     if is_neg {
         value_uint = read_from_bytes(&(-v_scalar).to_bytes());
         -uint_to_f32(value_uint)
-    }
-    else {
+    } else {
         value_uint = read_from_bytes(&v_scalar.to_bytes());
         uint_to_f32(value_uint)
     }
@@ -44,11 +47,14 @@ pub fn uint_to_f32_vec(uint_vec: &Vec<URawFix>) -> Vec<f32> {
 }
 
 pub fn f32_to_fp_vec(f32_vec: &Vec<f32>) -> Vec<URawFix> {
-    f32_vec.iter().map(|x| Fix::saturating_from_float(*x).to_bits()).collect()
+    f32_vec
+        .iter()
+        .map(|x| Fix::saturating_from_float(*x).to_bits())
+        .collect()
 }
 
 pub fn get_clip_bounds(range: usize) -> (f32, f32) {
-    let max: f32 = Fix::from_bits(((1u128 << range-1) - 1) as URawFix).to_float();
+    let max: f32 = Fix::from_bits(((1u128 << range - 1) - 1) as URawFix).to_float();
     let min: f32 = -max;
     (min, max)
 }
@@ -73,7 +79,10 @@ pub fn square(s1: &Scalar) -> Scalar {
 
     let mul: Option<Fix> = value_fp.checked_mul(value_fp);
     if mul.is_none() {
-        panic!("Value {:?} could not be multiplied because the result overflows {:?} bits", value_fp, N_BITS);
+        panic!(
+            "Value {:?} could not be multiplied because the result overflows {:?} bits",
+            value_fp, N_BITS
+        );
     }
 
     (mul.unwrap().to_bits() as URawFix).into()
@@ -82,10 +91,10 @@ pub fn square(s1: &Scalar) -> Scalar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::Rng;
-    use crate::pedersen_ops::{default_discrete_log_vec, commit_no_blinding_vec};
-    use curve25519_dalek::scalar::Scalar;
+    use crate::pedersen_ops::{commit_no_blinding_vec, default_discrete_log_vec};
     use curve25519_dalek::ristretto::RistrettoPoint;
+    use curve25519_dalek::scalar::Scalar;
+    use rand::Rng;
 
     #[test]
     fn test_print_fp_bit_conf() {
@@ -143,7 +152,6 @@ mod tests {
         let b_scalar: Scalar = f32_to_scalar(&b_f32);
         let c_scalar: Scalar = f32_to_scalar(&c_f32);
 
-
         assert_eq!(a_f32, scalar_to_f32(&a_scalar));
         assert_eq!(b_f32, scalar_to_f32(&b_scalar));
         assert_eq!(c_f32, scalar_to_f32(&c_scalar));
@@ -153,21 +161,27 @@ mod tests {
     fn test_conversion_f32_scalar_lossy_rounded() {
         // bigger values may lead to overflow depending
         let a_f32: f32 = (Fix::max_value().to_float::<f32>()) - 0.1;
-        let b_f32: f32 = (Fix::min_value().to_float::<f32>()) + (1.0/3.0);
+        let b_f32: f32 = (Fix::min_value().to_float::<f32>()) + (1.0 / 3.0);
 
         let a_scalar = f32_to_scalar(&a_f32);
         let b_scalar = f32_to_scalar(&b_f32);
 
         // NOTE mlei: loss is bounded by fractional bits of fixed precision
-        assert!((a_f32 - scalar_to_f32(&a_scalar)).abs() <= 2f32.powf(-(Fix::frac_nbits() as f32) - 1.0));
-        assert!((b_f32 - scalar_to_f32(&b_scalar)).abs() <= 2f32.powf(-(Fix::frac_nbits() as f32) - 1.0));
+        assert!(
+            (a_f32 - scalar_to_f32(&a_scalar)).abs()
+                <= 2f32.powf(-(Fix::frac_nbits() as f32) - 1.0)
+        );
+        assert!(
+            (b_f32 - scalar_to_f32(&b_scalar)).abs()
+                <= 2f32.powf(-(Fix::frac_nbits() as f32) - 1.0)
+        );
     }
 
     #[test]
     fn test_conversion_f32_scalar_lossy_saturated() {
         let max: f32 = Fix::max_value().to_float::<f32>();
         let min: f32 = -Fix::max_value().to_float::<f32>();
-        
+
         let a_f32: f32 = max + 5.0;
         let b_f32: f32 = min - 100.0;
 
@@ -182,7 +196,7 @@ mod tests {
     #[test]
     fn test_commit_no_blinding_extract_value_saturated() {
         let max: f32 = Fix::max_value().to_float::<f32>();
-        let min: f32 = -Fix::max_value().to_float::<f32>(); 
+        let min: f32 = -Fix::max_value().to_float::<f32>();
         let a_f32: f32 = max + 5.0;
         let b_f32: f32 = min - 100.0;
 

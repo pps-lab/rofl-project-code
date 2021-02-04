@@ -1,23 +1,28 @@
+use bulletproofs::ProofError;
 use bulletproofs::RangeProof;
 use bulletproofs::{BulletproofGens, PedersenGens};
-use bulletproofs::ProofError;
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
-use rayon::prelude::*;
 use merlin::Transcript;
+use rayon::prelude::*;
 use reduce::Reduce;
 
 pub mod errors;
 use self::errors::L2RangeProofError;
+use crate::conversion32::{
+    f32_to_fp_vec, f32_to_scalar, get_clip_bounds, get_l2_clip_bounds, scalar_to_f32, square,
+};
+use crate::fp::{read_from_bytes, Fix, URawFix};
 use crate::pedersen_ops::{compute_shifted_values_rp, compute_shifted_values_vec};
-use crate::fp::{Fix, URawFix, read_from_bytes};
-use crate::conversion32::{f32_to_fp_vec, f32_to_scalar, get_clip_bounds, scalar_to_f32, square, get_l2_clip_bounds};
 use crate::square_rand_proof_vec;
 
 /// prove that value x is element of [-2^((prove_range-1)/n_frac), 2^((prove_range-1)/n_frac)]
-pub fn create_rangeproof_l2(value_vec_clipped: &Vec<f32>, blinding_vec: &Vec<Scalar>, prove_range: usize, n_partition: usize)
-    -> Result<(RangeProof, RistrettoPoint), L2RangeProofError> {
-
+pub fn create_rangeproof_l2(
+    value_vec_clipped: &Vec<f32>,
+    blinding_vec: &Vec<Scalar>,
+    prove_range: usize,
+    n_partition: usize,
+) -> Result<(RangeProof, RistrettoPoint), L2RangeProofError> {
     if value_vec_clipped.len() != blinding_vec.len() {
         return Err(ProofError::WrongNumBlindingFactors.into());
     }
@@ -34,63 +39,93 @@ pub fn create_rangeproof_l2(value_vec_clipped: &Vec<f32>, blinding_vec: &Vec<Sca
 
     // println!("Offset scalar {:?} {:?}", Scalar::from((1 as URawFix)), offset_value_scalar);
     // TODO: Remove iterator in the code below for speed
-    let val = value_vec_clipped.iter()
+    let val = value_vec_clipped
+        .iter()
         .map(|x| f32_to_scalar(x))
         .map(|x| x * x)
-        .reduce(|a, b| a + b).unwrap(); // do we shift?
+        .reduce(|a, b| a + b)
+        .unwrap(); // do we shift?
 
     let shift = (i32::pow(2, Fix::frac_nbits()) as f32);
-    let val_float = value_vec_clipped.iter()
+    let val_float = value_vec_clipped
+        .iter()
         .map(|x| scalar_to_f32(&f32_to_scalar(x)))
         .map(|x| x * x * shift)
-        .reduce(|a, b| a + b).unwrap();
+        .reduce(|a, b| a + b)
+        .unwrap();
 
     // Check for overflows, strictly not required in proving but otherwise we prove bogus
     if scalar_to_f32(&val) != val_float {
-        return Err(L2RangeProofError::OverflowError(scalar_to_f32(&val).to_string(), val_float.to_string()));
+        return Err(L2RangeProofError::OverflowError(
+            scalar_to_f32(&val).to_string(),
+            val_float.to_string(),
+        ));
     }
 
     if (scalar_to_f32(&val) > get_l2_clip_bounds(prove_range)) {
-        return Err(L2RangeProofError::NormOutOfRangeError(scalar_to_f32(&val).to_string()));
+        return Err(L2RangeProofError::NormOutOfRangeError(
+            scalar_to_f32(&val).to_string(),
+        ));
     }
-    
+
     let value_shifted: Vec<Scalar> = vec![val];
     // let value_shifted: Vec<Scalar> = val.collect();
 
-    let value_fp_vec_clipped_shifted: Vec<URawFix> = value_shifted.iter()
+    let value_fp_vec_clipped_shifted: Vec<URawFix> = value_shifted
+        .iter()
         .map(|x| x.to_bytes())
         .map(|x| read_from_bytes(&x))
         .collect();
 
-    let blinding_sum = vec![blinding_vec.iter().map(|x|x.clone()).reduce(|a, b| a + b).unwrap()];
+    let blinding_sum = vec![blinding_vec
+        .iter()
+        .map(|x| x.clone())
+        .reduce(|a, b| a + b)
+        .unwrap()];
 
     assert_eq!(value_shifted.len(), blinding_sum.len());
 
     // extend vector length to pow2
-    let value_fp_vec_shifted_clipped_ext: Vec<u64> = extend_vec_to_pow2(&value_fp_vec_clipped_shifted, 0).iter().map(|x| *x as u64).collect();
+    let value_fp_vec_shifted_clipped_ext: Vec<u64> =
+        extend_vec_to_pow2(&value_fp_vec_clipped_shifted, 0)
+            .iter()
+            .map(|x| *x as u64)
+            .collect();
     let blinding_vec_ext: Vec<Scalar> = extend_vec_to_pow2(&blinding_sum, Scalar::zero());
-    
+
     // chunk the vector for par_iter
     let n_chunks: usize = std::cmp::min(value_fp_vec_shifted_clipped_ext.len(), n_partition);
     let chunk_size: usize = value_fp_vec_shifted_clipped_ext.len() / n_chunks;
-    let value_fp_vec_chunks: Vec<Vec<u64>> = value_fp_vec_shifted_clipped_ext.chunks(chunk_size).map(|x| x.to_vec()).collect();
-    let blinding_fp_vec_chunks: Vec<Vec<Scalar>> = blinding_vec_ext.chunks(chunk_size).map(|x| x.to_vec()).collect();
-    let proof_args: Vec<(&Vec<u64>, &Vec<Scalar>)> = value_fp_vec_chunks.iter().zip(&blinding_fp_vec_chunks).collect();
-    
+    let value_fp_vec_chunks: Vec<Vec<u64>> = value_fp_vec_shifted_clipped_ext
+        .chunks(chunk_size)
+        .map(|x| x.to_vec())
+        .collect();
+    let blinding_fp_vec_chunks: Vec<Vec<Scalar>> = blinding_vec_ext
+        .chunks(chunk_size)
+        .map(|x| x.to_vec())
+        .collect();
+    let proof_args: Vec<(&Vec<u64>, &Vec<Scalar>)> = value_fp_vec_chunks
+        .iter()
+        .zip(&blinding_fp_vec_chunks)
+        .collect();
+
     let pc_gens = PedersenGens::default();
-    let res_vec: Vec<Result<(RangeProof, Vec<CompressedRistretto>), ProofError>> = 
-    proof_args.par_iter().map(|(v, b)| create_rangeproof_helper(v, b, prove_range, &pc_gens)).collect();
-    
+    let res_vec: Vec<Result<(RangeProof, Vec<CompressedRistretto>), ProofError>> = proof_args
+        .par_iter()
+        .map(|(v, b)| create_rangeproof_helper(v, b, prove_range, &pc_gens))
+        .collect();
+
     // bundle up results
     let mut res_range_proof_vec: Vec<RangeProof> = Vec::with_capacity(n_chunks);
-    let mut res_commit_vec: Vec<CompressedRistretto> = Vec::with_capacity(value_fp_vec_shifted_clipped_ext.len());
+    let mut res_commit_vec: Vec<CompressedRistretto> =
+        Vec::with_capacity(value_fp_vec_shifted_clipped_ext.len());
     for r in res_vec {
         match r {
             Ok((rp, cpr_vec)) => {
                 res_range_proof_vec.push(rp);
                 res_commit_vec.extend(cpr_vec.iter());
             }
-            Err(e) => return Err(e.into())
+            Err(e) => return Err(e.into()),
         }
     }
 
@@ -103,12 +138,18 @@ pub fn create_rangeproof_l2(value_vec_clipped: &Vec<f32>, blinding_vec: &Vec<Sca
     assert_eq!(res_range_proof_vec.len(), 1);
     assert_eq!(res_commit_vec.len(), 1);
 
-    Ok((res_range_proof_vec[0].clone(), res_commit_vec[0].decompress().unwrap()))
+    Ok((
+        res_range_proof_vec[0].clone(),
+        res_commit_vec[0].decompress().unwrap(),
+    ))
 }
 
 pub fn clip_f32_to_range_vec(value_vec: &Vec<f32>, prove_range: usize) -> Vec<f32> {
     let (min_val, max_val) = get_clip_bounds(prove_range);
-    let value_vec_clipped: Vec<f32> = value_vec.iter().map(|x| f32::min(max_val, f32::max(min_val, *x))).collect();
+    let value_vec_clipped: Vec<f32> = value_vec
+        .iter()
+        .map(|x| f32::min(max_val, f32::max(min_val, *x)))
+        .collect();
     value_vec_clipped
 }
 
@@ -117,23 +158,27 @@ fn is_out_of_range(value_vec: &Vec<f32>, prove_range: usize) -> bool {
     value_vec.iter().any(|x| (&min > x) || (x > &max))
 }
 
-fn create_rangeproof_helper(value_vec: &[u64], blinding_vec: &[Scalar], prove_range: usize, pc_gens: &PedersenGens)
-    -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
-
+fn create_rangeproof_helper(
+    value_vec: &[u64],
+    blinding_vec: &[Scalar],
+    prove_range: usize,
+    pc_gens: &PedersenGens,
+) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
     let bp_gens = BulletproofGens::new(64, value_vec.len());
     let mut transcript = Transcript::new(b"L2RangeProof");
     match RangeProof::prove_multiple(
-        &bp_gens, 
-        &pc_gens, 
+        &bp_gens,
+        &pc_gens,
         &mut transcript,
         &value_vec,
         &blinding_vec,
-        prove_range) {
-            Ok((range_proof, commit_vec)) => Ok((range_proof, commit_vec)),
-            Err(e) => match e {
-                ProofError::InvalidBitsize => Err(e),
-                _ => panic!("Should not get here: {}", e)
-        }
+        prove_range,
+    ) {
+        Ok((range_proof, commit_vec)) => Ok((range_proof, commit_vec)),
+        Err(e) => match e {
+            ProofError::InvalidBitsize => Err(e),
+            _ => panic!("Should not get here: {}", e),
+        },
     }
 }
 
@@ -142,10 +187,11 @@ pub fn convert_sym_range_to_asym_fp_range(range_exp: usize) -> usize {
     range_exp + (Fix::frac_nbits() as usize)
 }
 
-
-pub fn verify_rangeproof_l2(range_proof: &RangeProof, commit: &RistrettoPoint, prove_range: usize)
--> Result<bool, ProofError>{
-
+pub fn verify_rangeproof_l2(
+    range_proof: &RangeProof,
+    commit: &RistrettoPoint,
+    prove_range: usize,
+) -> Result<bool, ProofError> {
     // TODO lhidde: Make efficient
     let range_proof_vec = vec![range_proof.clone()];
     let commit_vec = vec![commit.clone()];
@@ -162,23 +208,36 @@ pub fn verify_rangeproof_l2(range_proof: &RangeProof, commit: &RistrettoPoint, p
 
     let crp_vec_shifted_ext: Vec<CompressedRistretto> = rp_to_crp_vec(&commit_vec_shifted_ext);
     let chunk_size: usize = crp_vec_shifted_ext.len() / range_proof_vec.len();
-    let commit_vec_vec_shifted: Vec<Vec<CompressedRistretto>> = crp_vec_shifted_ext.chunks(chunk_size).map(|x| x.to_vec()).collect();
-    let verify_args: Vec<(&RangeProof, &Vec<CompressedRistretto>)> = range_proof_vec.iter().zip(&commit_vec_vec_shifted).collect();
+    let commit_vec_vec_shifted: Vec<Vec<CompressedRistretto>> = crp_vec_shifted_ext
+        .chunks(chunk_size)
+        .map(|x| x.to_vec())
+        .collect();
+    let verify_args: Vec<(&RangeProof, &Vec<CompressedRistretto>)> = range_proof_vec
+        .iter()
+        .zip(&commit_vec_vec_shifted)
+        .collect();
 
-    let res_vec: Vec<Result<bool, ProofError>> = verify_args.par_iter().map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens)).collect();
+    let res_vec: Vec<Result<bool, ProofError>> = verify_args
+        .par_iter()
+        .map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens))
+        .collect();
 
     let mut res: bool = true;
     for r in res_vec {
         match r {
             Ok(v) => res &= v,
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         }
     }
     Ok(res)
 }
 
-pub fn verify_rangeproof_helper(range_proof: &RangeProof, commit_vec: &Vec<CompressedRistretto>, range_exp: usize, pc_gens: &PedersenGens) 
--> Result<bool, ProofError>{
+pub fn verify_rangeproof_helper(
+    range_proof: &RangeProof,
+    commit_vec: &Vec<CompressedRistretto>,
+    range_exp: usize,
+    pc_gens: &PedersenGens,
+) -> Result<bool, ProofError> {
     let bp_gens = BulletproofGens::new(64, commit_vec.len());
     let verify_range: usize = range_exp;
     let mut transcript = Transcript::new(b"L2RangeProof");
@@ -188,19 +247,15 @@ pub fn verify_rangeproof_helper(range_proof: &RangeProof, commit_vec: &Vec<Compr
         &pc_gens,
         &mut transcript,
         &commit_vec,
-        verify_range
+        verify_range,
     ) {
         Ok(_) => Ok(true),
         Err(e) => match e {
-            ProofError::VerificationError => {
-                Ok(false)
-            },
-            _ => Err(e)
-            //Err(_) => panic!("Should not get here")
-        }
+            ProofError::VerificationError => Ok(false),
+            _ => Err(e), //Err(_) => panic!("Should not get here")
+        },
     }
 }
-
 
 fn extend_vec_to_pow2<T: Clone>(value_vec: &Vec<T>, fill_value: T) -> Vec<T> {
     let ext_len: usize = next_pow2(value_vec.len());
@@ -214,9 +269,9 @@ fn next_pow2(val: usize) -> usize {
     if val == 1 {
         return 1;
     }
-    let mut n: usize = val-1;
-    while (n & n-1) != 0 {
-        n &= n-1;
+    let mut n: usize = val - 1;
+    while (n & n - 1) != 0 {
+        n &= n - 1;
     }
     return n << 1;
 }
@@ -226,18 +281,20 @@ fn rp_to_crp_vec(rp_vec: &Vec<RistrettoPoint>) -> Vec<CompressedRistretto> {
 }
 
 fn crp_to_rp_vec(crp_vec: &Vec<CompressedRistretto>) -> Vec<RistrettoPoint> {
-    crp_vec.par_iter().map(|x| x.decompress().unwrap()).collect()
+    crp_vec
+        .par_iter()
+        .map(|x| x.decompress().unwrap())
+        .collect()
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pedersen_ops::*;
-    use rand::Rng;
-    use crate::conversion32::{scalar_to_f32_vec, scalar_to_f32};
+    use crate::conversion32::{scalar_to_f32, scalar_to_f32_vec};
     use crate::fp::N_BITS;
+    use crate::pedersen_ops::*;
     use crate::range_proof_vec::clip_f32_to_range_vec;
+    use rand::Rng;
     use std::cmp;
 
     #[test]
@@ -253,7 +310,8 @@ mod tests {
         // let values: Vec<f32> =  clip_f32_to_range_vec(&vec![-1.25, 0.5, -(Fix::max_value().to_float::<f32>())], prove_range);
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![1.25], prove_range);
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
-        let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
+        let (range_proof, commit) =
+            create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
         let res = verify_rangeproof_l2(&range_proof, &commit, N_BITS);
         assert!(res.unwrap());
     }
@@ -264,7 +322,8 @@ mod tests {
         // let values: Vec<f32> =  clip_f32_to_range_vec(&vec![-1.25, 0.5, -(Fix::max_value().to_float::<f32>())], prove_range);
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![1.25, 0.5, 0.25], prove_range);
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
-        let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
+        let (range_proof, commit) =
+            create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
         let res = verify_rangeproof_l2(&range_proof, &commit, N_BITS);
         assert!(res.unwrap());
     }
@@ -281,7 +340,8 @@ mod tests {
         // let mul = f32_to_scalar(&values[0]) * f32_to_scalar(&values[0]);
         // println!("bb {:?} {:?}", bb, scalar_to_f32(&mul));
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
-        let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
+        let (range_proof, commit) =
+            create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
         let res = verify_rangeproof_l2(&range_proof, &commit, prove_range);
         assert!(res.unwrap());
     }
@@ -291,7 +351,8 @@ mod tests {
         let prove_range: usize = 16;
         let values: Vec<f32> = vec![-7.9];
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
-        let (range_proof, commit) = create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
+        let (range_proof, commit) =
+            create_rangeproof_l2(&values, &blindings, prove_range, prove_range).unwrap();
         let res = verify_rangeproof_l2(&range_proof, &commit, prove_range);
         assert!(res.unwrap());
     }
@@ -319,7 +380,8 @@ mod tests {
         let prove_range: usize = 4;
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![0.5], prove_range);
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
-        let (range_proof_vec, _) = create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
+        let (range_proof_vec, _) =
+            create_rangeproof_l2(&values, &blindings, N_BITS, prove_range).unwrap();
 
         let fake_value: u64 = 1u64 << N_BITS + 1;
         let mut rng = rand::thread_rng();
@@ -338,7 +400,12 @@ mod tests {
         let prove_range: usize = N_BITS; // Because of the square
         let (fp_min, fp_max) = get_clip_bounds(prove_range / 2); // Otw out of bounds?
         println!("{} {} {}", prove_range, fp_min, fp_max);
-        let value_vec: Vec<f32> = clip_f32_to_range_vec(&(0..n_values).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect(), prove_range);
+        let value_vec: Vec<f32> = clip_f32_to_range_vec(
+            &(0..n_values)
+                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .collect(),
+            prove_range,
+        );
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(n_values);
 
         let (rangeproof_vec, commit_vec) =
@@ -348,11 +415,10 @@ mod tests {
 
     #[test]
     fn test_create_rangeproof_correct_shift() {
-
         // Cant work, need cancelling blindings
 
         let n_partition: usize = 4;
-        let x_vec: Vec<f32> =  clip_f32_to_range_vec(&vec![0.25, 1.25, -1.5], N_BITS);
+        let x_vec: Vec<f32> = clip_f32_to_range_vec(&vec![0.25, 1.25, -1.5], N_BITS);
         let blinding_vec: Vec<Scalar> = (0..x_vec.len()).map(|_| Scalar::zero()).collect();
 
         let (_, commit_vec) =
@@ -361,7 +427,10 @@ mod tests {
         let extracted_val: Vec<f32> = scalar_to_f32_vec(&extracted_val_scalar);
         //println!("extracted_val {:?}", extracted_val);
 
-        assert_eq!(extracted_val[0], 3.875 * (i32::pow(2, Fix::frac_nbits()) as f32));
+        assert_eq!(
+            extracted_val[0],
+            3.875 * (i32::pow(2, Fix::frac_nbits()) as f32)
+        );
     }
 
     #[test]
@@ -371,15 +440,20 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         // prove_range as to be at least 8 bit
-        let prove_range: usize = cmp::max(N_BITS/2, 8);
+        let prove_range: usize = cmp::max(N_BITS / 2, 8);
         //let float_range: f32 = 2f32.powi((range_exp-1) as i32) - 1f32/(Fix::frac_nbits() as f32);
-        let float_range: f32 = Fix::from_bits(((1u128 << prove_range) - 1u128) as URawFix).to_float();
-        let value_vec: Vec<f32> = clip_f32_to_range_vec(&(0..n_values).map(|_| rng.gen_range::<f32>(-float_range, float_range)).collect(), prove_range);
+        let float_range: f32 =
+            Fix::from_bits(((1u128 << prove_range) - 1u128) as URawFix).to_float();
+        let value_vec: Vec<f32> = clip_f32_to_range_vec(
+            &(0..n_values)
+                .map(|_| rng.gen_range::<f32>(-float_range, float_range))
+                .collect(),
+            prove_range,
+        );
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(n_values);
 
         let (rangeproof_vec, commit_vec_vec): (RangeProof, RistrettoPoint) =
             create_rangeproof_l2(&value_vec, &blinding_vec, prove_range, n_partition).unwrap();
-
 
         let fake_value: Scalar = Scalar::from(1u64 << prove_range + 1);
         let mut rng = rand::thread_rng();
@@ -400,7 +474,8 @@ mod tests {
         let y_vec: Vec<f32> = vec![-0.75, 1.25, -2.0];
         let z_vec: Vec<f32> = vec![0.5, 1.25, -3.0];
         let correction = i32::pow(2, Fix::frac_nbits()) as f32;
-        let target_vec: Vec<f32> = vec![3.875 * correction, 6.125 * correction, 10.8125 * correction];
+        let target_vec: Vec<f32> =
+            vec![3.875 * correction, 6.125 * correction, 10.8125 * correction];
 
         let zero: f32 = 0.0;
 
@@ -413,9 +488,12 @@ mod tests {
             }
         }
 
-        let (range_proof_x, commitments_x) = create_rangeproof_l2(&x_vec, &blindings[0], range_exp, n_partition).unwrap();
-        let (range_proof_y, commitments_y) = create_rangeproof_l2(&y_vec, &blindings[1], range_exp, n_partition).unwrap();
-        let (range_proof_z, commitments_z) = create_rangeproof_l2(&z_vec, &blindings[2], range_exp, n_partition).unwrap();
+        let (range_proof_x, commitments_x) =
+            create_rangeproof_l2(&x_vec, &blindings[0], range_exp, n_partition).unwrap();
+        let (range_proof_y, commitments_y) =
+            create_rangeproof_l2(&y_vec, &blindings[1], range_exp, n_partition).unwrap();
+        let (range_proof_z, commitments_z) =
+            create_rangeproof_l2(&z_vec, &blindings[2], range_exp, n_partition).unwrap();
 
         assert!(verify_rangeproof_l2(&range_proof_x, &commitments_x, range_exp).unwrap());
         assert!(verify_rangeproof_l2(&range_proof_y, &commitments_y, range_exp).unwrap());
@@ -436,18 +514,24 @@ mod tests {
         let prove_range: usize = N_BITS / 2;
         let (min_val, max_val) = get_clip_bounds(prove_range);
         let target = vec![min_val, max_val];
-        let x_vec: Vec<f32> = vec![min_val-2f32, max_val+3f32];
+        let x_vec: Vec<f32> = vec![min_val - 2f32, max_val + 3f32];
         let f0 = 0f32;
         assert_eq!(Scalar::zero(), f32_to_scalar(&f0));
         let blindings: Vec<Scalar> = (0..x_vec.len()).map(|_| Scalar::zero()).collect();
         let x_vec_clipped: Vec<f32> = clip_f32_to_range_vec(&x_vec, prove_range);
 
-        let (_, commitments_x) = create_rangeproof_l2(&x_vec_clipped, &blindings, prove_range, n_partition).unwrap();
+        let (_, commitments_x) =
+            create_rangeproof_l2(&x_vec_clipped, &blindings, prove_range, n_partition).unwrap();
         let x_clipped_scalar: Vec<Scalar> = default_discrete_log_vec(&vec![commitments_x]);
         let x_clipped_dlog: Vec<f32> = scalar_to_f32_vec(&x_clipped_scalar);
 
         // Incl correction
-        let summed = x_vec_clipped.iter().map(|x| x * x).reduce(|a, b| a + b).unwrap() * (i32::pow(2, Fix::frac_nbits()) as f32);
+        let summed = x_vec_clipped
+            .iter()
+            .map(|x| x * x)
+            .reduce(|a, b| a + b)
+            .unwrap()
+            * (i32::pow(2, Fix::frac_nbits()) as f32);
         assert_eq!(x_clipped_dlog[0], summed);
     }
 
@@ -458,10 +542,17 @@ mod tests {
         let values: Vec<f32> = clip_f32_to_range_vec(&vec![1.25, -0.5, 0.25], prove_range);
         let blindings_1: Vec<Scalar> = vec![Scalar::zero(); values.len()];
         let blindings_2: Vec<Scalar> = vec![Scalar::zero(); values.len()];
-        let (range_proof, commit) = create_rangeproof_l2(&values, &blindings_2, N_BITS, prove_range).unwrap();
-        let (rand_proof_vec, eg_pair_vec) = square_rand_proof_vec::create_l2rangeproof_vec(&values, &blindings_1, &blindings_2).unwrap();
+        let (range_proof, commit) =
+            create_rangeproof_l2(&values, &blindings_2, N_BITS, prove_range).unwrap();
+        let (rand_proof_vec, eg_pair_vec) =
+            square_rand_proof_vec::create_l2rangeproof_vec(&values, &blindings_1, &blindings_2)
+                .unwrap();
 
-        let sum = eg_pair_vec.iter().map(|x| x.c_sq).reduce(|a, b| a + b).unwrap();
+        let sum = eg_pair_vec
+            .iter()
+            .map(|x| x.c_sq)
+            .reduce(|a, b| a + b)
+            .unwrap();
 
         let x_clipped_scalar: Vec<Scalar> = default_discrete_log_vec(&vec![sum, commit]);
         let x_clipped_dlog: Vec<f32> = scalar_to_f32_vec(&x_clipped_scalar);
@@ -469,4 +560,3 @@ mod tests {
         assert_eq!(sum, commit);
     }
 }
-

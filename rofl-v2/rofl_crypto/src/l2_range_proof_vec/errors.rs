@@ -10,7 +10,10 @@ pub enum L2RangeProofError {
     #[fail(display = "The scalar L2 norm exceeds prove range bounds: {}", _0)]
     NormOutOfRangeError(String),
 
-    #[fail(display = "The scalar calculation does not match the floating point calculation: {} != {}", _0, _1)]
+    #[fail(
+        display = "The scalar calculation does not match the floating point calculation: {} != {}",
+        _0, _1
+    )]
     OverflowError(String, String),
 
     // Error originating from the Bulletproof lib

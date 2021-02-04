@@ -1,8 +1,6 @@
 from trainservice import flservice_pb2
 from trainservice import flservice_pb2_grpc
 from concurrent import futures
-import time
-import math
 import logging
 
 import grpc

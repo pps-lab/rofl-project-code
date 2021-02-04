@@ -1,50 +1,54 @@
 #![allow(non_snake_case)]
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use merlin::Transcript;
-use serde::{self, Serialize, Deserialize, Serializer, Deserializer};
-use serde::de::Visitor;
 use core::fmt::Debug;
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
+use merlin::Transcript;
+use serde::de::Visitor;
+use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
-use self::party::*;
 use self::dealer::*;
-use super::rand_proof::transcript::TranscriptProtocol;
+use self::party::*;
 use self::util::read32;
+use super::rand_proof::transcript::TranscriptProtocol;
 
 pub mod constants;
 mod dealer;
 mod party;
-mod util;
 pub mod pedersen;
+mod util;
 pub use super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
 mod errors;
 pub use self::errors::ProofError;
-use crate::square_rand_proof::pedersen::{SquareRandProofCommitments, PedersenCommitment};
-use crate::square_rand_proof::constants::{LABEL_COMMIT_REAL_PEDERSEN, LABEL_COMMIT_REAL_ELGAMAL, LABEL_COMMIT_PRIME_PEDERSEN, LABEL_CHALLENGE_SCALAR, LABEL_COMMIT_PRIME_ELGAMAL, LABEL_RESPONSE_Z_M, LABEL_RESPONSE_R_1, LABEL_RESPONSE_R_2};
+use crate::square_rand_proof::constants::{
+    LABEL_CHALLENGE_SCALAR, LABEL_COMMIT_PRIME_ELGAMAL, LABEL_COMMIT_PRIME_PEDERSEN,
+    LABEL_COMMIT_REAL_ELGAMAL, LABEL_COMMIT_REAL_PEDERSEN, LABEL_RESPONSE_R_1, LABEL_RESPONSE_R_2,
+    LABEL_RESPONSE_Z_M,
+};
+use crate::square_rand_proof::pedersen::{PedersenCommitment, SquareRandProofCommitments};
 
 #[derive(PartialEq, Clone)]
 pub struct SquareRandProof {
     C_prime: SquareRandProofCommitments,
     Z_m: Scalar,
     Z_r_1: Scalar,
-    Z_r_2: Scalar
+    Z_r_2: Scalar,
 }
 
 /**
  * Implements a RandProof as well as a commitment to the square of m
  */
 impl SquareRandProof {
-    pub fn prove_existing (
+    pub fn prove_existing(
         eg_gens: &ElGamalGens,
         transcript: &mut Transcript,
         m: Scalar,
         m_com: RistrettoPoint,
         r_1: Scalar,
-        r_2: Scalar) -> Result<(SquareRandProof, SquareRandProofCommitments), ProofError> {
-        
+        r_2: Scalar,
+    ) -> Result<(SquareRandProof, SquareRandProofCommitments), ProofError> {
         let (party, c, c_prime) = PartyExisting::new(&eg_gens, m, m_com, r_1, r_2)?;
         let dealer = Dealer::new(eg_gens, transcript, c);
-        
+
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r_1, z_r_2) = party.apply_challenge(challenge);
 
@@ -57,11 +61,11 @@ impl SquareRandProof {
         transcript: &mut Transcript,
         m: Scalar,
         r_1: Scalar,
-        r_2: Scalar) -> Result<(SquareRandProof, SquareRandProofCommitments), ProofError> {
-        
+        r_2: Scalar,
+    ) -> Result<(SquareRandProof, SquareRandProofCommitments), ProofError> {
         let (party, c, c_prime) = Party::new(&eg_gens, m, r_1, r_2)?;
         let dealer = Dealer::new(eg_gens, transcript, c);
-        
+
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r_1, z_r_2) = party.apply_challenge(challenge);
 
@@ -73,8 +77,8 @@ impl SquareRandProof {
         &self,
         eg_gens: &ElGamalGens,
         transcript: &mut Transcript,
-        c: SquareRandProofCommitments) -> Result<(), ProofError> {
-        
+        c: SquareRandProofCommitments,
+    ) -> Result<(), ProofError> {
         transcript.rand_proof_domain_sep();
         transcript.commit_eg_point(LABEL_COMMIT_REAL_ELGAMAL, &c.c);
         transcript.commit_ped_point(LABEL_COMMIT_REAL_PEDERSEN, &c.c_sq);
@@ -88,7 +92,7 @@ impl SquareRandProof {
 
         // elgamal
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r_1);
-        let src_eg_pair: ElGamalPair = &self.C_prime.c + &(&challenge*&c.c);
+        let src_eg_pair: ElGamalPair = &self.C_prime.c + &(&challenge * &c.c);
 
         if dst_eg_pair != src_eg_pair {
             return Err(ProofError::VerificationError);
@@ -101,7 +105,7 @@ impl SquareRandProof {
         let rhs_ped_pair: PedersenCommitment = self.C_prime.c_sq + (challenge * c.c_sq);
 
         if lhs_ped_pair != rhs_ped_pair {
-            return Err(ProofError::VerificationError)
+            return Err(ProofError::VerificationError);
         }
 
         Ok(())
@@ -111,10 +115,8 @@ impl SquareRandProof {
         SquareRandProofCommitments::serialized_size() + 3 * 32
     }
 
-
-
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::with_capacity(6*32);
+        let mut buf: Vec<u8> = Vec::with_capacity(6 * 32);
         buf.extend_from_slice(&self.C_prime.to_bytes());
         buf.extend_from_slice(self.Z_m.as_bytes());
         buf.extend_from_slice(self.Z_r_1.as_bytes());
@@ -123,27 +125,23 @@ impl SquareRandProof {
     }
 
     pub fn from_bytes(slice: &[u8]) -> Result<SquareRandProof, ProofError> {
-        if slice.len() != 6*32 {
+        if slice.len() != 6 * 32 {
             return Err(ProofError::FormatError);
         }
-        let C_prime_opt = SquareRandProofCommitments::from_bytes(&slice[0*32..3*32]);
-        let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[3*32..4*32]));
-        let Z_r_1_opt = Scalar::from_canonical_bytes(read32(&slice[4*32..5*32]));
-        let Z_r_2_opt = Scalar::from_canonical_bytes(read32(&slice[5*32..6*32]));
+        let C_prime_opt = SquareRandProofCommitments::from_bytes(&slice[0 * 32..3 * 32]);
+        let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[3 * 32..4 * 32]));
+        let Z_r_1_opt = Scalar::from_canonical_bytes(read32(&slice[4 * 32..5 * 32]));
+        let Z_r_2_opt = Scalar::from_canonical_bytes(read32(&slice[5 * 32..6 * 32]));
 
-        if 
-            C_prime_opt.is_err() ||
-            Z_m_opt.is_none() ||
-                Z_r_1_opt.is_none() ||
-                Z_r_2_opt.is_none() {
-                return Err(ProofError::FormatError)
+        if C_prime_opt.is_err() || Z_m_opt.is_none() || Z_r_1_opt.is_none() || Z_r_2_opt.is_none() {
+            return Err(ProofError::FormatError);
         }
 
         Ok(SquareRandProof {
             C_prime: C_prime_opt.unwrap(),
             Z_m: Z_m_opt.unwrap(),
             Z_r_1: Z_r_1_opt.unwrap(),
-            Z_r_2: Z_r_2_opt.unwrap()
+            Z_r_2: Z_r_2_opt.unwrap(),
         })
     }
 }
@@ -194,9 +192,9 @@ impl Debug for SquareRandProof {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::conversion32::square;
     use bincode;
     use bulletproofs::PedersenGens;
-    use crate::conversion32::square;
 
     #[test]
     fn test_serde_randproof_roundtrip() {
@@ -220,7 +218,8 @@ mod tests {
         let m = Scalar::random(&mut rng);
         let r_1 = Scalar::random(&mut rng);
         let r_2 = Scalar::random(&mut rng);
-        let (rand_proof, c) = SquareRandProof::prove(&eg_gens, &mut prove_transcript, m, r_1, r_2).unwrap();
+        let (rand_proof, c) =
+            SquareRandProof::prove(&eg_gens, &mut prove_transcript, m, r_1, r_2).unwrap();
         let mut verify_transcript = Transcript::new(b"test_serde");
         let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c);
         assert!(res.is_ok());
@@ -229,14 +228,18 @@ mod tests {
     #[test]
     fn test_fake_randproof() {
         let eg_gens = ElGamalGens::default();
-        let p_gens = PedersenGens {B: eg_gens.B, B_blinding: eg_gens.B_blinding};
+        let p_gens = PedersenGens {
+            B: eg_gens.B,
+            B_blinding: eg_gens.B_blinding,
+        };
         let mut prove_transcript = Transcript::new(b"test_serde");
         let mut rng = rand::thread_rng();
         let m = Scalar::random(&mut rng);
         let m_sq = m * m;
         let r_1 = Scalar::random(&mut rng);
         let r_2 = Scalar::random(&mut rng);
-        let (rand_proof, _) = SquareRandProof::prove(&eg_gens, &mut prove_transcript, m, r_1, r_2).unwrap();
+        let (rand_proof, _) =
+            SquareRandProof::prove(&eg_gens, &mut prove_transcript, m, r_1, r_2).unwrap();
         let r_fake = Scalar::random(&mut rng);
         if r_fake == r_2 {
             println!("YOU WON 1 BILLION DOLLARS!!!");
@@ -244,7 +247,7 @@ mod tests {
         }
         let c_fake = SquareRandProofCommitments {
             c: eg_gens.commit(m, r_1),
-            c_sq: p_gens.commit(m_sq, r_fake)
+            c_sq: p_gens.commit(m_sq, r_fake),
         };
         let mut verify_transcript = Transcript::new(b"test_serde");
         let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c_fake);

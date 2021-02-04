@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
-use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 
 use hashbrown::HashMap;
@@ -34,7 +34,7 @@ impl BSGSTable {
     }
 
     pub fn default() -> BSGSTable {
-        BSGSTable::new((1 as usize) << (N_BITS/2 + PRECOMP_BIAS))
+        BSGSTable::new((1 as usize) << (N_BITS / 2 + PRECOMP_BIAS))
     }
 
     pub fn get_value(&self, point: RistrettoPoint) -> Option<&URawFix> {
@@ -64,23 +64,22 @@ impl BSGSTable {
     pub fn solve_discrete_log_with_neg(&self, M: RistrettoPoint) -> Scalar {
         let res: Option<URawFix> = self.solve_discrete_log_default(M);
         match res {
-                Some(val) => val.into(),
-                None => {
-                    let inv_res = self.solve_discrete_log_default(-M);
-                    -Scalar::from(inv_res.unwrap())
-                },
+            Some(val) => val.into(),
+            None => {
+                let inv_res = self.solve_discrete_log_default(-M);
+                -Scalar::from(inv_res.unwrap())
+            }
         }
-        
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::Rng;
-    use crate::pedersen_ops::{commit_no_blinding_vec, discrete_log_vec};
     use crate::conversion32::f32_to_scalar_vec;
     use crate::fp::Fix;
+    use crate::pedersen_ops::{commit_no_blinding_vec, discrete_log_vec};
+    use rand::Rng;
 
     #[test]
     fn test_solve_discrete_log_positive() {
@@ -88,17 +87,19 @@ mod tests {
         let n_values: usize = 30;
         let mut rng = rand::thread_rng();
 
-        let x_vec: Vec<f32> = (0..n_values).map(|_| rng.gen_range::<f32>(0.0, Fix::max_value().to_float::<f32>())).collect();
+        let x_vec: Vec<f32> = (0..n_values)
+            .map(|_| rng.gen_range::<f32>(0.0, Fix::max_value().to_float::<f32>()))
+            .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
-        let y_vec_scalar: Vec<Scalar> = x_vec_enc.iter()
-                                  .map(|x| bsgs.solve_discrete_log_default(*x).unwrap().into())
-                                  .collect();
+        let y_vec_scalar: Vec<Scalar> = x_vec_enc
+            .iter()
+            .map(|x| bsgs.solve_discrete_log_default(*x).unwrap().into())
+            .collect();
         for (x, y) in x_vec_scalar.iter().zip(&y_vec_scalar) {
             assert_eq!(x, y);
         }
     }
-
 
     #[test]
     fn test_solve_discrete_log_negative() {
@@ -106,13 +107,16 @@ mod tests {
         let n_values: usize = 30;
         let mut rng = rand::thread_rng();
 
-        let x_vec: Vec<f32> = (0..n_values).map(|_| rng.gen_range::<f32>(-Fix::max_value().to_float::<f32>(), 0.0)).collect();
+        let x_vec: Vec<f32> = (0..n_values)
+            .map(|_| rng.gen_range::<f32>(-Fix::max_value().to_float::<f32>(), 0.0))
+            .collect();
         //let x_vec: Vec<f32> = vec![Fix::max_value().to_float::<f32>()];
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
-        let y_vec_scalar: Vec<Scalar> = x_vec_enc.iter()
-                                  .map(|x| bsgs.solve_discrete_log_with_neg(*x))
-                                  .collect();
+        let y_vec_scalar: Vec<Scalar> = x_vec_enc
+            .iter()
+            .map(|x| bsgs.solve_discrete_log_with_neg(*x))
+            .collect();
         for (x, y) in x_vec_scalar.iter().zip(&y_vec_scalar) {
             assert_eq!(x, y);
         }

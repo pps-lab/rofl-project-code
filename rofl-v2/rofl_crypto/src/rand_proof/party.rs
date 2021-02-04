@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::RistrettoPoint;
 use clear_on_drop::clear::Clear;
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
 
-use super::errors::*;
 use super::el_gamal::{ElGamalGens, ElGamalPair};
+use super::errors::*;
 
 pub struct PartyExisting {}
 
@@ -14,8 +14,8 @@ impl PartyExisting {
     pub fn new<'a>(
         eg_gens: &'a ElGamalGens,
         m: Scalar,
-        m_com: RistrettoPoint, 
-        r: Scalar
+        m_com: RistrettoPoint,
+        r: Scalar,
     ) -> Result<(PartyAwaitingChallenge, ElGamalPair, ElGamalPair), ProofError> {
         let c: ElGamalPair = eg_gens.complete_existing(m_com, r);
         let mut rng = rand::thread_rng();
@@ -25,13 +25,17 @@ impl PartyExisting {
 
         let c_prime: ElGamalPair = eg_gens.commit(m_prime, r_prime);
 
-        Ok((PartyAwaitingChallenge{
-            eg_gens: eg_gens,
-            m: m,
-            r: r,
-            m_prime: m_prime,
-            r_prime: r_prime,
-        }, c, c_prime))
+        Ok((
+            PartyAwaitingChallenge {
+                eg_gens: eg_gens,
+                m: m,
+                r: r,
+                m_prime: m_prime,
+                r_prime: r_prime,
+            },
+            c,
+            c_prime,
+        ))
     }
 }
 
@@ -41,7 +45,7 @@ impl Party {
     pub fn new<'a>(
         eg_gens: &'a ElGamalGens,
         m: Scalar,
-        r: Scalar
+        r: Scalar,
     ) -> Result<(PartyAwaitingChallenge, ElGamalPair, ElGamalPair), ProofError> {
         let c: ElGamalPair = eg_gens.commit(m, r);
         let mut rng = rand::thread_rng();
@@ -51,13 +55,17 @@ impl Party {
 
         let c_prime: ElGamalPair = eg_gens.commit(m_prime, r_prime);
 
-        Ok((PartyAwaitingChallenge{
-            eg_gens: eg_gens,
-            m: m,
-            r: r,
-            m_prime: m_prime,
-            r_prime: r_prime,
-        }, c, c_prime))
+        Ok((
+            PartyAwaitingChallenge {
+                eg_gens: eg_gens,
+                m: m,
+                r: r,
+                m_prime: m_prime,
+                r_prime: r_prime,
+            },
+            c,
+            c_prime,
+        ))
     }
 }
 
@@ -71,10 +79,9 @@ pub struct PartyAwaitingChallenge<'a> {
 
 impl<'a> PartyAwaitingChallenge<'a> {
     pub fn apply_challenge(self, c: Scalar) -> (Scalar, Scalar) {
-        
-        let z_m: Scalar = self.m_prime + self.m*c;
-        let z_r: Scalar = self.r_prime + self.r*c;
-        
+        let z_m: Scalar = self.m_prime + self.m * c;
+        let z_r: Scalar = self.r_prime + self.r * c;
+
         (z_m, z_r)
     }
 }
@@ -87,4 +94,3 @@ impl<'a> Drop for PartyAwaitingChallenge<'a> {
         self.r_prime.clear();
     }
 }
-

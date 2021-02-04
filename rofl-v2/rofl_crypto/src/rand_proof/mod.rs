@@ -1,21 +1,21 @@
 #![allow(non_snake_case)]
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use merlin::Transcript;
-use serde::{self, Serialize, Deserialize, Serializer, Deserializer};
-use serde::de::Visitor;
 use core::fmt::Debug;
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
+use merlin::Transcript;
+use serde::de::Visitor;
+use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
-use self::party::*;
 use self::dealer::*;
+use self::party::*;
 use self::transcript::TranscriptProtocol;
 use self::util::read32;
 
-pub mod transcript;
 mod dealer;
-mod party;
-mod util;
 pub mod el_gamal;
+mod party;
+pub mod transcript;
+mod util;
 pub use self::el_gamal::{ElGamalGens, ElGamalPair};
 mod errors;
 pub use self::errors::ProofError;
@@ -32,11 +32,11 @@ impl RandProof {
         eg_gens: &ElGamalGens,
         transcript: &mut Transcript,
         m: Scalar,
-        r: Scalar) -> Result<(RandProof, ElGamalPair), ProofError> {
-        
+        r: Scalar,
+    ) -> Result<(RandProof, ElGamalPair), ProofError> {
         let (party, c, c_prime) = Party::new(&eg_gens, m, r)?;
         let dealer = Dealer::new(eg_gens, transcript, c);
-        
+
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r) = party.apply_challenge(challenge);
 
@@ -49,11 +49,11 @@ impl RandProof {
         transcript: &mut Transcript,
         m: Scalar,
         m_com: RistrettoPoint,
-        r: Scalar) -> Result<(RandProof, ElGamalPair), ProofError> {
-        
+        r: Scalar,
+    ) -> Result<(RandProof, ElGamalPair), ProofError> {
         let (party, c, c_prime) = PartyExisting::new(&eg_gens, m, m_com, r)?;
         let dealer = Dealer::new(eg_gens, transcript, c);
-        
+
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r) = party.apply_challenge(challenge);
 
@@ -65,8 +65,8 @@ impl RandProof {
         &self,
         eg_gens: &ElGamalGens,
         transcript: &mut Transcript,
-        c: ElGamalPair) -> Result<(), ProofError> {
-        
+        c: ElGamalPair,
+    ) -> Result<(), ProofError> {
         transcript.rand_proof_domain_sep();
         transcript.commit_eg_point(b"C", &c);
         transcript.commit_eg_point(b"C_prime", &self.C_prime);
@@ -75,8 +75,8 @@ impl RandProof {
         transcript.commit_scalar(b"Z_r", &self.Z_r);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
-        let src_eg_pair: ElGamalPair = &self.C_prime + &(&challenge*&c);
-        
+        let src_eg_pair: ElGamalPair = &self.C_prime + &(&challenge * &c);
+
         if dst_eg_pair != src_eg_pair {
             return Err(ProofError::VerificationError);
         }
@@ -85,11 +85,11 @@ impl RandProof {
     }
 
     pub fn serialized_size() -> usize {
-        4*32
+        4 * 32
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::with_capacity(4*32);
+        let mut buf: Vec<u8> = Vec::with_capacity(4 * 32);
         buf.extend_from_slice(&self.C_prime.to_bytes());
         buf.extend_from_slice(self.Z_m.as_bytes());
         buf.extend_from_slice(self.Z_r.as_bytes());
@@ -97,23 +97,20 @@ impl RandProof {
     }
 
     pub fn from_bytes(slice: &[u8]) -> Result<RandProof, ProofError> {
-        if slice.len() != 4*32 {
+        if slice.len() != 4 * 32 {
             return Err(ProofError::FormatError);
         }
-        let C_prime_opt = ElGamalPair::from_bytes(&slice[0*32..2*32]);
-        let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[2*32..3*32]));
-        let Z_r_opt = Scalar::from_canonical_bytes(read32(&slice[3*32..4*32]));
-        if 
-            C_prime_opt.is_err() ||
-            Z_m_opt.is_none() ||
-            Z_r_opt.is_none() {
-                return Err(ProofError::FormatError)
+        let C_prime_opt = ElGamalPair::from_bytes(&slice[0 * 32..2 * 32]);
+        let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[2 * 32..3 * 32]));
+        let Z_r_opt = Scalar::from_canonical_bytes(read32(&slice[3 * 32..4 * 32]));
+        if C_prime_opt.is_err() || Z_m_opt.is_none() || Z_r_opt.is_none() {
+            return Err(ProofError::FormatError);
         }
 
         Ok(RandProof {
             C_prime: C_prime_opt.unwrap(),
             Z_m: Z_m_opt.unwrap(),
-            Z_r: Z_r_opt.unwrap()
+            Z_r: Z_r_opt.unwrap(),
         })
     }
 }

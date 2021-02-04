@@ -4,8 +4,8 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
-use super::el_gamal::ElGamalPair;
 use super::super::square_rand_proof::pedersen::PedersenCommitment;
+use super::el_gamal::ElGamalPair;
 
 pub trait TranscriptProtocol {
     fn rand_proof_domain_sep(&mut self);
@@ -20,7 +20,7 @@ impl TranscriptProtocol for Transcript {
     fn rand_proof_domain_sep(&mut self) {
         self.append_message(b"dom-sep", b"randomness proof v1")
     }
-    
+
     fn commit_scalar(&mut self, label: &'static [u8], scalar: &Scalar) {
         self.append_message(label, scalar.as_bytes());
     }
@@ -42,5 +42,4 @@ impl TranscriptProtocol for Transcript {
         self.challenge_bytes(label, &mut buf);
         Scalar::from_bytes_mod_order_wide(&buf)
     }
-
 }

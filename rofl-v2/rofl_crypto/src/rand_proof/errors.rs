@@ -1,7 +1,6 @@
 /// Represents an error in ElGamal creation, verification, or parsing.
 #[derive(Fail, Clone, Debug, Eq, PartialEq)]
 pub enum ElGamalPairError {
-
     /// This error occurs when the El Gamal encoding is malformed.
     #[fail(display = "ElGamalPair data could not be parsed.")]
     FormatError,
