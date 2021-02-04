@@ -241,3 +241,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+rofl-v2/rofl_train_client/.idea/misc.xml
+rofl-v2/rofl_train_client/.idea/modules.xml
+rofl-v2/rofl_train_client/.idea/rofl_train_client.iml
+rofl-v2/rofl_train_client/.idea/vcs.xml
+rofl-v2/rofl_train_client/.idea/inspectionProfiles/profiles_settings.xml

@@ -36,3 +36,7 @@ path = "src/bin/basic_server.rs"
 [[bin]]
 name = "flclients"
 path = "src/bin/basic_client.rs"
+
+[[bin]]
+name = "test_train"
+path = "src/bin/test_train_client.rs"

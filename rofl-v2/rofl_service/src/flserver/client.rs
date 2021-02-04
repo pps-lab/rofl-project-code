@@ -1,3 +1,4 @@
+use crate::flserver::trainclient::FlTraining;
 use tokio::sync::mpsc::Sender;
 use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
@@ -52,26 +53,39 @@ fn get_crypto_config(config : &Config) -> Option<&CryptoConfig> {
     None
 }
 
+fn get_model_config(config : &Config) -> Option<&ModelConfig> {
+    if let Some(model_config) = &config.model_config {
+        return Some(model_config);
+    }
+    None
+}
+
 pub struct FlServiceClient {
     client_id : i32,
     grpc : Box<FlserviceClient<tonic::transport::Channel>>,
+    training_client : Box<FlTraining>,
     blindings : Vec<Scalar>
 }
 
 impl FlServiceClient {
 
-    pub fn new(client_id: i32, channel : tonic::transport::Channel, scalars : Vec<Scalar>) -> Self {
+    pub fn new(client_id: i32, channel : tonic::transport::Channel, scalars : Vec<Scalar>, training_client : Box<FlTraining>) -> Self {
         FlServiceClient {
             client_id : client_id,
             grpc : Box::new(FlserviceClient::new(channel)),
+            training_client : training_client,
             blindings : scalars
         }
     }
 
-    pub fn train_model_locally(&self, params : PlainParams, conifg : &Config) -> Option<PlainParams> {
-        Some(PlainParams {
-            content : vec![0.001; params.content.len()]
-        })
+    async fn train_model_locally(&mut self, params : PlainParams, conifg : &Config, round_id : i32, model_id : i32) -> Option<PlainParams> {
+        let model_config = get_model_config(conifg).unwrap();
+        let trained_params_opt = self.training_client.train_for_round(model_config.clone(), params.into_vec(), round_id, model_id).await;
+        if let Some(trained_params) = trained_params_opt {
+            Some(PlainParams {content : trained_params})
+        } else {
+            None
+        }
     }
 
     pub fn encrypt_data(&self, params : &PlainParams, conifg : &Config) -> Option<EncModelParams> {
@@ -157,6 +171,7 @@ impl FlServiceClient {
                         server_model_data::ModelMessage::ModelBlock(msg) => {
                             match msg.param_message.unwrap() {
                                 ParamMessage::ParamMeta(meta) => {
+                                    println!("Client {} receives model parameters for round {}", client_id, meta.round_id);
                                     state.data.init(meta);
                                 }
                                 ParamMessage::ParamBlock(data_block) => {
@@ -166,7 +181,7 @@ impl FlServiceClient {
                                         let round_id = state.data.get_round_id();
                                         state.data.reset_mem();
                                         let current_config_ref = state.get_current_config().unwrap();
-                                        let trained_params = self.train_model_locally(params, current_config_ref);
+                                        let trained_params = self.train_model_locally(params, current_config_ref, round_id as i32, model_id).await;
                                         let encrypted_params = self.encrypt_data(&trained_params.unwrap(), current_config_ref);
                                         let _res = self.handle_send_data(encrypted_params.unwrap(), &mut outbound, model_id, round_id).await;
                                         println!("Client {} finished training for round {}", client_id, round_id);
@@ -174,13 +189,15 @@ impl FlServiceClient {
                                 }
                             }
                         }
-                        server_model_data::ModelMessage::DoneMessage(_) => {
-                            break;
-                        }
+                        
                     }
                 }
                 train_response::ParamMessage::ErrorMessage(_) => {
                     todo!("Handle erros");
+                }
+                train_response::ParamMessage::DoneMessage(_) => {
+                    println!("Client {} terminates, server done message received", client_id);
+                    break;
                 }
             }
         }

@@ -50,8 +50,8 @@ impl EncModelParamType {
     }
 }
 
-fn extract_pedersen_vec(gamal_vec : &Vec<ElGamalPair>) -> Vec<RistrettoPoint> {
-    return gamal_vec.iter().map(|x| x.L).collect();
+fn extract_pedersen_vec(gamal_vec : &Vec<ElGamalPair>, num_elems : usize) -> Vec<RistrettoPoint> {
+    return gamal_vec[..num_elems].iter().map(|x| x.L).collect();
 }
 
 fn extract_pedersen_vec_l2(gamal_vec : &[SquareRandProofCommitments]) -> Vec<RistrettoPoint> {
@@ -113,7 +113,7 @@ impl EncModelParamsAccumulator {
                     }
                 }
 
-                let rp_vec = extract_pedersen_vec(enc_params);
+                let rp_vec = extract_pedersen_vec(enc_params, enc_params.len());
                 let scalar_vec: Vec<Scalar> = default_discrete_log_vec(&rp_vec);
                 let f32_vec: Vec<f32> = scalar_to_f32_vec(&scalar_vec);
                 return Some(f32_vec);
@@ -163,7 +163,8 @@ impl EncModelParams {
                 let res = rand_proof_vec::verify_randproof_vec(&params.rand_proofs, &params.enc_values);
                 if let Ok(ok) = res {
                      //Check range proof 
-                    let vec_tmp = extract_pedersen_vec(&params.enc_values);
+                    let num_elems = params.enc_values.len() * params.check_percentage / 100;
+                    let vec_tmp = extract_pedersen_vec(&params.enc_values, num_elems);
                     let range_res = range_proof_vec::verify_rangeproof(&params.range_proofs, &vec_tmp, params.prove_range);
                     if let Ok(ok_range) = range_res {
                         return ok && ok_range;
@@ -260,7 +261,8 @@ impl EncModelParams {
                     &plain_params.content, 
                     blindings, 
                     config.value_range as usize, 
-                    config.n_partition as usize)));
+                    config.n_partition as usize,
+                config.check_percentage as usize)));
 
             }
             EncModelParamType::EncL2 => {
@@ -279,7 +281,8 @@ pub struct EncParamsRange {
     pub enc_values : Vec<ElGamalPair>,
     pub rand_proofs : Vec<RandProof>,
     pub range_proofs : Vec<RangeProof>,
-    pub prove_range : usize
+    pub prove_range : usize,
+    pub check_percentage : usize
 }
 
 fn encode_el_gamal_vec(enc_values : &Vec<ElGamalPair>) -> Vec<u8> {
@@ -336,15 +339,28 @@ fn decode_range_proof_vec(encoded : &Vec<Vec<u8>>) -> Vec<RangeProof> {
 
 
 impl EncParamsRange {
-    pub fn encrypt(plaintext_vec : &Vec<f32>, blinding_vec : &Vec<Scalar>, prove_range : usize, n_partition : usize) -> Self {
+    pub fn encrypt(plaintext_vec : &Vec<f32>, blinding_vec : &Vec<Scalar>, prove_range : usize, n_partition : usize, check_percentage : usize) -> Self {
         let range_clipped = range_proof_vec::clip_f32_to_range_vec(plaintext_vec, prove_range);
-        let (range_proofs, enc_com ) =  range_proof_vec::create_rangeproof(&range_clipped, blinding_vec, prove_range, n_partition).unwrap();
-        let (rand_proofs, enc_update) = rand_proof_vec::create_randproof_vec_existing(plaintext_vec, enc_com, &blinding_vec).unwrap();
+        // Dummy probabilistic checking
+        let (range_proofs, enc_com ) =  if check_percentage == 100 {
+            range_proof_vec::create_rangeproof(&range_clipped, blinding_vec, prove_range, n_partition).unwrap()
+        } else {
+            let num_elems = range_clipped.len() * check_percentage / 100;
+            let filtered_elems = range_clipped[..num_elems].to_vec();
+            let filtered_blidings = blinding_vec[..num_elems].to_vec();
+            range_proof_vec::create_rangeproof(&filtered_elems, &filtered_blidings, prove_range, n_partition).unwrap()
+        };
+        let (rand_proofs, enc_update) = if check_percentage == 100 {
+            rand_proof_vec::create_randproof_vec_existing(plaintext_vec, enc_com, &blinding_vec).unwrap()
+        } else {
+            rand_proof_vec::create_randproof_vec(plaintext_vec, &blinding_vec).unwrap()
+        };
         EncParamsRange {
             enc_values : enc_update,
             rand_proofs : rand_proofs,
             range_proofs : range_proofs,
-            prove_range : prove_range
+            prove_range : prove_range,
+            check_percentage : check_percentage
         }
     }
 
@@ -356,7 +372,8 @@ impl EncParamsRange {
             enc_values : enc_values,
             rand_proof : rand_proofs,
             range_proof : range_proofs,
-            range_bits : self.prove_range as i32
+            range_bits : self.prove_range as i32,
+            check_percentage : self.check_percentage as i32
         };
         let mut buffer = Vec::with_capacity(enc_data.encoded_len() + 1);
         let _res = enc_data.encode_length_delimited(&mut buffer);
@@ -372,7 +389,8 @@ impl EncParamsRange {
             enc_values : enc_values,
             rand_proofs : rand_proofs,
             range_proofs : range_proofs,
-            prove_range : msg.range_bits as usize
+            prove_range : msg.range_bits as usize,
+            check_percentage : msg.check_percentage as usize
         }
     }
 }
@@ -493,6 +511,10 @@ impl PlainParams  {
         return PlainParams {
             content : vec![0.0; size],
         };
+    }
+
+    pub fn into_vec(self) -> Vec<f32> {
+        self.content
     }
     
     pub fn accumulate_other(&mut self, other : &PlainParams) -> bool {

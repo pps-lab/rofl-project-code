@@ -7,7 +7,7 @@ use rofl_service::flserver::flservice::{ModelConfig, CryptoConfig};
 use tonic::{transport::Server};
 use clap::{Arg, App};
 
-fn dummy_training_state(num_clients : i32, num_params : i32, num_in_memory : i32) -> TrainingState {
+fn dummy_training_state(num_clients : i32, num_params : i32, num_in_memory : i32, train_until_round : i32) -> TrainingState {
      let model_confing = ModelConfig {
           num_of_clients: num_clients,
           client_batch_size: 10,
@@ -28,9 +28,11 @@ fn dummy_training_state(num_clients : i32, num_params : i32, num_in_memory : i32
           value_range: 8,
           n_partition: 1,
           l2_value_range: 32,
-          enc_type: params::ENC_L2_TYPE as i32,
+          check_percentage: 10,
+          enc_type: params::ENC_RANGE_TYPE as i32,
      };
-     TrainingState::new(model_confing.model_id, model_confing, crypto_config, num_params, num_in_memory)
+     TrainingState::new(model_confing.model_id, model_confing, crypto_config, 
+          num_params, num_in_memory, train_until_round)
 }
 
 #[tokio::main]
@@ -56,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}",ip, port).parse().unwrap();
     let service = DefaultFlService::new();
-    service.register_new_trainig_state(dummy_training_state(10, 1000, 5));
+    service.register_new_trainig_state(dummy_training_state(10, 1000, 5, 10));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))
