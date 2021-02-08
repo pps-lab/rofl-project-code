@@ -295,8 +295,8 @@ pub mod flservice_client {
         }
         pub async fn observer_model_training(
             &mut self,
-            request: impl tonic::IntoStreamingRequest<Message = super::ModelSelection>,
-        ) -> Result<tonic::Response<tonic::codec::Streaming<super::ServerModelData>>, tonic::Status>
+            request: impl tonic::IntoRequest<super::ModelSelection>,
+        ) -> Result<tonic::Response<tonic::codec::Streaming<super::TrainResponse>>, tonic::Status>
         {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
@@ -308,7 +308,7 @@ pub mod flservice_client {
             let path =
                 http::uri::PathAndQuery::from_static("/flservice.Flservice/ObserverModelTraining");
             self.inner
-                .streaming(request.into_streaming_request(), path, codec)
+                .server_streaming(request.into_request(), path, codec)
                 .await
         }
     }
@@ -414,13 +414,13 @@ pub mod flservice_server {
             request: tonic::Request<super::ModelSelection>,
         ) -> Result<tonic::Response<super::StatusMessage>, tonic::Status>;
         #[doc = "Server streaming response type for the ObserverModelTraining method."]
-        type ObserverModelTrainingStream: Stream<Item = Result<super::ServerModelData, tonic::Status>>
+        type ObserverModelTrainingStream: Stream<Item = Result<super::TrainResponse, tonic::Status>>
             + Send
             + Sync
             + 'static;
         async fn observer_model_training(
             &self,
-            request: tonic::Request<tonic::Streaming<super::ModelSelection>>,
+            request: tonic::Request<super::ModelSelection>,
         ) -> Result<tonic::Response<Self::ObserverModelTrainingStream>, tonic::Status>;
     }
     #[derive(Debug)]
@@ -525,16 +525,16 @@ pub mod flservice_server {
                 "/flservice.Flservice/ObserverModelTraining" => {
                     #[allow(non_camel_case_types)]
                     struct ObserverModelTrainingSvc<T: Flservice>(pub Arc<T>);
-                    impl<T: Flservice> tonic::server::StreamingService<super::ModelSelection>
+                    impl<T: Flservice> tonic::server::ServerStreamingService<super::ModelSelection>
                         for ObserverModelTrainingSvc<T>
                     {
-                        type Response = super::ServerModelData;
+                        type Response = super::TrainResponse;
                         type ResponseStream = T::ObserverModelTrainingStream;
                         type Future =
                             BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<tonic::Streaming<super::ModelSelection>>,
+                            request: tonic::Request<super::ModelSelection>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut =
@@ -553,7 +553,7 @@ pub mod flservice_server {
                         } else {
                             tonic::server::Grpc::new(codec)
                         };
-                        let res = grpc.streaming(method, req).await;
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

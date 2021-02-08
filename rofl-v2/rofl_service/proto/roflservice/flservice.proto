@@ -9,7 +9,7 @@ service Flservice {
 
     rpc TerminateModelTraining(ModelSelection) returns (StatusMessage);
 
-    rpc ObserverModelTraining(stream ModelSelection) returns (stream ServerModelData);
+    rpc ObserverModelTraining(ModelSelection) returns (stream TrainResponse);
 }
 
 service FLClientTrainService {

@@ -1,4 +1,5 @@
 use super::flservice::{model_parameters::ModelParametersMeta, DataBlock};
+use tokio::{fs, io::AsyncWriteExt};
 pub struct DataBlockStorage {
     round_id: u32,
     expected_blocks: u32,
@@ -52,3 +53,12 @@ impl DataBlockStorage {
         self.round_id
     }
 }
+
+
+async fn write_model_to_file(res : &[f32], file_path : &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = fs::File::create(file_path).await.unwrap();
+    for result in res {
+        let _ok = file.write_all(&format!("{}\n", result).as_bytes()).await;
+    }
+    Ok(())
+} 

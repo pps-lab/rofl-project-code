@@ -43,6 +43,7 @@ pub struct TrainingState {
     crypto_config: CryptoConfig,
     aggregation_type: EncModelParamType,
     channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
+    channels_observer: Arc<RwLock<Vec<Sender<Result<TrainResponse, Status>>>>>,
     rounds: Arc<RwLock<Vec<TrainingRoundState>>>,
 }
 
@@ -66,6 +67,7 @@ impl TrainingState {
             aggregation_type: EncModelParamType::get_type_from_int(&crypto_config.enc_type)
                 .unwrap(),
             channels: Arc::new(RwLock::new(HashMap::new())),
+            channels_observer: Arc::new(RwLock::new(Vec::new())),
             rounds: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -93,11 +95,31 @@ impl TrainingState {
         tmp.len()
     }
 
+    fn register_observer_channel(
+        &self,
+        sender: Sender<Result<TrainResponse, Status>>,
+    ) -> usize {
+        let tmp = Arc::clone(&self.channels_observer);
+        let mut tmp = tmp.write().unwrap();
+        tmp.push(sender);
+        tmp.len()
+    }
+
     fn get_channels_to_broadcast(&self) -> Vec<Sender<Result<TrainResponse, Status>>> {
         let tmp = Arc::clone(&self.channels);
         let tmp = tmp.read().unwrap();
         let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
         for (_key, sender) in &*tmp {
+            out.push(sender.clone());
+        }
+        out
+    }
+
+    fn get_channels_observer_to_broadcast(&self) -> Vec<Sender<Result<TrainResponse, Status>>> {
+        let tmp = Arc::clone(&self.channels_observer);
+        let tmp = tmp.read().unwrap();
+        let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
+        for sender in &*tmp {
             out.push(sender.clone());
         }
         out
@@ -269,6 +291,29 @@ impl TrainingState {
         for join_handler in join_handlers {
             let _res = join_handler.await;
         }
+
+        // Broadcast to observers
+        let observer_channels = self.get_channels_observer_to_broadcast();
+        if observer_channels.len() > 0 {
+            let mut join_handlers = Vec::with_capacity(channels.len());
+            for chan in &observer_channels {
+                let mut out = chan.clone();
+                let data_messages_local = Arc::clone(&data_messages_arc);
+                let meta_packet_local = meta_packet.clone();
+                let config_packet_local = config_message.clone();
+                let fut = tokio::spawn(async move {
+                    let _res = out.send(Ok(config_packet_local)).await;
+                    let _res = out.send(Ok(meta_packet_local)).await;
+                    for data_packet in &*data_messages_local {
+                        let _res = out.send(Ok(data_packet.clone())).await;
+                    }
+                });
+                join_handlers.push(fut);
+            }
+            for join_handler in join_handlers {
+                let _res = join_handler.await;
+            }
+        }
     }
 }
 
@@ -397,7 +442,7 @@ impl DefaultFlService {
 #[tonic::async_trait]
 impl Flservice for DefaultFlService {
     type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
-    type ObserverModelTrainingStream = mpsc::Receiver<Result<ServerModelData, Status>>;
+    type ObserverModelTrainingStream = mpsc::Receiver<Result<TrainResponse, Status>>;
 
     async fn train_model(
         &self,
@@ -625,8 +670,17 @@ impl Flservice for DefaultFlService {
 
     async fn observer_model_training(
         &self,
-        request: Request<Streaming<ModelSelection>>,
+        request: Request<ModelSelection>,
     ) -> Result<Response<Self::ObserverModelTrainingStream>, Status> {
-        todo!();
+        let selection = request.into_inner();
+        let training_state = self.get_training_state_for_model(selection.model_id);
+        let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+        match training_state {
+            Some(state) => {
+                state.register_observer_channel(tx);
+                Ok(Response::new(rx))
+            }
+            None => Err(Status::invalid_argument("Model does not exists")),
+        }
     }
 }
