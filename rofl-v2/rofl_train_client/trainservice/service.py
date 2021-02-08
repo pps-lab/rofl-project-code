@@ -5,7 +5,7 @@ import logging
 
 import grpc
 
-NUM_FLOATS_PER_BLOCK = 10000
+NUM_FLOATS_PER_BLOCK = 10000;
 
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):

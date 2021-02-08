@@ -1,6 +1,6 @@
-use super::flservice::{
+use super::{flservice::{
     model_parameters, server_model_data, status_message, train_request, train_response,
-};
+}, params::GlobalModel};
 use super::flservice::{
     Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
     ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
@@ -41,6 +41,7 @@ pub struct TrainingState {
     train_until_round: i32,
     training_status: Arc<RwLock<TrainingStatusType>>,
     crypto_config: CryptoConfig,
+    global_model: Arc<RwLock<GlobalModel>>,
     aggregation_type: EncModelParamType,
     channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
     channels_observer: Arc<RwLock<Vec<Sender<Result<TrainResponse, Status>>>>>,
@@ -55,6 +56,7 @@ impl TrainingState {
         num_parmas: i32,
         in_memory_rounds: i32,
         train_until_round: i32,
+        global_model: GlobalModel
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -64,6 +66,7 @@ impl TrainingState {
             train_until_round: train_until_round,
             training_status: Arc::new(RwLock::new(TrainingStatusType::Register)),
             crypto_config: crypto_config.clone(),
+            global_model: Arc::new(RwLock::new(global_model)),
             aggregation_type: EncModelParamType::get_type_from_int(&crypto_config.enc_type)
                 .unwrap(),
             channels: Arc::new(RwLock::new(HashMap::new())),
@@ -199,6 +202,13 @@ impl TrainingState {
         }
     }
 
+    fn update_global_model(&self, mut update: PlainParams) -> bool {
+        update.multiply_inplace(1.0 / self.get_num_clients() as f32);
+        let mut tmp = Arc::clone(&self.global_model);
+        let mut tmp = tmp.write().unwrap();
+        tmp.update(&update)
+    }
+
     async fn broadcast_done(&self) {
         let channels = self.get_channels_to_broadcast();
         let done_message = TrainResponse {
@@ -212,7 +222,7 @@ impl TrainingState {
         }
     }
 
-    async fn broadcast_models(&self, params: &PlainParams) {
+    async fn broadcast_global_model(&self) {
         let channels = self.get_channels_to_broadcast();
         let config_message = TrainResponse {
             param_message: Some(train_response::ParamMessage::Params(ServerModelData {
@@ -224,7 +234,11 @@ impl TrainingState {
         };
 
         //Encode Params
-        let buffer = params.serialize();
+        let buffer = {
+            let tmp = Arc::clone(&self.global_model);
+            let tmp = tmp.read().unwrap();
+            tmp.params.serialize()
+        };
         let len_buffer = buffer.len();
         let mut num_packets = len_buffer / NUM_PARAM_BYTES_PER_PACKET;
         if len_buffer % NUM_PARAM_BYTES_PER_PACKET != 0 {
@@ -497,7 +511,7 @@ impl Flservice for DefaultFlService {
             training_state.set_traning_running();
             training_state.init_round();
             training_state
-                .broadcast_models(&training_state.init_params())
+                .broadcast_global_model()
                 .await;
             println!("First training round has started");
         }
@@ -627,13 +641,13 @@ impl Flservice for DefaultFlService {
                                         }
 
                                         let params = model.unwrap();
-                                        training_state_local
-                                            .start_new_round(local_group_state.round_id + 1);
+                                        training_state_local.update_global_model(params);
+                                        training_state_local.start_new_round(local_group_state.round_id + 1);
                                         println!(
                                             "Broadcast new model for round {}",
                                             local_group_state.round_id + 1
                                         );
-                                        training_state_local.broadcast_models(&params).await;
+                                        training_state_local.broadcast_global_model().await;
                                     }
                                 }
                             }

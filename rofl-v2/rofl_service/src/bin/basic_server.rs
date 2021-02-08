@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use params::GlobalModel;
 use rofl_service::flserver::flservice::flservice_server::FlserviceServer;
 use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
 use rofl_service::flserver::params;
@@ -42,6 +43,7 @@ fn dummy_training_state(
         num_params,
         num_in_memory,
         train_until_round,
+        GlobalModel::new(num_params as usize, 1.0)
     )
 }
 

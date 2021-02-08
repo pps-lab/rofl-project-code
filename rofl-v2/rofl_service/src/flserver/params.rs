@@ -1,4 +1,4 @@
-use super::flservice::{CryptoConfig, EncNormData, EncRangeData};
+use super::flservice::{CryptoConfig, EncNormData, EncRangeData, FloatBlock};
 use bulletproofs::RangeProof;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -15,7 +15,7 @@ use rofl_crypto::{
     square_rand_proof::{pedersen::SquareRandProofCommitments, SquareRandProof},
     square_rand_proof_vec,
 };
-use std::{collections::btree_map::Range, io::Cursor, todo};
+use std::{collections::btree_map::Range, io::Cursor};
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;
@@ -577,20 +577,61 @@ impl PlainParams {
         if other.content.len() != self.content.len() {
             return false;
         }
-        for i in 0..self.content.len() {
-            self.content[i] += other.content[i]
-        }
+        self.content.iter_mut()
+            .zip(other.content.iter())
+            .for_each(|(local_v, other_v)| *local_v += other_v);
         return true;
     }
 
+    pub fn ml_update_in_place(&mut self, other: &PlainParams, learning_rate: f32) -> bool {
+        if other.content.len() != self.content.len() {
+            return false;
+        }
+        self.content.iter_mut()
+            .zip(other.content.iter())
+            .for_each(|(local_v, other_v)| *local_v += other_v * learning_rate);
+        return true;
+    }
+
+    pub fn multiply_inplace(&mut self, value: f32) {
+        self.content.iter_mut().for_each(|val| *val *= value);
+    }
+
     pub fn serialize(&self) -> Vec<u8> {
-        return bincode::serialize(&self.content).unwrap();
+        //TODO: cloning is not necessary, but proto
+        let block = FloatBlock {
+            block_number: 0,
+            floats: self.content.clone(),
+        };
+        let mut buffer = Vec::with_capacity(block.encoded_len() + 1);
+        let _res = block.encode(&mut buffer);
+        buffer
     }
 
     pub fn deserialize(data: &[u8]) -> Self {
+        let msg = FloatBlock::decode(&mut Cursor::new(data)).unwrap();
         return PlainParams {
-            content: bincode::deserialize(data).unwrap(),
+            content: msg.floats,
         };
+    }
+}
+
+#[derive(Clone)]
+pub struct GlobalModel {
+    pub params: PlainParams,
+    pub learning_rate: f32,
+}
+
+impl GlobalModel {
+    pub fn new(size: usize, learning_rate: f32) -> Self {
+        GlobalModel {
+            params: PlainParams::unity(size),
+            learning_rate: learning_rate
+        }
+    }
+
+    pub fn update(&mut self, aggregated_update: &PlainParams) -> bool {
+       self.params.ml_update_in_place(aggregated_update, self.learning_rate)
     }
 }
 

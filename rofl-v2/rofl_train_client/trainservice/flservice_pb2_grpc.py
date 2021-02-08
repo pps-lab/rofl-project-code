@@ -24,10 +24,10 @@ class FlserviceStub(object):
                 request_serializer=flservice__pb2.ModelSelection.SerializeToString,
                 response_deserializer=flservice__pb2.StatusMessage.FromString,
                 )
-        self.ObserverModelTraining = channel.stream_stream(
+        self.ObserverModelTraining = channel.unary_stream(
                 '/flservice.Flservice/ObserverModelTraining',
                 request_serializer=flservice__pb2.ModelSelection.SerializeToString,
-                response_deserializer=flservice__pb2.ServerModelData.FromString,
+                response_deserializer=flservice__pb2.TrainResponse.FromString,
                 )
 
 
@@ -46,7 +46,7 @@ class FlserviceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ObserverModelTraining(self, request_iterator, context):
+    def ObserverModelTraining(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -65,10 +65,10 @@ def add_FlserviceServicer_to_server(servicer, server):
                     request_deserializer=flservice__pb2.ModelSelection.FromString,
                     response_serializer=flservice__pb2.StatusMessage.SerializeToString,
             ),
-            'ObserverModelTraining': grpc.stream_stream_rpc_method_handler(
+            'ObserverModelTraining': grpc.unary_stream_rpc_method_handler(
                     servicer.ObserverModelTraining,
                     request_deserializer=flservice__pb2.ModelSelection.FromString,
-                    response_serializer=flservice__pb2.ServerModelData.SerializeToString,
+                    response_serializer=flservice__pb2.TrainResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -115,7 +115,7 @@ class Flservice(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def ObserverModelTraining(request_iterator,
+    def ObserverModelTraining(request,
             target,
             options=(),
             channel_credentials=None,
@@ -125,9 +125,9 @@ class Flservice(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.stream_stream(request_iterator, target, '/flservice.Flservice/ObserverModelTraining',
+        return grpc.experimental.unary_stream(request, target, '/flservice.Flservice/ObserverModelTraining',
             flservice__pb2.ModelSelection.SerializeToString,
-            flservice__pb2.ServerModelData.FromString,
+            flservice__pb2.TrainResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
