@@ -1,0 +1,40 @@
+base_experiment: # the base config object  
+  environment:
+    num_clients: 3383
+    num_selected_clients: 30
+    num_malicious_clients: 0
+    experiment_name: "backdoor_tasks_noattack"
+    use_config_dir: true
+  server:
+    num_rounds: 10
+    num_test_batches: 5
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: dev
+    benign_training:
+      num_epochs: $VARIES$
+      batch_size: 24
+      optimizer: Adam
+      learning_rate: 0.001
+  dataset:
+    dataset: femnist
+    data_distribution: nonIID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+​
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client:
+    benign_training:
+      num_epochs: 1
+- client:
+    benign_training:
+      num_epochs: 2
+- client:
+    benign_training:
+      num_epochs: 3
