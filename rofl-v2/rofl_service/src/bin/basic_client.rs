@@ -7,7 +7,7 @@ async fn start_dummy_client(client_id: i32, model_id: i32, verbose: bool) {
         .connect()
         .await
         .unwrap();
-    let blindings = zero_scalar_vec(1000);
+    let blindings = zero_scalar_vec(100);
     let dummy_trainer = Box::new(FlTraining::Dummy);
     let mut client = FlServiceClient::new(client_id, channel, blindings, dummy_trainer);
     client.train_model(model_id, verbose).await;
