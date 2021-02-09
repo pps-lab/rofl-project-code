@@ -17,7 +17,7 @@ class FLClientTrainObserver:
         block_counter = 0
         buff = []
         for msg_matcher in msg_iter:
-            if msg_matcher.params:
+            if msg_matcher.HasField("params"):
                 msg_matcher = msg_matcher.params
                 if msg_matcher.HasField("config"):
                     continue
@@ -35,7 +35,7 @@ class FLClientTrainObserver:
                         if block_counter == current_meta.num_blocks:
                             serialized = b''.join(buff)
                             params = flservice_pb2.FloatBlock()
-                            params.ParseFromString(serialized[2:])
+                            params.ParseFromString(serialized)
                             self.handle_model(current_meta.round_id, params.floats)
             elif msg_matcher.HasField("error_message"):
                 print("Error occurred: %s" % msg_matcher.error_message.msg)

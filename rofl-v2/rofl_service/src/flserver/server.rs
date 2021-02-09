@@ -123,6 +123,7 @@ impl TrainingState {
         let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
         for (_key, sender) in &*tmp {
             out.push(sender.clone());
+            
         }
         out
     }
@@ -232,13 +233,18 @@ impl TrainingState {
     }
 
     async fn broadcast_done(&self) {
-        let channels = self.get_channels_to_broadcast();
         let done_message = TrainResponse {
             param_message: Some(train_response::ParamMessage::DoneMessage(StatusMessage {
                 status: status_message::Status::Done as i32,
             })),
         };
+        let channels = self.get_channels_to_broadcast();
         for chan in &channels {
+            let mut out = chan.clone();
+            let _res = out.send(Ok(done_message.clone())).await;
+        }
+        let channels_observer = self.get_channels_observer_to_broadcast();
+        for chan in &channels_observer {
             let mut out = chan.clone();
             let _res = out.send(Ok(done_message.clone())).await;
         }
