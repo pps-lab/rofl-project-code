@@ -22,8 +22,7 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
         }
     };
     let docs = YamlLoader::load_from_str(&config_str).unwrap();
-    let doc = &docs[0];
-    let experiment = &doc["base_experiment"];
+    let experiment = &docs[0];
     // NO ERROR HANDLING !!!
     let num_clients = experiment["environment"]["num_clients"]
         .as_i64()

@@ -1,39 +1,38 @@
-base_experiment: # the base config object  
-  environment:
-    num_clients: 10
-    num_selected_clients: 10
-    num_malicious_clients: 0
-    experiment_name: "backdoor_tasks_noattack"
-    use_config_dir: true
-  server:
-    num_rounds: 10
-    num_test_batches: 5
-    aggregator:
-      name: FedAvg
-    global_learning_rate: 1
-  client:
-    model_name: dev
-    num_params: 100
-    benign_training:
-      num_epochs: VARIES
-      batch_size: 24
-      optimizer: Adam
-      learning_rate: 0.001
-  crypto:
-    enc_type: Range #l2, Range, Plain 
-    value_range: 8
-    n_partition: 1
-    l2_value_range: 32
-    check_percentage: 10 # 0-100 for Range
-    fp_bits: 32
-    fp_frac: 7
+environment:
+  num_clients: 10
+  num_selected_clients: 10
+  num_malicious_clients: 0
+  experiment_name: "backdoor_tasks_noattack"
+  use_config_dir: true
+server:
+  num_rounds: 10
+  num_test_batches: 5
+  aggregator:
+    name: FedAvg
+  global_learning_rate: 1
+client:
+  model_name: dev
+  num_params: 100
+  benign_training:
+    num_epochs: VARIES
+    batch_size: 24
+    optimizer: Adam
+    learning_rate: 0.001
+crypto:
+  enc_type: Range #l2, Range, Plain 
+  value_range: 8
+  n_partition: 1
+  l2_value_range: 32
+  check_percentage: 10 # 0-100 for Range
+  fp_bits: 32
+  fp_frac: 7
 
-  dataset:
-    dataset: femnist
-    data_distribution: nonIID
-  job:
-    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
-    cpu_cores: 20
-    cpu_mem_per_core: 4096
-    use_gpu: 1
-    gpu_memory_min: 10240
+dataset:
+  dataset: femnist
+  data_distribution: nonIID
+job:
+  minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+  cpu_cores: 20
+  cpu_mem_per_core: 4096
+  use_gpu: 1
+  gpu_memory_min: 10240
