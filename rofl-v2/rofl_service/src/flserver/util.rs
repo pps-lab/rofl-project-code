@@ -54,7 +54,7 @@ impl DataBlockStorage {
     }
 }
 
-async fn write_model_to_file(
+pub async fn write_model_to_file(
     res: &[f32],
     file_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {

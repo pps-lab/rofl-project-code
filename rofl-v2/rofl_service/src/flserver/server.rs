@@ -1,3 +1,4 @@
+use crate::flserver::util::write_model_to_file;
 use super::flservice::{
     Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
     ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
@@ -19,9 +20,10 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
-use tokio::sync::mpsc;
+use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
+use tokio::fs;
 use tonic::{Request, Response, Status, Streaming};
 
 const CHAN_BUFFER_SIZE: usize = 100;
@@ -207,6 +209,19 @@ impl TrainingState {
         let mut tmp = Arc::clone(&self.global_model);
         let mut tmp = tmp.write().unwrap();
         tmp.update(&update)
+    }
+
+    async fn write_global_model_to_file(&self) {
+        let file_name = format!("model_{}_round_{}.txt", self.model_id, self.get_round());
+        let values = {
+            let tmp = Arc::clone(&self.global_model);
+            let tmp = tmp.read().unwrap();
+            tmp.params.content.clone()
+        };
+        let mut file = fs::File::create(file_name.as_str()).await.unwrap();
+        for result in &values {
+            let _ok = file.write_all(&format!("{}\n", result).as_bytes()).await;
+        }
     }
 
     async fn broadcast_done(&self) {
@@ -635,6 +650,7 @@ impl Flservice for DefaultFlService {
                                                 "Training for model {} is done, max round reached",
                                                 training_state_local.model_id
                                             );
+                                            training_state_local.write_global_model_to_file().await;
                                             break;
                                         }
 

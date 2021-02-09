@@ -24,7 +24,7 @@ async fn start_client(
         let channel = tonic::transport::Channel::builder(uri)
             .connect()
             .await
-            .unwrap();
+            .expect(format!("Failed to connect to trainer at port {}", trainer_port).as_str());
         Box::new(FlTraining::Grpc(FlTrainClient::new(channel)))
     };
     let mut client = FlServiceClient::new(client_id, channel, trainer);
@@ -81,6 +81,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .default_value("0")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("numtrainers")
+                .short("t")
+                .help("The number of local training services")
+                .default_value("1")
+                .takes_value(true),
+        )
         .get_matches();
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
@@ -105,6 +112,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or("default.conf")
         .parse::<i32>()
         .unwrap();
+    let num_trainiers = matches
+        .value_of("numtrainers")
+        .unwrap_or("default.conf")
+        .parse::<i32>()
+        .unwrap();
     let uri = Uri::builder()
         .scheme("http")
         .authority(addr.as_str())
@@ -113,21 +125,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
 
     let mut tasks = Vec::with_capacity(num_clients as usize);
+    let mut port = trainer_port;
     for i in (start_id + 1)..num_clients {
         let client_id = i;
         let local_uri = uri.clone();
+        if i % (num_clients/num_trainiers) == 0 {
+            port += 1;
+        }
+        println!("Client {} connects to trainer at port {}", client_id, port);
         tasks.push(tokio::spawn(async move {
             let channel = tonic::transport::Channel::builder(local_uri)
                 .connect()
                 .await
                 .expect("Connection to FlService failed");
-            start_client(channel, client_id, model_id, true, trainer_port).await;
+            start_client(channel, client_id, model_id, true, port).await;
         }));
     }
     let channel = tonic::transport::Channel::builder(uri)
         .connect()
         .await
         .expect("Connection to FlService failed");
+    println!("Client {} connects to trainer at port {}", start_id, trainer_port);
     start_client(channel, start_id, model_id, true, trainer_port).await;
     for task in tasks {
         let _ou = task.await;
