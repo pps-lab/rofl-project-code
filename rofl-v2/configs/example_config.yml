@@ -12,7 +12,7 @@ server:
   global_learning_rate: 1
 client:
   model_name: dev
-  num_params: 100
+  num_params: 1000
   benign_training:
     num_epochs: VARIES
     batch_size: 24

@@ -5,10 +5,12 @@ use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
 use rofl_service::flserver::params;
 use rofl_service::flserver::server::DefaultFlService;
 use rofl_service::flserver::server::TrainingState;
+use rofl_service::flserver::logs::{BENCH_TAG, bench_logger};
 use std::fs::File;
 use std::io::Read;
 use tonic::transport::Server;
 use yaml_rust::{YamlEmitter, YamlLoader};
+use flexi_logger::{LogTarget, Logger, opt_format};
 
 fn get_training_state_from_config(path: &str) -> TrainingState {
     let config_str = match File::open(path) {
@@ -131,6 +133,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = matches.value_of("config").unwrap_or("default.conf");
     let service = DefaultFlService::new();
     service.register_new_trainig_state(get_training_state_from_config(config));
+    Logger::with_str("info")
+        .log_target(LogTarget::StdOut)  
+        .format_for_stdout(opt_format)
+        .add_writer(BENCH_TAG, bench_logger())                 
+        .start()?;
+
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

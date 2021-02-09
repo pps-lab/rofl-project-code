@@ -20,11 +20,15 @@ use std::{collections::HashMap, process};
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
 use tokio::fs;
 use tonic::{Request, Response, Status, Streaming};
+
+use log::info;
+use crate::bench_info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -365,6 +369,43 @@ enum RoundState {
     Error(String),
     Done,
 }
+
+#[derive(Clone)]
+struct TimeState {
+    instants: Arc<RwLock<Vec<Instant>>>,
+}
+
+impl TimeState {
+    fn new() -> Self {
+        TimeState {
+            instants: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    fn record_instant(&self) {
+        let ts = Instant::now();
+        let ts_list_arc = Arc::clone(&self.instants);
+        let mut ts_list_mut = ts_list_arc.write().unwrap();
+        ts_list_mut.push(ts);
+    }
+
+    fn log_bench_times(&self, round_id: i32) {
+        let ts = Instant::now();
+        let ts_list_arc = Arc::clone(&self.instants);
+        let ts_list = ts_list_arc.read().unwrap();
+        let mut out = String::new();
+        let mut sum = 0;
+        &ts_list[0..(ts_list.len()-1)].iter().zip(&ts_list[1..ts_list.len()]).for_each(|(elem1, elem2)| {
+            let millis = elem2.duration_since(*elem1).as_millis();
+            sum += millis;
+            out.push_str(millis.to_string().as_str());
+            out.push_str(", ");
+        });
+        out.push_str(sum.to_string().as_str());
+        bench_info!("Round {}: {}", round_id, out);
+    }
+}
+
 #[derive(Clone)]
 pub struct TrainingRoundState {
     round_id: i32,
@@ -374,6 +415,7 @@ pub struct TrainingRoundState {
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
     notify: Arc<Notify>,
+    time_state: TimeState
 }
 
 impl TrainingRoundState {
@@ -382,7 +424,7 @@ impl TrainingRoundState {
         expected_clients: i32,
         param_aggr: EncModelParamsAccumulator,
     ) -> Self {
-        return TrainingRoundState {
+        let out =  TrainingRoundState {
             round_id: round_id,
             expected_clients: expected_clients,
             param_aggr: Arc::new(RwLock::new(param_aggr)),
@@ -390,7 +432,10 @@ impl TrainingRoundState {
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
             notify: Arc::new(Notify::new()),
+            time_state: TimeState::new()
         };
+        out.time_state.record_instant();
+        out
     }
 
     fn extract_model_data(&self) -> Option<PlainParams> {
@@ -416,8 +461,12 @@ impl TrainingRoundState {
             if let RoundState::InProgress = *mut_ref_state {
                 *mut_ref_state = RoundState::Done;
             }
-            let tmp_notify = Arc::clone(&self.notify);
-            tmp_notify.notify();
+            {
+                let tmp_notify = Arc::clone(&self.notify);
+                tmp_notify.notify();
+            }
+            self.time_state.record_instant();
+            self.time_state.log_bench_times(self.round_id);
         }
     }
 
@@ -492,7 +541,7 @@ impl Flservice for DefaultFlService {
     ) -> Result<Response<Self::TrainModelStream>, Status> {
         let mut streamer = request.into_inner();
         let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
-        //println!("", client_id, init.model_id);
+        //info!("", client_id, init.model_id);
 
         // Handle Register Message verifed_counter
         let req = streamer.message().await.unwrap();
@@ -511,7 +560,7 @@ impl Flservice for DefaultFlService {
 
         let client_id = init.client_id;
 
-        println!(
+        info!(
             "Register Messages received from from client {} for model {}",
             client_id, init.model_id
         );
@@ -535,11 +584,11 @@ impl Flservice for DefaultFlService {
 
         // Are all clients registered?
         if (num_channels == training_state.get_num_clients() as usize) {
-            println!("Initialize model and broadcast it to clients");
+            info!("Initialize model and broadcast it to clients");
             training_state.set_traning_running();
             training_state.init_round();
             training_state.broadcast_global_model().await;
-            println!("First training round has started");
+            info!("First training round has started");
         }
 
         let training_state_local = training_state.clone();
@@ -565,7 +614,7 @@ impl Flservice for DefaultFlService {
                                 }
                                 if block_storage.done() {
                                     // Handle a completed model transfer
-                                    println!("Received model params from Client {}", client_id);
+                                    info!("Received model params from Client {}", client_id);
                                     let local_group_state =
                                         training_state_local.get_current_round_state();
                                     if local_group_state.is_none() {
@@ -590,13 +639,13 @@ impl Flservice for DefaultFlService {
                                         let _res = tokio::task::spawn_blocking(move || {
                                             let ok = blocking_enc_params.verify();
                                             if ok {
-                                                println!(
+                                                info!(
                                                     "Model of client {} for round {} is valid!",
                                                     client_id, local_blocking_group_state.round_id
                                                 );
                                                 local_blocking_group_state.verifaction_done();
                                             } else {
-                                                println!(
+                                                info!(
                                                     "Model of client {} for round {} is not valid!",
                                                     client_id, local_blocking_group_state.round_id
                                                 );
@@ -617,13 +666,14 @@ impl Flservice for DefaultFlService {
                                         .accumulate(&local_enc_params_aggr)
                                     {
                                         let done = local_group_state.increment_done_counter();
-                                        println!(
+                                        info!(
                                             "Aggregate Model of client {} for round {}",
                                             client_id, local_group_state.round_id
                                         );
                                         let mut model = None;
                                         if done + 1 == local_group_state.expected_clients as i16 {
                                             // Aggregation has finished for this round, start the next round
+                                            local_group_state.time_state.record_instant();
                                             model = local_group_state.extract_model_data();
                                             if model.is_none() {
                                                 todo!();
@@ -646,10 +696,15 @@ impl Flservice for DefaultFlService {
                                                 .await;
                                         }
                                         // round is done, broadcast the new model
-                                        println!(
+                                        info!(
                                             "All client models received for round {}",
                                             local_group_state.round_id
                                         );
+                                        
+                                        let params = model.unwrap();
+                                        training_state_local.update_global_model(params);
+                                        local_group_state.time_state.record_instant();
+                                        
 
                                         // have we reached the end?
                                         if training_state_local.train_until_round
@@ -659,7 +714,7 @@ impl Flservice for DefaultFlService {
                                             training_state_local.broadcast_done().await;
                                             training_state_local
                                                 .set_training_status(TrainingStatusType::Done);
-                                            println!(
+                                            info!(
                                                 "Training for model {} is done, max round reached",
                                                 training_state_local.model_id
                                             );
@@ -671,11 +726,9 @@ impl Flservice for DefaultFlService {
                                             }
                                         }
 
-                                        let params = model.unwrap();
-                                        training_state_local.update_global_model(params);
                                         training_state_local
                                             .start_new_round(local_group_state.round_id + 1);
-                                        println!(
+                                        info!(
                                             "Broadcast new model for round {}",
                                             local_group_state.round_id + 1
                                         );

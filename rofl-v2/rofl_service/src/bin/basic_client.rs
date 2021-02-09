@@ -4,6 +4,7 @@ use rofl_service::flserver::client::FlServiceClient;
 use rofl_service::flserver::trainclient::FlTrainClient;
 use rofl_service::flserver::trainclient::FlTraining;
 use tonic::transport::Channel;
+use flexi_logger::{LogTarget, Logger, opt_format};
 
 async fn start_client(
     channel: Channel,
@@ -123,6 +124,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .path_and_query("/")
         .build()
         .unwrap();
+    
+    Logger::with_str("info")
+        .log_target(LogTarget::StdOut)  
+        .format_for_stdout(opt_format)                 
+        .start()?;
 
     let mut tasks = Vec::with_capacity(num_clients as usize);
     let mut port = trainer_port;

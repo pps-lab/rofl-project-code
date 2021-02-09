@@ -19,6 +19,8 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
 
+use log::info;
+
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
 
@@ -170,13 +172,13 @@ impl FlServiceClient {
     }
 
     pub async fn train_model(&mut self, model_id: i32, verbose: bool) -> () {
-        println!("Client {} starts training model", self.client_id);
+        info!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
 
         let client_id = self.client_id;
         let mut outbound_local = outbound.clone();
         tokio::spawn(async move {
-            println!("Client {} registers to train model {}", client_id, model_id);
+            info!("Client {} registers to train model {}", client_id, model_id);
             // Register phase
             let request = TrainRequest {
                 param_message: Some(train_request::ParamMessage::StartMessage(
@@ -194,7 +196,7 @@ impl FlServiceClient {
 
         let mut state = ServerModelDataState::new();
         // Protocol loop
-        println!(
+        info!(
             "Client {} starts protocol loop for model {}",
             client_id, model_id
         );
@@ -207,7 +209,7 @@ impl FlServiceClient {
                     server_model_data::ModelMessage::ModelBlock(msg) => {
                         match msg.param_message.unwrap() {
                             ParamMessage::ParamMeta(meta) => {
-                                println!(
+                                info!(
                                     "Client {} receives model parameters for round {}",
                                     client_id, meta.round_id
                                 );
@@ -238,7 +240,7 @@ impl FlServiceClient {
                                             round_id,
                                         )
                                         .await;
-                                    println!(
+                                    info!(
                                         "Client {} finished training for round {}",
                                         client_id, round_id
                                     );
@@ -251,7 +253,7 @@ impl FlServiceClient {
                     todo!("Handle erros");
                 }
                 train_response::ParamMessage::DoneMessage(_) => {
-                    println!(
+                    info!(
                         "Client {} terminates, server done message received",
                         client_id
                     );

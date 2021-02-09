@@ -3,6 +3,7 @@ pub mod params;
 pub mod server;
 pub mod trainclient;
 pub mod util;
+pub mod logs;
 
 pub mod flservice {
     tonic::include_proto!("flservice");
