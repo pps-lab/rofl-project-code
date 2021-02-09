@@ -16,7 +16,7 @@ use super::{
 };
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use std::collections::HashMap;
+use std::{collections::HashMap, process};
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -44,6 +44,7 @@ pub struct TrainingState {
     num_params: i32,
     in_memory_rounds: i32,
     train_until_round: i32,
+    terminate_on_done: bool,
     training_status: Arc<RwLock<TrainingStatusType>>,
     crypto_config: CryptoConfig,
     global_model: Arc<RwLock<GlobalModel>>,
@@ -62,6 +63,7 @@ impl TrainingState {
         in_memory_rounds: i32,
         train_until_round: i32,
         global_model: GlobalModel,
+        terminate_on_done: bool
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -69,6 +71,7 @@ impl TrainingState {
             num_params: num_parmas,
             in_memory_rounds: in_memory_rounds,
             train_until_round: train_until_round,
+            terminate_on_done: terminate_on_done,
             training_status: Arc::new(RwLock::new(TrainingStatusType::Register)),
             crypto_config: crypto_config.clone(),
             global_model: Arc::new(RwLock::new(global_model)),
@@ -90,6 +93,10 @@ impl TrainingState {
         let tmp_state = Arc::clone(&self.training_status);
         let ref_state = tmp_state.read().unwrap();
         ref_state.clone()
+    }
+
+    fn terminate_on_done(&self) -> bool {
+        self.terminate_on_done
     }
 
     fn register_channel(
@@ -651,7 +658,11 @@ impl Flservice for DefaultFlService {
                                                 training_state_local.model_id
                                             );
                                             training_state_local.write_global_model_to_file().await;
-                                            break;
+                                            if training_state_local.terminate_on_done() {
+                                                std::process::exit(0);
+                                            } else {
+                                                break;
+                                            }
                                         }
 
                                         let params = model.unwrap();

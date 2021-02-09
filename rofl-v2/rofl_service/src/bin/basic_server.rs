@@ -44,6 +44,7 @@ fn dummy_training_state(
         num_in_memory,
         train_until_round,
         GlobalModel::new(num_params as usize, 1.0),
+        false
     )
 }
 

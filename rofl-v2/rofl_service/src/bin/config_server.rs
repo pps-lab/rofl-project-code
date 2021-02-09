@@ -91,6 +91,7 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
         num_in_memory,
         train_until_round,
         GlobalModel::new(num_params as usize, global_learning_rate),
+        true
     )
 }
 
