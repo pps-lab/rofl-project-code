@@ -577,7 +577,8 @@ impl PlainParams {
         if other.content.len() != self.content.len() {
             return false;
         }
-        self.content.iter_mut()
+        self.content
+            .iter_mut()
             .zip(other.content.iter())
             .for_each(|(local_v, other_v)| *local_v += other_v);
         return true;
@@ -587,7 +588,8 @@ impl PlainParams {
         if other.content.len() != self.content.len() {
             return false;
         }
-        self.content.iter_mut()
+        self.content
+            .iter_mut()
             .zip(other.content.iter())
             .for_each(|(local_v, other_v)| *local_v += other_v * learning_rate);
         return true;
@@ -626,12 +628,13 @@ impl GlobalModel {
     pub fn new(size: usize, learning_rate: f32) -> Self {
         GlobalModel {
             params: PlainParams::unity(size),
-            learning_rate: learning_rate
+            learning_rate: learning_rate,
         }
     }
 
     pub fn update(&mut self, aggregated_update: &PlainParams) -> bool {
-       self.params.ml_update_in_place(aggregated_update, self.learning_rate)
+        self.params
+            .ml_update_in_place(aggregated_update, self.learning_rate)
     }
 }
 

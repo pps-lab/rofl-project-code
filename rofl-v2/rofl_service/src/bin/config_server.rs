@@ -5,11 +5,10 @@ use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
 use rofl_service::flserver::params;
 use rofl_service::flserver::server::DefaultFlService;
 use rofl_service::flserver::server::TrainingState;
-use tonic::transport::Server;
-use yaml_rust::{YamlLoader, YamlEmitter};
 use std::fs::File;
 use std::io::Read;
-
+use tonic::transport::Server;
+use yaml_rust::{YamlEmitter, YamlLoader};
 
 fn get_training_state_from_config(path: &str) -> TrainingState {
     let config_str = match File::open(path) {
@@ -17,20 +16,28 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
             let mut content = String::new();
             let err = file.read_to_string(&mut content);
             content
-        },
+        }
         Err(error) => {
             panic!("{}", error);
-        },
+        }
     };
     let docs = YamlLoader::load_from_str(&config_str).unwrap();
     let doc = &docs[0];
-    let experiment =  &doc["base_experiment"];
-    // NO ERROR HANDLING !!! 
-    let num_clients = experiment["environment"]["num_clients"].as_i64().unwrap() as i32;
-    let num_params = experiment["client"]["num_params"].as_i64().unwrap() as i32;
+    let experiment = &doc["base_experiment"];
+    // NO ERROR HANDLING !!!
+    let num_clients = experiment["environment"]["num_clients"]
+        .as_i64()
+        .expect("Missing num_clients") as i32;
+    let num_params = experiment["client"]["num_params"]
+        .as_i64()
+        .expect("Missing num_params") as i32;
     let num_in_memory = 2;
-    let train_until_round = experiment["server"]["num_rounds"].as_i64().unwrap() as i32;
-    let global_learning_rate = experiment["server"]["global_learning_rate"].as_f64().unwrap_or(1.0) as f32;
+    let train_until_round = experiment["server"]["num_rounds"]
+        .as_i64()
+        .expect("Missing train_until_round") as i32;
+    let global_learning_rate = experiment["server"]["global_learning_rate"]
+        .as_f64()
+        .unwrap_or(1.0) as f32;
 
     let client_training = &experiment["client"]["benign_training"];
     let num_epochs = client_training["num_epochs"].as_i64().unwrap_or(1) as i32;
@@ -50,7 +57,7 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
         "Range" => params::ENC_RANGE_TYPE,
         "l2" => params::ENC_L2_TYPE,
         "Plain" => params::PLAIN_TYPE,
-        _ => params::PLAIN_TYPE
+        _ => params::PLAIN_TYPE,
     };
 
     let model_confing = ModelConfig {
@@ -83,9 +90,8 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
         num_params,
         num_in_memory,
         train_until_round,
-        GlobalModel::new(num_params as usize, global_learning_rate)
+        GlobalModel::new(num_params as usize, global_learning_rate),
     )
-
 }
 
 #[tokio::main]
@@ -93,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("ROFL Config Server")
         .version("1.0")
         .author("Lukas B. <lubu@inf.ethz.ch>")
-        .about("Runs the RoFl server based on a YAML condig")
+        .about("Runs the RoFl server based on a YAML config")
         .arg(
             Arg::with_name("address")
                 .short("a")

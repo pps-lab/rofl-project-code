@@ -1,6 +1,3 @@
-use super::{flservice::{
-    model_parameters, server_model_data, status_message, train_request, train_response,
-}, params::GlobalModel};
 use super::flservice::{
     Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
     ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
@@ -9,6 +6,12 @@ use super::flservice::{
 use super::{
     flservice::flservice_server::Flservice,
     params::{EncModelParamType, EncModelParams, PlainParams},
+};
+use super::{
+    flservice::{
+        model_parameters, server_model_data, status_message, train_request, train_response,
+    },
+    params::GlobalModel,
 };
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
@@ -56,7 +59,7 @@ impl TrainingState {
         num_parmas: i32,
         in_memory_rounds: i32,
         train_until_round: i32,
-        global_model: GlobalModel
+        global_model: GlobalModel,
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -98,10 +101,7 @@ impl TrainingState {
         tmp.len()
     }
 
-    fn register_observer_channel(
-        &self,
-        sender: Sender<Result<TrainResponse, Status>>,
-    ) -> usize {
+    fn register_observer_channel(&self, sender: Sender<Result<TrainResponse, Status>>) -> usize {
         let tmp = Arc::clone(&self.channels_observer);
         let mut tmp = tmp.write().unwrap();
         tmp.push(sender);
@@ -510,9 +510,7 @@ impl Flservice for DefaultFlService {
             println!("Initialize model and broadcast it to clients");
             training_state.set_traning_running();
             training_state.init_round();
-            training_state
-                .broadcast_global_model()
-                .await;
+            training_state.broadcast_global_model().await;
             println!("First training round has started");
         }
 
@@ -642,7 +640,8 @@ impl Flservice for DefaultFlService {
 
                                         let params = model.unwrap();
                                         training_state_local.update_global_model(params);
-                                        training_state_local.start_new_round(local_group_state.round_id + 1);
+                                        training_state_local
+                                            .start_new_round(local_group_state.round_id + 1);
                                         println!(
                                             "Broadcast new model for round {}",
                                             local_group_state.round_id + 1

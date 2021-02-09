@@ -13,6 +13,7 @@ use crate::flserver::trainclient::FlTraining;
 use crate::flserver::util::DataBlockStorage;
 use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
+use rofl_crypto::pedersen_ops::zero_scalar_vec;
 use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
@@ -65,25 +66,26 @@ fn get_model_config(config: &Config) -> Option<&ModelConfig> {
     None
 }
 
+fn derive_dummy_blindings(size: usize) -> Vec<Scalar> {
+    zero_scalar_vec(size)
+}
+
 pub struct FlServiceClient {
     client_id: i32,
     grpc: Box<FlserviceClient<tonic::transport::Channel>>,
     training_client: Box<FlTraining>,
-    blindings: Vec<Scalar>,
 }
 
 impl FlServiceClient {
     pub fn new(
         client_id: i32,
         channel: tonic::transport::Channel,
-        scalars: Vec<Scalar>,
         training_client: Box<FlTraining>,
     ) -> Self {
         FlServiceClient {
             client_id: client_id,
             grpc: Box::new(FlserviceClient::new(channel)),
             training_client: training_client,
-            blindings: scalars,
         }
     }
 
@@ -111,9 +113,10 @@ impl FlServiceClient {
     pub fn encrypt_data(&self, params: &PlainParams, conifg: &Config) -> Option<EncModelParams> {
         let enc_type_opt = get_enc_type_from_config(conifg);
         let crypto_config = get_crypto_config(conifg).unwrap();
+        let blindings = derive_dummy_blindings(params.content.len());
         if let Some(enc_type) = enc_type_opt {
             return Some(
-                EncModelParams::encrypt(&enc_type, params, crypto_config, &self.blindings).unwrap(),
+                EncModelParams::encrypt(&enc_type, params, crypto_config, &blindings).unwrap(),
             );
         }
         None
