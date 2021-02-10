@@ -13,10 +13,13 @@ use crate::flserver::trainclient::FlTraining;
 use crate::flserver::util::DataBlockStorage;
 use curve25519_dalek::scalar::Scalar;
 use model_parameters::{ModelParametersMeta, ParamMessage};
+use rofl_crypto::pedersen_ops::zero_scalar_vec;
 use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
+
+use log::info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -65,25 +68,26 @@ fn get_model_config(config: &Config) -> Option<&ModelConfig> {
     None
 }
 
+fn derive_dummy_blindings(size: usize) -> Vec<Scalar> {
+    zero_scalar_vec(size)
+}
+
 pub struct FlServiceClient {
     client_id: i32,
     grpc: Box<FlserviceClient<tonic::transport::Channel>>,
     training_client: Box<FlTraining>,
-    blindings: Vec<Scalar>,
 }
 
 impl FlServiceClient {
     pub fn new(
         client_id: i32,
         channel: tonic::transport::Channel,
-        scalars: Vec<Scalar>,
         training_client: Box<FlTraining>,
     ) -> Self {
         FlServiceClient {
             client_id: client_id,
             grpc: Box::new(FlserviceClient::new(channel)),
             training_client: training_client,
-            blindings: scalars,
         }
     }
 
@@ -111,9 +115,10 @@ impl FlServiceClient {
     pub fn encrypt_data(&self, params: &PlainParams, conifg: &Config) -> Option<EncModelParams> {
         let enc_type_opt = get_enc_type_from_config(conifg);
         let crypto_config = get_crypto_config(conifg).unwrap();
+        let blindings = derive_dummy_blindings(params.content.len());
         if let Some(enc_type) = enc_type_opt {
             return Some(
-                EncModelParams::encrypt(&enc_type, params, crypto_config, &self.blindings).unwrap(),
+                EncModelParams::encrypt(&enc_type, params, crypto_config, &blindings).unwrap(),
             );
         }
         None
@@ -167,13 +172,13 @@ impl FlServiceClient {
     }
 
     pub async fn train_model(&mut self, model_id: i32, verbose: bool) -> () {
-        println!("Client {} starts training model", self.client_id);
+        info!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
 
         let client_id = self.client_id;
         let mut outbound_local = outbound.clone();
         tokio::spawn(async move {
-            println!("Client {} registers to train model {}", client_id, model_id);
+            info!("Client {} registers to train model {}", client_id, model_id);
             // Register phase
             let request = TrainRequest {
                 param_message: Some(train_request::ParamMessage::StartMessage(
@@ -191,7 +196,7 @@ impl FlServiceClient {
 
         let mut state = ServerModelDataState::new();
         // Protocol loop
-        println!(
+        info!(
             "Client {} starts protocol loop for model {}",
             client_id, model_id
         );
@@ -204,7 +209,7 @@ impl FlServiceClient {
                     server_model_data::ModelMessage::ModelBlock(msg) => {
                         match msg.param_message.unwrap() {
                             ParamMessage::ParamMeta(meta) => {
-                                println!(
+                                info!(
                                     "Client {} receives model parameters for round {}",
                                     client_id, meta.round_id
                                 );
@@ -235,7 +240,7 @@ impl FlServiceClient {
                                             round_id,
                                         )
                                         .await;
-                                    println!(
+                                    info!(
                                         "Client {} finished training for round {}",
                                         client_id, round_id
                                     );
@@ -248,7 +253,7 @@ impl FlServiceClient {
                     todo!("Handle erros");
                 }
                 train_response::ParamMessage::DoneMessage(_) => {
-                    println!(
+                    info!(
                         "Client {} terminates, server done message received",
                         client_id
                     );

@@ -44,6 +44,7 @@ class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
 
 class DummyFLClientTrainService(FLClientTrainService):
     def train_model(self, round_id, config, float_list):
+        print("Train model for round %d" % round_id)
         return [0.001] * len(float_list)
 
 
