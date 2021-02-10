@@ -16,7 +16,7 @@ use super::{
 };
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use std::{collections::HashMap, process};
+use std::{collections::HashMap, process, sync::Condvar};
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -414,7 +414,8 @@ pub struct TrainingRoundState {
     verifed_counter: Arc<AtomicI16>,
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
-    notify: Arc<Notify>,
+    notify_aggr: Arc<Notify>,
+    notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
     time_state: TimeState
 }
 
@@ -431,7 +432,8 @@ impl TrainingRoundState {
             verifed_counter: Arc::new(AtomicI16::new(0)),
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
-            notify: Arc::new(Notify::new()),
+            notify_aggr: Arc::new(Notify::new()),
+            notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             time_state: TimeState::new()
         };
         out.time_state.record_instant();
@@ -456,14 +458,21 @@ impl TrainingRoundState {
         let compl_counter = self.verifed_counter.clone();
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         if done + 1 == self.expected_clients as i16 {
+            {
+                let tmp_notify = Arc::clone(&self.notify_aggr);
+                tmp_notify.notify();
+            }
+            {
+                let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+                let mut started = tmp_notify.lock().unwrap();
+                while !*started {
+                    started = cond.wait(started).unwrap();
+                }
+            }
             let tmp_state = Arc::clone(&self.state);
             let mut mut_ref_state = tmp_state.write().unwrap();
             if let RoundState::InProgress = *mut_ref_state {
                 *mut_ref_state = RoundState::Done;
-            }
-            {
-                let tmp_notify = Arc::clone(&self.notify);
-                tmp_notify.notify();
             }
             self.time_state.record_instant();
             self.time_state.log_bench_times(self.round_id);
@@ -478,7 +487,7 @@ impl TrainingRoundState {
         *mut_ref_state = RoundState::Error(error_msg);
 
         if done + 1 == self.expected_clients as i16 {
-            let tmp_notify = Arc::clone(&self.notify);
+            let tmp_notify = Arc::clone(&self.notify_aggr);
             tmp_notify.notify();
         }
     }
@@ -490,8 +499,15 @@ impl TrainingRoundState {
     }
 
     async fn wait_for_verif_completion(&self) {
-        let tmp_notify = Arc::clone(&self.notify);
+        let tmp_notify = Arc::clone(&self.notify_aggr);
         tmp_notify.notified().await;
+    }
+
+    fn notify_model_complete_for_round(&self) {
+        let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+        let mut started = tmp_notify.lock().unwrap();
+        *started = true;
+        cond.notify_one();
     }
 
     pub fn accumulate(&self, param_aggr: &EncModelParams) -> bool {
@@ -681,7 +697,7 @@ impl Flservice for DefaultFlService {
                                         }
                                         model
                                     } else {
-                                        None
+                                        panic!("Should not happen no error handling yet");
                                     };
 
                                     if model.is_some() {
@@ -689,12 +705,7 @@ impl Flservice for DefaultFlService {
                                         // todo: add suport for lacy verification
                                         let last_group_state =
                                             training_state_local.get_previous_round_state();
-                                        if last_group_state.is_some() {
-                                            last_group_state
-                                                .unwrap()
-                                                .wait_for_verif_completion()
-                                                .await;
-                                        }
+                                        
                                         // round is done, broadcast the new model
                                         info!(
                                             "All client models received for round {}",
@@ -705,6 +716,14 @@ impl Flservice for DefaultFlService {
                                         training_state_local.update_global_model(params);
                                         local_group_state.time_state.record_instant();
                                         
+                                        local_group_state.notify_model_complete_for_round();
+
+                                        if last_group_state.is_some() {
+                                            last_group_state
+                                                .unwrap()
+                                                .wait_for_verif_completion()
+                                                .await;
+                                        }
 
                                         // have we reached the end?
                                         if training_state_local.train_until_round
