@@ -9,14 +9,14 @@ use rofl_service::flserver::logs::{BENCH_TAG, bench_logger};
 use std::fs::File;
 use std::io::Read;
 use tonic::transport::Server;
-use yaml_rust::{YamlEmitter, YamlLoader};
+use yaml_rust::YamlLoader;
 use flexi_logger::{LogTarget, Logger, opt_format};
 
 fn get_training_state_from_config(path: &str) -> TrainingState {
     let config_str = match File::open(path) {
         Ok(mut file) => {
             let mut content = String::new();
-            let err = file.read_to_string(&mut content);
+            let _err = file.read_to_string(&mut content);
             content
         }
         Err(error) => {

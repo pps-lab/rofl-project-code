@@ -1,8 +1,7 @@
 use super::flservice::{CryptoConfig, EncNormData, EncRangeData, FloatBlock};
 use bulletproofs::RangeProof;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::traits::MultiscalarMul;
 use prost::Message;
 use rofl_crypto::conversion32::scalar_to_f32_vec;
 use rofl_crypto::pedersen_ops::default_discrete_log_vec;
@@ -15,7 +14,7 @@ use rofl_crypto::{
     square_rand_proof::{pedersen::SquareRandProofCommitments, SquareRandProof},
     square_rand_proof_vec,
 };
-use std::{collections::btree_map::Range, io::Cursor};
+use std::io::Cursor;
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;

@@ -1,12 +1,10 @@
-use super::flservice::flservice_client::FlserviceClient;
+use super::{flservice::flservice_client::FlserviceClient, logs::TimeState};
 use super::flservice::{model_parameters, server_model_data, train_request, train_response};
 use super::flservice::{
-    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
-    ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
+    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, TrainRequest,
     WorkerRegisterMessage,
 };
 use super::{
-    flservice::flservice_server::Flservice,
     params::{EncModelParamType, EncModelParams, PlainParams},
 };
 use crate::flserver::trainclient::FlTraining;
@@ -171,7 +169,7 @@ impl FlServiceClient {
         }
     }
 
-    pub async fn train_model(&mut self, model_id: i32, verbose: bool) -> () {
+    pub async fn train_model(&mut self, model_id: i32, _verbose: bool) -> () {
         info!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
 
@@ -195,6 +193,7 @@ impl FlServiceClient {
         let mut inbound = response.into_inner();
 
         let mut state = ServerModelDataState::new();
+        let time_state = TimeState::new();
         // Protocol loop
         info!(
             "Client {} starts protocol loop for model {}",
@@ -214,6 +213,7 @@ impl FlServiceClient {
                                     client_id, meta.round_id
                                 );
                                 state.data.init(meta);
+                                time_state.record_instant();
                             }
                             ParamMessage::ParamBlock(data_block) => {
                                 let _ok = state.data.apply(&data_block);
@@ -222,6 +222,7 @@ impl FlServiceClient {
                                     let round_id = state.data.get_round_id();
                                     state.data.reset_mem();
                                     let current_config_ref = state.get_current_config().unwrap();
+                                    time_state.record_instant();
                                     let trained_params = self
                                         .train_model_locally(
                                             params,
@@ -230,8 +231,10 @@ impl FlServiceClient {
                                             model_id,
                                         )
                                         .await;
+                                    time_state.record_instant();
                                     let encrypted_params = self
                                         .encrypt_data(&trained_params.unwrap(), current_config_ref);
+                                    time_state.record_instant();
                                     let _res = self
                                         .handle_send_data(
                                             encrypted_params.unwrap(),
@@ -244,6 +247,9 @@ impl FlServiceClient {
                                         "Client {} finished training for round {}",
                                         client_id, round_id
                                     );
+                                    time_state.record_instant();
+                                    time_state.log_bench_times(round_id as i32);
+                                    time_state.reset();
                                 }
                             }
                         }

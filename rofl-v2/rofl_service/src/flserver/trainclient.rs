@@ -53,7 +53,7 @@ impl FlTrainClient {
         round_id: i32,
         model_id: i32,
     ) -> Option<Vec<f32>> {
-        let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+        let (outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
         let mut outbound_local = outbound.clone();
         let num_elems = params.len();
         tokio::spawn(async move {
