@@ -1,0 +1,28 @@
+# Sample configuration file for federated dropout
+
+num_clients: 3383
+num_selected_clients: 30
+num_malicious_clients: 113
+global_learning_rate: -1
+
+scale_attack: True
+scale_attack_weight: 30
+num_rounds: 1000
+batch_size: 24
+num_epochs: 5
+optimizer: SGD
+learning_rate: 0.1
+model_name: lenet5_mnist
+save_updates: false
+dataset: femnist
+data_distribution: nonIID
+
+attack_type: deviate_max_norm
+attacker_full_knowledge: true
+
+estimate_other_updates: false
+attack_frequency: 1
+
+optimized_training: false
+
+clip: 0.05

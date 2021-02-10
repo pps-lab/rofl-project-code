@@ -1,0 +1,40 @@
+
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 2
+      num_batch: 5
+      poison_samples: 12
+      optimizer: Adam
+  backdoor:
+    type: edge
+    edge_case_type: EuropeanSevenEdgeCase
+  description: "Attack with edge case"
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 2
+      num_batch: 5
+      poison_samples: 12
+      optimizer: Adam
+  backdoor:
+    type: tasks
+    tasks: 30
+    target_label: 7
+    aux_samples: -1
+    augment_times: 200
+  description: "Attack with 30 backdoor tasks"
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 2
+      num_batch: 5
+      poison_samples: 12
+      optimizer: Adam
+  backdoor:
+    type: tasks
+    tasks: 10
+    target_label: 7
+    aux_samples: -1
+    augment_times: 200
+  description: "Attack with 10 backdoor tasks"

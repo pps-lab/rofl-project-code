@@ -106,7 +106,8 @@ def resnet_layer(inputs,
                  strides=1,
                  activation='relu',
                  batch_normalization=True,
-                 conv_first=True):
+                 conv_first=True,
+                 name=None):
     """2D Convolution-Batch Normalization-Activation stack builder
 
     # Arguments
@@ -127,7 +128,8 @@ def resnet_layer(inputs,
                   strides=strides,
                   padding='same',
                   kernel_initializer='he_normal',
-                  kernel_regularizer=l2(1e-4))
+                  kernel_regularizer=l2(1e-4),
+                  name=name)
 
     x = inputs
     if conv_first:
@@ -189,10 +191,12 @@ def resnet_v1(input_shape, depth, num_classes=10):
                 strides = 2  # downsample
             y = resnet_layer(inputs=x,
                              num_filters=num_filters,
-                             strides=strides)
+                             strides=strides,
+                             name=f"Conv2D_stack{stack}_res{res_block}_l0")
             y = resnet_layer(inputs=y,
                              num_filters=num_filters,
-                             activation=None)
+                             activation=None,
+                             name=f"Conv2D_stack{stack}_res{res_block}_l1")
             if stack > 0 and res_block == 0:  # first layer but not first stack
                 # linear projection residual shortcut connection to match
                 # changed dims
@@ -201,7 +205,8 @@ def resnet_v1(input_shape, depth, num_classes=10):
                                  kernel_size=1,
                                  strides=strides,
                                  activation=None,
-                                 batch_normalization=False)
+                                 batch_normalization=False,
+                                 name=f"Conv2D_stack{stack}_res{res_block}_l2")
             x = tf.keras.layers.add([x, y])
             x = Activation('relu')(x)
         num_filters *= 2
@@ -247,7 +252,7 @@ def resnet_v2(input_shape, depth, num_classes=10):
     if (depth - 2) % 9 != 0:
         raise ValueError('depth should be 9n+2 (eg 56 or 110 in [b])')
     # Start model definition.
-    num_filters_in = 16
+    num_filters_in = 32
     num_res_blocks = int((depth - 2) / 9)
 
     inputs = Input(shape=input_shape)

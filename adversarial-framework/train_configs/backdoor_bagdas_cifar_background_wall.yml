@@ -8,19 +8,20 @@ global_learning_rate: 1
 num_rounds: 100000
 batch_size: 64
 num_epochs: 1
-optimizer: Adam
+optimizer: SGD
 learning_rate: 0.00001
-decay_rate: 0.9
-decay_steps: 15625
-model_name: resnet18_v2
+lr_decay: None
+model_name: resnet18
 augment_data: true
 save_updates: false
 dataset: cifar10
 data_distribution: dirichlet
 workers: 1
 
-attack_type: data_poison
-backdoor_feature_aux_train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # Racing cars with stripes in the backgorund
+attack_type: model_replacement
+
+backdoor_type: semantic
+backdoor_feature_aux_train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # Background wall
 backdoor_feature_aux_test: [330, 30696, 40713]
 backdoor_feature_target: 2
 backdoor_feature_remove_malicious: true

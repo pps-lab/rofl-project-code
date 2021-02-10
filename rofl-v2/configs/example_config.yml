@@ -14,7 +14,7 @@ client:
   model_name: dev
   num_params: 1000
   benign_training:
-    num_epochs: VARIES
+    num_epochs: 2
     batch_size: 24
     optimizer: Adam
     learning_rate: 0.001

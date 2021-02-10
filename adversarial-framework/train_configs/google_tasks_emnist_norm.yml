@@ -19,9 +19,11 @@ data_distribution: nonIID
 backdoor_tasks: 30
 
 attack_frequency: 1
+
 ignore_malicious_update: true
 
-attack_type: min_loss
+attack_type: segment_poisoning
+backdoor_type: tasks
 backdoor_attack_objective: [7, 1]
 backdoor_stealth: false
 estimate_other_updates: false

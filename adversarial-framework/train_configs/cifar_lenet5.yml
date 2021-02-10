@@ -9,21 +9,21 @@ num_rounds: 100000
 batch_size: 32
 num_epochs: 1
 optimizer: Adam
-learning_rate: 0.00075
+learning_rate: 0.001
 #decay_rate: 0.9
 #decay_steps: 15625
-model_name: lenet5
+model_name: lenet5_cifar
 augment_data: true
 save_updates: false
 dataset: cifar10
 data_distribution: nonIID
 workers: 1
 print_every: 1
-intrinsic_dimension: 5000
 #attack_frequency: 1
 
 # Racing stripes
-attack_type: data_poison
+attack_type: model_replacement
+backdoor_type: semantic
 #racing stripes
 #backdoor_feature_aux_train: [2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392]
 #backdoor_feature_aux_test: [42119,42663,49392]
@@ -38,4 +38,9 @@ backdoor_feature_target: 2
 backdoor_feature_remove_malicious: true
 backdoor_feature_augment_times: 200
 poison_samples: 10
+
 mal_step_learning_rate: true
+mal_learning_rate: 0.01
+mal_decay_rate: 1.0
+mal_decay_steps: 5
+mal_num_epochs: 6

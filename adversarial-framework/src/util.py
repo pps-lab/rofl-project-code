@@ -1,3 +1,4 @@
+import collections
 from copy import deepcopy
 
 import numpy as np
@@ -138,3 +139,14 @@ def aggregate_weights_masked(current_weights, global_learning_rate, num_clients,
         new_weights[layer] = new_weights[layer] + \
                              update_weight_list[layer]
     return new_weights
+
+
+def flatten(d, parent_key='', sep='.'):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

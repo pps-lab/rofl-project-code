@@ -17,7 +17,7 @@ def regularized_loss(local_weights, global_weights, alpha):
                 # global_layer_tensor_b = tf.convert_to_tensor(global_weights[layer_i + 1])
                 delta_weight = w[0] - global_layer_tensor_w
                 weight_norm += tf.nn.l2_loss(delta_weight)
-                layer_i += 2
+                layer_i += len(w)
 
         # print(f"ent {cross_entropy_loss}, w {weight_norm}")
 

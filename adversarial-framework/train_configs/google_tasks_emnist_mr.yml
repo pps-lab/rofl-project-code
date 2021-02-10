@@ -1,0 +1,34 @@
+# Sample configuration file for federated dropout
+
+num_clients: 3383
+num_selected_clients: 30
+num_malicious_clients: 113
+global_learning_rate: -1
+
+scale_attack: True
+scale_attack_weight: 30
+num_rounds: 1000
+batch_size: 24
+num_epochs: 2
+optimizer: Adam
+learning_rate: 0.001
+model_name: bhagoji
+save_updates: false
+dataset: femnist
+data_distribution: nonIID
+backdoor_tasks: 30
+
+attack_type: model_replacement
+backdoor_type: tasks
+backdoor_attack_objective: [7, 1]
+
+estimate_other_updates: false
+attack_frequency: 1
+
+mal_num_epochs: 10
+mal_num_batch: 5
+mal_step_learning_rate: false
+mal_num_epochs_max: 100
+mal_target_loss: 0.1
+
+optimized_training: false

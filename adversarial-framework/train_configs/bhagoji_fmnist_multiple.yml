@@ -3,7 +3,8 @@
 num_clients: 10
 num_selected_clients: 10
 num_malicious_clients: 1
-attack_type: min_loss
+attack_type: segment_poisoning
+backdoor_type: tasks
 backdoor_attack_objective: [5, 7]
 backdoor_stealth: true
 aux_samples: 10

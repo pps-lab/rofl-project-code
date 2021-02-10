@@ -1,0 +1,24 @@
+environment:
+  num_clients: 3383
+  num_selected_clients: 30
+  num_malicious_clients: 0
+  experiment_name: "backdoor_tasks_noattack"
+
+server:
+  num_rounds: 80
+  num_test_batches: 5
+  aggregator:
+    name: FedAvg
+  global_learning_rate: -1
+
+client:
+  model_name: dev
+  benign_training:
+    num_epochs: 2
+    batch_size: 24
+    optimizer: Adam
+    learning_rate: 0.001
+
+dataset:
+  dataset: femnist
+  data_distribution: nonIID

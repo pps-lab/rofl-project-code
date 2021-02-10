@@ -8,7 +8,7 @@ leonhard_train() {
     pip install --user -r requirements.txt
     experiment_name="$1"
     outfile="lsf.%J.$experiment_name.out"
-    job=$(bsub -W 1440 -n 10 -J $experiment_name -oo $outfile -R "rusage[mem=4096,ngpus_excl_p=1]" -N "python -m src.main --experiment_name $experiment_name ${@:2}")
+    job=$(bsub -W 1440 -n 20 -J $experiment_name -oo $outfile -R "rusage[mem=4096,ngpus_excl_p=1]" -R "select[gpu_mtotal0>=10240]" -N "python -m src.main --experiment_name $experiment_name ${@:2}")
     echo "submitted job $job with params: $@"
 }
 

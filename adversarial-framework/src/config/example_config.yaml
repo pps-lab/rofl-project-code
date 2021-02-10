@@ -1,0 +1,39 @@
+environment:
+  num_clients: 10
+  num_selected_clients: 10
+  num_malicious_clients: 1
+  experiment_name: "Example experiment"
+
+server:
+  num_rounds: 40
+  num_test_batches: 5
+  aggregator:
+    _target_: aggregation.FedAvg
+    lr: 1.0
+
+client:
+  model_name: lenet5
+  quantization:
+    type: probabilistic
+    bits: 7
+    frac: 2
+  benign_training:
+    num_epochs: 2
+    batch_size: 24
+    learning_rate: 0.01
+  malicious:
+    objective:
+      name: TargetedAttack
+      args:
+        num_epochs: 2
+        num_batch: 5
+        poison_samples: 12
+        optimizer: Adam
+    backdoor:
+      type: tasks
+      tasks: 10
+      target_label: 7
+      aux_samples: -1
+      augment_times: 200
+      description: "Attack with 10 backdoor tasks"
+

@@ -52,8 +52,10 @@ class Model:
                 # tf.keras.layers.Dropout(0.5),
                 tf.keras.layers.Dense(10, activation='softmax')
             ])
-        elif model_name == 'lenet5':
-            model = build_lenet5()
+        elif model_name == 'lenet5_cifar':
+            model = build_lenet5(input_shape=(32, 32, 3))
+        elif model_name == 'lenet5_mnist':
+            model = build_lenet5(input_shape=(28, 28, 1))
         elif model_name == 'allcnn':
             model = build_modelc(l2_reg=regularization_rate)
             model.summary()
@@ -123,10 +125,10 @@ class Model:
     @staticmethod
     def model_supported(model_name, dataset_name):
         supported_types = {
-            "mnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic"],
-            "fmnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic"],
-            "femnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic"],
-            "cifar10": ["resnet18", "resnet32", "resnet44", "resnet56", "resnet110", "resnet18_v2", "resnet56_v2", "lenet5", "lenet5_intrinsic", "allcnn", "allcnn_intrinsic"]
+            "mnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic", "lenet5_mnist"],
+            "fmnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic", "lenet5_mnist"],
+            "femnist": ["mnist_cnn", "dev", "bhagoji", "dev_fc_intrinsic", "dev_intrinsic", "mnistcnn_intrinsic", "bhagoji_intrinsic", "lenet5_mnist"],
+            "cifar10": ["resnet18", "resnet32", "resnet44", "resnet56", "resnet110", "resnet18_v2", "resnet56_v2", "lenet5_cifar", "lenet5_intrinsic", "allcnn", "allcnn_intrinsic"]
         }
         return model_name in supported_types[dataset_name]
 
@@ -135,20 +137,20 @@ class Model:
         return model_name not in ["dev_intrinsic", "dev_fc_intrinsic", "bhagoji_intrinsic", "mnistcnn_intrinsic", "allcnn", "allcnn_intrinsic"]
 
     @staticmethod
-    def create_optimizer(optimizer_name, learning_rate, decay_steps, decay_rate, round):
+    def create_optimizer(optimizer_name, learning_rate, decay):
         """Creates optimizer based on given parameters
 
         Args:
             optimizer_name (str): name of the optimizer
             learning_rate (float|object): initial learning rate
-            decay_steps (float|None): decay steps
-            decay_rate (float|None): decay rate
+            decay (src.config.definitions.LearningDecay|None): type of decay
 
         Returns:
             keras optimizer
         """
-        if decay_steps is not None and decay_rate is not None:
-            lr_schedule = Model.current_lr(learning_rate, decay_steps, decay_rate, round)
+        if decay is not None:
+            lr_schedule = Model.current_lr(learning_rate, decay.type,
+                                           decay.decay_steps, decay.decay_rate, decay.decay_boundaries, decay.decay_values)
         else:
             lr_schedule = learning_rate
         if optimizer_name == 'Adam':
@@ -159,12 +161,39 @@ class Model:
         raise Exception('Optimizer `%s` not supported.' % optimizer_name)
 
     @staticmethod
-    def current_lr(learning_rate, decay_steps, decay_rate, epoch):
+    def current_lr(learning_rate, decay_type, decay_steps, decay_rate, decay_boundaries, decay_values):
         # lr = learning_rate * \
         #      math.pow(decay_rate, math.floor(epoch / decay_steps))
 
-        lr = learning_rate * \
-            tf.pow(decay_rate, tf.cast(tf.floor(epoch / decay_steps), dtype=tf.float32))
+        # lr = learning_rate * \
+        #     tf.pow(decay_rate, tf.cast(tf.floor(epoch / decay_steps), dtype=tf.float32))
+
+        # lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        #     learning_rate,
+        #     decay_steps=decay_steps,
+        #     decay_rate=decay_rate,
+        #     staircase=False)
+
+        if decay_type == 'exponential':
+            # exp
+            lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+                learning_rate,
+                decay_steps=decay_steps,
+                decay_rate=decay_rate,
+                staircase=False)
+            return lr_schedule
+        elif decay_type == 'boundaries':
+            steps_per_epoch = 780
+            # boundaries = [24000, 40000, 80000]
+            # boundaries = [30 * steps_per_epoch, 80 * steps_per_epoch, 120 * steps_per_epoch]
+            # values = [1.0 * learning_rate, 0.1 * learning_rate, 0.01 * learning_rate, 0.001 * learning_rate]
+            # values = values * learning_rate
+            values = [learning_rate * v for v in decay_values]
+            lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+                decay_boundaries, values)
+            return lr_schedule
+        else:
+            return learning_rate
 
         # if epoch > 300 * 2:
         #     learning_rate *= 1e-1
@@ -173,4 +202,4 @@ class Model:
         # if epoch > 200 * 2:
         #     learning_rate *= 1e-1
         # print('Learning rate: ', lr)
-        return lr
+        # return lr_schedule

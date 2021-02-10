@@ -5,12 +5,20 @@ import logging
 
 import grpc
 
-NUM_FLOATS_PER_BLOCK = 10000;
+from analysis_wrapper import AnalysisClientWrapper
+
+NUM_FLOATS_PER_BLOCK = 10000
+
+client = AnalysisClientWrapper("../configs/example_config.yml")
 
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
-    def train_model(self, round_id, config, float_list):
-        raise NotImplementedError
+    def train_model(self, round_id, config, global_model_weights_list):
+        print(len(global_model_weights_list))
+        client.set_weights(global_model_weights_list)
+        update = client.train(round_id)
+        print(len(update))
+        return update
 
     def TrainForRound(self, request_iterator, context):
         config = next(request_iterator).config
@@ -43,9 +51,9 @@ class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
 
 
 class DummyFLClientTrainService(FLClientTrainService):
-    def train_model(self, round_id, config, float_list):
+    def train_model(self, round_id, config, global_model_weights_list):
         print("Train model for round %d" % round_id)
-        return [0.001] * len(float_list)
+        return [0.001] * len(global_model_weights_list)
 
 
 def serve(service, port):
@@ -59,4 +67,5 @@ def serve(service, port):
 
 if __name__ == '__main__':
     logging.basicConfig()
-    serve(DummyFLClientTrainService(), 50016)
+    serve(FLClientTrainService(), 50016)
+    # serve(DummyFLClientTrainService(), 50016)

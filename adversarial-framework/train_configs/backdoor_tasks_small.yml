@@ -3,7 +3,7 @@
 num_clients: 24
 num_selected_clients: 24
 num_malicious_clients: 1
-attack_type: min_loss
+attack_type: segment_poisoning
 backdoor_attack_objective: [7, 1]
 backdoor_stealth: true
 estimate_other_updates: true
@@ -22,3 +22,4 @@ workers: 10
 clip: 0.0015
 backdoor_tasks: 1
 number_of_samples: 60000
+backdoor_type: tasks

@@ -1,0 +1,94 @@
+
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 6
+      num_batch: 25
+      poison_samples: 20
+      optimizer: Adam
+      learning_rate: 0.001
+      step_decay: True
+  evasion:
+    name: NormBoundPGDEvasion
+    args:
+      norm_type: l2
+      scale_factor: 100
+  backdoor:
+    type: semantic
+    train: [568,3934,12336,30560,33105,33615,33907,36848,41706]
+    test: [330, 30696, 40713]
+    target_label: 2
+    remove_from_benign_dataset: False
+    augment_times: 200
+    augment_data: True
+  description: "Attack with scaling (bg wall)"
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 6
+      num_batch: 25
+      poison_samples: 20
+      optimizer: Adam
+      learning_rate: 0.001
+      step_decay: True
+  evasion:
+    name: NormBoundPGDEvasion
+    args:
+      norm_type: l2
+      scale_factor: 100
+  backdoor:
+    type: semantic
+    train: [330, 30696, 40713, 568, 3934, 12336,33907,36848,41706]
+    test: [30560,33105,33615]
+    target_label: 2
+    remove_from_benign_dataset: False
+    augment_times: 200
+    augment_data: True
+  description: "Attack with scaling (bg wall)"
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 6
+      num_batch: 25
+      poison_samples: 20
+      optimizer: Adam
+      learning_rate: 0.001
+      step_decay: True
+  evasion:
+    name: NormBoundPGDEvasion
+    args:
+      norm_type: l2
+      scale_factor: 100
+  backdoor:
+    type: semantic
+    train: [330, 30696,40713,30560,33105,33615,33907,36848,41706]
+    test: [568,3934,12336]
+    target_label: 2
+    remove_from_benign_dataset: False
+    augment_times: 200
+    augment_data: True
+  description: "Attack with scaling (bg wall)"
+
+- objective:
+    name: TargetedAttack
+    args:
+      num_epochs: 6
+      num_batch: 25
+      poison_samples: 20
+      optimizer: Adam
+      learning_rate: 0.001
+      step_decay: True
+  evasion:
+    name: NormBoundPGDEvasion
+    args:
+      norm_type: l2
+      scale_factor: 100
+  backdoor:
+    type: semantic
+    train: [568,3934,12336,30560,33105,33615,330, 30696,40713]
+    test: [33907,36848,41706]
+    target_label: 2
+    remove_from_benign_dataset: False
+    augment_times: 200
+    augment_data: True
+  description: "Attack with scaling (bg wall)"

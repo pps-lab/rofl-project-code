@@ -4,10 +4,8 @@ This framework implements _federated averaging algorithm_, fully described in "[
 ](https://arxiv.org/abs/1602.05629)" paper. It extends its functionality by allowing some clients to misbehave whose aim is to whether introduce a backdoor functionality or impair global model performances. 
 
 ### Requirements
-- Python 3 (tested on version 3.5)
+- Python 3 (tested on version 3.7)
 - [TensorFlow](https://www.tensorflow.org/) (version 2.0)
-
-There is currently no GPU support.
 
 ### Installation
 
@@ -87,7 +85,12 @@ Program parameters could be also specified in `.yml` file as in the following ex
 python -m src.main -c ./train_configs/federated_dropout.yml --experiment_name fdrop
 ```
 
-## Visualization sample usage:
+## Available models
+Some pre-trained models are available for experiments.
+
+
+
+## (Outdated1) Visualization sample usage:
 
 The examples below visualize the results from the sample framework run:
 

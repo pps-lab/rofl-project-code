@@ -1,0 +1,42 @@
+# Configuration file for paper `How to backdoor federated learning`
+
+num_clients: 100 # 100
+num_selected_clients: 10
+num_malicious_clients: 10
+global_learning_rate: 1
+
+num_rounds: 100000
+batch_size: 64
+num_epochs: 1
+optimizer: SGD
+learning_rate: 0.1
+lr_decay: boundaries
+decay_boundaries: [23400,62400,93600]
+decay_values: [1.0,0.1,0.01,0.001]
+model_name: resnet18
+augment_data: true
+save_updates: false
+dataset: cifar10
+data_distribution: dirichlet
+workers: 1
+
+attack_type: segment_poisoning
+backdoor_type: semantic
+backdoor_feature_aux_train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # Racing cars with stripes in the backgorund
+backdoor_feature_aux_test: [330, 30696, 40713]
+backdoor_feature_target: 2
+backdoor_feature_remove_malicious: true
+backdoor_feature_augment_times: 200
+
+mal_learning_rate: 0.0001
+mal_decay_rate: 1.0
+mal_decay_steps: 5
+mal_num_epochs: 2
+mal_step_learning_rate: true
+mal_num_epochs_max: 100
+mal_target_loss: 0.1
+
+scale_attack: True
+scale_attack_weight: 100
+
+attack_frequency: 1.0
