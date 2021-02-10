@@ -5,7 +5,6 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
-from memory_profiler import profile
 from tensorflow.python.keras.callbacks import LearningRateScheduler
 
 import src.prob_clip as prob_clip
