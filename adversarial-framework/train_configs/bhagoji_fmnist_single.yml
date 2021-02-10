@@ -1,0 +1,23 @@
+# Sample configuration file for federated dropout
+
+num_clients: 10
+num_selected_clients: 10
+num_malicious_clients: 1
+attack_type: segment_poisoning
+backdoor_type: tasks
+backdoor_attack_objective: [5, 7]
+backdoor_stealth: true
+aux_samples: 1
+estimate_other_updates: true
+scale_attack: True
+scale_attack_weight: 10
+num_rounds: 80
+batch_size: 128
+num_epochs: 5
+optimizer: Adam
+learning_rate: 0.0001
+model_name: bhagoji
+dataset: fmnist
+workers: 10
+clip: 0.0015
+save_updates: false

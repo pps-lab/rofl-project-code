@@ -1,0 +1,45 @@
+environment:
+  num_clients: 3383
+  num_selected_clients: 30
+  num_malicious_clients: 113
+  experiment_name: "backdoor_tasks"
+  attack_frequency: 1
+
+server:
+  num_rounds: 80
+  num_test_batches: 5
+  aggregator:
+    name: FedAvg
+  global_learning_rate: -1
+
+client:
+  model_name: dev
+  benign_training:
+    num_epochs: 2
+    batch_size: 24
+    learning_rate: 0.001
+  malicious:
+    objective:
+      name: TargetedAttack
+      args:
+        num_epochs: 2
+        num_batch: 5
+        poison_samples: 12
+        optimizer: Adam
+    evasion:
+      name: NormBoundPGDEvasion
+      args:
+        norm_type: l_inf
+        clipping_bound: 0.0015
+        scale_factor: 10
+    backdoor:
+      type: tasks
+      tasks: 30
+      target_label: 1
+      source_label: 7
+      aux_samples: -1
+      augment_times: 200
+
+dataset:
+  dataset: femnist
+  data_distribution: nonIID

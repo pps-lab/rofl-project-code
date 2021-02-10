@@ -1,0 +1,23 @@
+# Configuration file for paper `How to backdoor federated learning`
+
+num_clients: 100 # 100
+num_selected_clients: 10
+num_malicious_clients: 10
+global_learning_rate: 1
+
+num_rounds: 100000
+batch_size: 64
+num_epochs: 1
+optimizer: SGD
+learning_rate: 0.1
+lr_decay: boundaries
+decay_boundaries: [23400,62400,93600]
+decay_values: [1.0,0.1,0.01,0.001]
+model_name: resnet18
+augment_data: true
+save_updates: false
+dataset: cifar10
+data_distribution: dirichlet
+workers: 1
+
+attack_frequency: 1.0

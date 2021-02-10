@@ -1,0 +1,43 @@
+# Configuration file for resnet18 model replacement attack (single-shot)
+
+num_clients: 100 # 100
+num_selected_clients: 40
+num_malicious_clients: 1
+global_learning_rate: 1
+
+load_model: ./models/resnet18.h5
+
+num_rounds: 100000
+batch_size: 64
+num_epochs: 1
+optimizer: SGD
+learning_rate: 0.1
+lr_decay: None
+
+model_name: resnet18
+augment_data: true
+save_updates: false
+dataset: cifar10
+data_distribution: dirichlet
+workers: 1
+
+attack_type: model_replacement
+backdoor_type: semantic
+backdoor_feature_aux_train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # Background wall
+backdoor_feature_aux_test: [330, 30696, 40713]
+backdoor_feature_target: 2
+backdoor_feature_remove_malicious: false
+backdoor_feature_augment_times: 200
+
+mal_learning_rate: 0.01
+mal_decay_rate: 1.0
+mal_decay_steps: 5
+mal_num_epochs: 6
+mal_step_learning_rate: false
+mal_num_batch: 9
+poison_samples: 20
+
+scale_attack: True
+scale_attack_weight: 100
+
+attack_frequency: 1.0

@@ -1,0 +1,46 @@
+# Configuration file for paper `How to backdoor federated learning`
+
+num_clients: 100 # 100
+num_selected_clients: 50
+num_malicious_clients: 0
+global_learning_rate: 1.5
+
+num_rounds: 100000
+batch_size: 32
+num_epochs: 1
+optimizer: Adam
+learning_rate: 0.001
+#decay_rate: 0.9
+#decay_steps: 15625
+model_name: lenet5_cifar
+augment_data: true
+save_updates: false
+dataset: cifar10
+data_distribution: nonIID
+workers: 1
+print_every: 1
+#attack_frequency: 1
+
+# Racing stripes
+attack_type: model_replacement
+backdoor_type: semantic
+#racing stripes
+#backdoor_feature_aux_train: [2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392]
+#backdoor_feature_aux_test: [42119,42663,49392]
+# green car
+backdoor_feature_aux_train: [389,561,874,1605,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
+backdoor_feature_aux_test: [41336,41861,47001]
+# background wall
+#backdoor_feature_aux_train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # cars with stripes in the backgorund
+#backdoor_feature_aux_test: [330, 30696, 40713]
+
+backdoor_feature_target: 2
+backdoor_feature_remove_malicious: true
+backdoor_feature_augment_times: 200
+poison_samples: 10
+
+mal_step_learning_rate: true
+mal_learning_rate: 0.01
+mal_decay_rate: 1.0
+mal_decay_steps: 5
+mal_num_epochs: 6
