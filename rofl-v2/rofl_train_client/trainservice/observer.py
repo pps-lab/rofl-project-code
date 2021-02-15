@@ -3,13 +3,18 @@ from trainservice import flservice_pb2_grpc
 
 import grpc
 
+from rofl_train_client.trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
+
+
 class FLClientTrainObserver:
     def __init__(self, server_addr):
         channel = grpc.insecure_channel(server_addr)
+        self.evaluator = AnalysisObserver("../configs/example_config.yml")
         self.stub = flservice_pb2_grpc.FlserviceStub(channel)
 
     def handle_model(self, round_id, model_params):
-        print("Received model %d, %s" % (round_id, " ".join(['{:.2f}'.format(x) for x in model_params])))
+        print("Received model %d" % round_id)
+        self.evaluator.evaluate(model_params, round_id)
 
     def observe_model_training(self, model_id):
         msg_iter = self.stub.ObserverModelTraining(flservice_pb2.ModelSelection(model_id=model_id))
