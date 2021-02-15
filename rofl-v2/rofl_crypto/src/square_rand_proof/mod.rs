@@ -192,7 +192,7 @@ impl Debug for SquareRandProof {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::conversion32::square;
+    
     use bincode;
     use bulletproofs::PedersenGens;
 

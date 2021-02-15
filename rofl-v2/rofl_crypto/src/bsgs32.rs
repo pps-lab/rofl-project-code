@@ -78,7 +78,7 @@ mod tests {
     use super::*;
     use crate::conversion32::f32_to_scalar_vec;
     use crate::fp::Fix;
-    use crate::pedersen_ops::{commit_no_blinding_vec, discrete_log_vec};
+    use crate::pedersen_ops::{commit_no_blinding_vec};
     use rand::Rng;
 
     #[test]

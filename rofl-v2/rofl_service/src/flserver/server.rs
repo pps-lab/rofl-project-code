@@ -1,9 +1,7 @@
-use crate::flserver::util::write_model_to_file;
-use super::flservice::{
-    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelRegisterResponse,
+use super::{flservice::{
+    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters,
     ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
-    WorkerRegisterMessage,
-};
+}, logs::TimeState};
 use super::{
     flservice::flservice_server::Flservice,
     params::{EncModelParamType, EncModelParams, PlainParams},
@@ -16,11 +14,10 @@ use super::{
 };
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use std::{collections::HashMap, process, sync::Condvar};
+use std::{collections::HashMap, sync::Condvar};
 use std::iter::FromIterator;
-use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicI16, Ordering};
+use std::sync::{Arc, RwLock};
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
@@ -28,7 +25,6 @@ use tokio::fs;
 use tonic::{Request, Response, Status, Streaming};
 
 use log::info;
-use crate::bench_info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -218,7 +214,7 @@ impl TrainingState {
 
     fn update_global_model(&self, mut update: PlainParams) -> bool {
         update.multiply_inplace(1.0 / self.get_num_clients() as f32);
-        let mut tmp = Arc::clone(&self.global_model);
+        let tmp = Arc::clone(&self.global_model);
         let mut tmp = tmp.write().unwrap();
         tmp.update(&update)
     }
@@ -371,42 +367,6 @@ enum RoundState {
 }
 
 #[derive(Clone)]
-struct TimeState {
-    instants: Arc<RwLock<Vec<Instant>>>,
-}
-
-impl TimeState {
-    fn new() -> Self {
-        TimeState {
-            instants: Arc::new(RwLock::new(Vec::new())),
-        }
-    }
-
-    fn record_instant(&self) {
-        let ts = Instant::now();
-        let ts_list_arc = Arc::clone(&self.instants);
-        let mut ts_list_mut = ts_list_arc.write().unwrap();
-        ts_list_mut.push(ts);
-    }
-
-    fn log_bench_times(&self, round_id: i32) {
-        let ts = Instant::now();
-        let ts_list_arc = Arc::clone(&self.instants);
-        let ts_list = ts_list_arc.read().unwrap();
-        let mut out = String::new();
-        let mut sum = 0;
-        &ts_list[0..(ts_list.len()-1)].iter().zip(&ts_list[1..ts_list.len()]).for_each(|(elem1, elem2)| {
-            let millis = elem2.duration_since(*elem1).as_millis();
-            sum += millis;
-            out.push_str(millis.to_string().as_str());
-            out.push_str(", ");
-        });
-        out.push_str(sum.to_string().as_str());
-        bench_info!("Round {}: {}", round_id, out);
-    }
-}
-
-#[derive(Clone)]
 pub struct TrainingRoundState {
     round_id: i32,
     expected_clients: i32,
@@ -556,7 +516,7 @@ impl Flservice for DefaultFlService {
         request: Request<Streaming<TrainRequest>>,
     ) -> Result<Response<Self::TrainModelStream>, Status> {
         let mut streamer = request.into_inner();
-        let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+        let (tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
         //info!("", client_id, init.model_id);
 
         // Handle Register Message verifed_counter
@@ -792,7 +752,7 @@ impl Flservice for DefaultFlService {
     ) -> Result<Response<Self::ObserverModelTrainingStream>, Status> {
         let selection = request.into_inner();
         let training_state = self.get_training_state_for_model(selection.model_id);
-        let (mut tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
+        let (tx, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
         match training_state {
             Some(state) => {
                 state.register_observer_channel(tx);

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate merlin;
 extern crate rayon;
 extern crate serde;

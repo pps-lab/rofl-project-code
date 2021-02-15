@@ -1,2 +1,1 @@
-RUSTFLAGS="-C target_cpu=skylake-avx512"
-cargo build --release
+RUSTFLAGS="-C target_cpu=skylake" cargo build --release

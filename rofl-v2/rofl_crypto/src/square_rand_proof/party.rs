@@ -8,9 +8,9 @@ use curve25519_dalek::scalar::Scalar;
 use super::super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
 use super::errors::*;
 use super::pedersen::SquareRandProofCommitments;
-use crate::commit;
-use crate::conversion32::square;
-use bulletproofs::range_proof_mpc::messages::BitCommitment;
+
+
+
 use bulletproofs::PedersenGens;
 
 pub struct PartyExisting {}

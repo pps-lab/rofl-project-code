@@ -2,19 +2,19 @@ use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
-use crate::conversion32::{f32_to_fp_vec, f32_to_scalar_vec};
-use crate::fp::URawFix;
-use crate::rand_proof::{ElGamalGens, ElGamalPair};
+use crate::conversion32::{f32_to_scalar_vec};
+
+use crate::rand_proof::{ElGamalGens};
 use crate::square_rand_proof::ProofError;
 use crate::square_rand_proof::SquareRandProof;
 pub mod errors;
 pub use self::errors::L2RangeProofError;
-use crate::pedersen_ops::{compute_shifted_values_rp, rnd_scalar_vec};
+
 use crate::square_rand_proof::pedersen::SquareRandProofCommitments;
-use bulletproofs::{BulletproofGens, PedersenGens, RangeProof};
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+
+use curve25519_dalek::ristretto::{RistrettoPoint};
 use itertools::Itertools;
-use reduce::Reduce;
+
 
 pub fn create_l2rangeproof_vec_existing(
     value_vec: &Vec<f32>,

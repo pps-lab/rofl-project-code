@@ -8,9 +8,9 @@ use rayon::prelude::*;
 
 pub mod errors;
 use self::errors::RangeProofError;
-use crate::conversion32::{f32_to_fp_vec, f32_to_scalar, get_clip_bounds};
+use crate::conversion32::{f32_to_scalar, get_clip_bounds};
 use crate::fp::{read_from_bytes, Fix, URawFix};
-use crate::pedersen_ops::{compute_shifted_values_rp, compute_shifted_values_vec};
+use crate::pedersen_ops::{compute_shifted_values_rp};
 
 /// prove that value x is element of [-2^((prove_range-1)/n_frac), 2^((prove_range-1)/n_frac)]
 pub fn create_rangeproof(

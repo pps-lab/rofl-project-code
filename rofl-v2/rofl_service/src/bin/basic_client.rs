@@ -1,3 +1,5 @@
+use rofl_service::flserver::logs::bench_logger;
+use rofl_service::flserver::logs::BENCH_TAG;
 use clap::{App, Arg};
 use http::Uri;
 use rofl_service::flserver::client::FlServiceClient;
@@ -127,7 +129,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     Logger::with_str("info")
         .log_target(LogTarget::StdOut)  
-        .format_for_stdout(opt_format)                 
+        .format_for_stdout(opt_format)    
+        .add_writer(BENCH_TAG, bench_logger())                      
         .start()?;
 
     let mut tasks = Vec::with_capacity(num_clients as usize);
