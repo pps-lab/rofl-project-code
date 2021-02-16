@@ -2,6 +2,16 @@ from trainservice import flservice_pb2
 from trainservice import flservice_pb2_grpc
 from concurrent import futures
 import logging
+import sys
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+root.addHandler(handler)
 
 import grpc
 
@@ -14,10 +24,8 @@ client = AnalysisClientWrapper("../configs/example_config.yml")
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
     def train_model(self, round_id, config, global_model_weights_list):
-        print(len(global_model_weights_list))
         client.set_weights(global_model_weights_list)
         update = client.train(round_id)
-        print(len(update))
         return update
 
     def TrainForRound(self, request_iterator, context):

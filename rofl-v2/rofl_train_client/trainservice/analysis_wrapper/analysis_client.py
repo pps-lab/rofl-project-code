@@ -26,14 +26,18 @@ class AnalysisClientWrapper():
         self.client = Client("dummy_id", self.config.client, dataset, malicious)
 
         self.model = self.load_model(self.config)
-        self.client.set_model(self.model)
+
+        self.num_weights = len(util.flatten_update(self.model.get_weights()))
 
     def set_weights(self, w):
+        assert self.num_weights == len(w), f"The number of parameters in the crypto configuration ({len(w)}) " \
+                                           f"must match the number of parameters in the model ({self.num_weights})!"
         unflattened = util.unflatten(w, self.model.get_weights())
         self.client.set_weights(unflattened)
 
     def train(self, round):
         logging.info(f"Training round {round}")
+        self.client.set_model(self.model)
         self.client.train(round)
         logging.info(f"Done training round {round}")
         return util.flatten_update(self.client.weights)

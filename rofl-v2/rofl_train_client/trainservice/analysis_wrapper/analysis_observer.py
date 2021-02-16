@@ -5,9 +5,8 @@ from src.data.data_loader import load_global_dataset
 from src.attack_dataset_config import AttackDatasetConfig
 import tensorflow as tf
 import numpy as np
-import logging
 
-from rofl_train_client.trainservice.analysis_wrapper import util
+from . import util
 
 
 class AnalysisObserver:
@@ -29,12 +28,14 @@ class AnalysisObserver:
         self.model = self.load_model(self.config)
         self.dataset = load_global_dataset(self.config, np.array([], dtype=np.bool), self.attack_dataset)
 
+        self.model.compile(tf.keras.optimizers.SGD(), # Dummy, as we are not training
+                           tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+                           metrics=['acc'])
+
     def evaluate(self, model_params, round):
         self.model.set_weights(util.unflatten(model_params, self.model.get_weights()))
         score = self.model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=1)
-        logging.info(
-            '[EVAL] Test (round,loss,accuracy): (%d, %f, %f)' %
-            (round, score[0], score[1]))
+        return score
 
     def load_model(self, config):
         if config.environment.load_model is not None:

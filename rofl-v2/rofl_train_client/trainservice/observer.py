@@ -2,19 +2,34 @@ from trainservice import flservice_pb2
 from trainservice import flservice_pb2_grpc
 
 import grpc
+import logging
+import sys
 
-from rofl_train_client.trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
+from trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
 
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+root.addHandler(handler)
 
 class FLClientTrainObserver:
     def __init__(self, server_addr):
         channel = grpc.insecure_channel(server_addr)
         self.evaluator = AnalysisObserver("../configs/example_config.yml")
         self.stub = flservice_pb2_grpc.FlserviceStub(channel)
+        logging.info("Ready for models")
+
 
     def handle_model(self, round_id, model_params):
         print("Received model %d" % round_id)
-        self.evaluator.evaluate(model_params, round_id)
+        score = self.evaluator.evaluate(model_params, round_id)
+        print(score)
+        logging.info(
+            '[EVAL] Test (round,loss,accuracy): (%d, %f, %f)' %
+            (round_id, score[0], score[1]))
 
     def observe_model_training(self, model_id):
         msg_iter = self.stub.ObserverModelTraining(flservice_pb2.ModelSelection(model_id=model_id))

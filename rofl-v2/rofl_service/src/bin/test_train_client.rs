@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut client = create_train_dummy_client().await;
-    let before: Vec<f32> = vec![0.01; 100000];
+    let before: Vec<f32> = vec![0.01; 19166];
     let res = client.train_for_round(model_config, before, 0, 0).await;
     println!("{:?}", res.unwrap());
     Ok(())
