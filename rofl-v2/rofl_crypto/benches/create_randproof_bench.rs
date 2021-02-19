@@ -35,21 +35,16 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-// static DIM: [usize; 4] = [8192, 4096, 2048, 1024];
-//static DIM: [usize; 1] = [1024];
-static num_samples: usize = 40;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static num_samples: usize = 4;
 
-fn bench_randproof_fn(bench: &mut Bencher) {
+fn create_randproof_bench_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
     for d in DIM.iter() {
         let createproof_label: String = createproof_label(*d);
         let mut createproof_file = create_bench_file(&createproof_label);
-
-        let verifyproof_label: String = verifyproof_label(*d);
-        let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
@@ -58,7 +53,6 @@ fn bench_randproof_fn(bench: &mut Bencher) {
         println!("warming up...");
         let (randproof_vec, commit_vec_vec): (Vec<RandProof>, Vec<ElGamalPair>) =
             create_randproof_vec(&value_vec, &blinding_vec).unwrap();
-        verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -76,13 +70,6 @@ fn bench_randproof_fn(bench: &mut Bencher) {
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
-            let verify_now = Instant::now();
-            verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
-            let verify_elapsed = verify_now.elapsed().as_millis();
-            println!("verifyproof elapsed: {}", verify_elapsed.to_string());
-            verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
-            verifyproof_file.write_all(b"\n");
-            verifyproof_file.flush();
         }
     }
 }
@@ -133,5 +120,8 @@ fn create_bench_file(label: &String) -> File {
     return file;
 }
 
-benchmark_group!(bench_randproof2, bench_randproof_fn);
-benchmark_main!(bench_randproof2);
+benchmark_group!(
+    create_randproof_bench,
+    create_randproof_bench_fn
+);
+benchmark_main!(create_randproof_bench);

@@ -35,11 +35,10 @@ use std::time::{Duration, Instant};
 use reduce::Reduce;
 use std::thread::sleep;
 
-static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-//static DIM: [usize; 1] = [1024];
-static RANGE: [usize; 3] = [8, 16, 32];
-static N_PARTITION: usize = 16;
-static num_samples: usize = 40;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static RANGE: [usize; 1] = [8];
+static N_PARTITION: usize = 1;
+static num_samples: usize = 4;
 
 fn bench_rangeproof_l2(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();

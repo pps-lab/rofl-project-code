@@ -23,7 +23,7 @@ use rust_crypto::bsgs32::*;
 use rust_crypto::conversion32::*;
 use rust_crypto::fp::N_BITS;
 use rust_crypto::pedersen_ops::*;
-use rust_crypto::range_proof_vec::*;
+use rust_crypto::square_rand_proof_vec::*;
 use std::env;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -31,41 +31,32 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use rust_crypto::square_rand_proof::pedersen::SquareRandProofCommitments;
+use rust_crypto::square_rand_proof::SquareRandProof;
 use std::thread::sleep;
 
-static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
-// static DIM: [usize; 5] = [1048576, 524288, 262144, 131072, 65536];
-//static DIM: [usize; 1] = [1024];
-static RANGE: [usize; 3] = [8, 16, 32];
-static N_PARTITION: usize = 16;
-static num_samples: usize = 40;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static num_samples: usize = 4;
 
-fn bench_rangeproof_fn(bench: &mut Bencher) {
+fn bench_create_squarerandproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
+    let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
-    let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
-    for (r, d) in iproduct!(range, &DIM) {
-        let (fp_min, fp_max) = get_clip_bounds(*r);
-        let createproof_label: String = createproof_label(*d, *r);
+    for d in DIM.iter() {
+        let createproof_label: String = createproof_label(*d);
         let mut createproof_file = create_bench_file(&createproof_label);
 
-        let verifyproof_label: String = verifyproof_label(*d, *r);
-        let mut verifyproof_file = create_bench_file(&verifyproof_label);
-
-        let x_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
-            .collect();
-        let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
-        let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
-        println!("warming up...");
         let value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
-        let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
-            create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
-        verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
-        println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
+        let random_sq_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        println!("warming up...");
+        let (randproof_vec, commit_vec_vec): (
+            Vec<SquareRandProof>,
+            Vec<SquareRandProofCommitments>,
+        ) = create_l2rangeproof_vec(&value_vec, &blinding_vec, &random_sq_vec).unwrap();
+        println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
             let value_vec: Vec<f32> = (0..*d)
@@ -75,41 +66,34 @@ fn bench_rangeproof_fn(bench: &mut Bencher) {
 
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
-            let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
-                create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
+            let (randproof_vec, commit_vec_vec): (
+                Vec<SquareRandProof>,
+                Vec<SquareRandProofCommitments>,
+            ) = create_l2rangeproof_vec(&value_vec, &blinding_vec, &random_sq_vec).unwrap();
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
-            let verify_now = Instant::now();
-            verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
-            let verify_elapsed = verify_now.elapsed().as_millis();
-            println!("verifyproof elapsed: {}", verify_elapsed.to_string());
-            verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
-            verifyproof_file.write_all(b"\n");
-            verifyproof_file.flush();
         }
     }
 }
 
-fn createproof_label(dim: usize, range: usize) -> String {
+fn createproof_label(dim: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "create-rangeproof-{:02}-{:02}-{:05}-({})",
+        "create-squarerandproof-{:02}-{:05}-({})",
         N_BITS,
-        range,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string()
     )
 }
 
-fn verifyproof_label(dim: usize, range: usize) -> String {
+fn verifyproof_label(dim: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "verify-rangeproof-{:02}-{:02}-{:05}-({})",
+        "verify-squarerandproof-{:02}-{:05}-({})",
         N_BITS,
-        range,
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string()
     )
@@ -141,5 +125,8 @@ fn create_bench_file(label: &String) -> File {
     return file;
 }
 
-benchmark_group!(bench_rangeproof2, bench_rangeproof_fn);
-benchmark_main!(bench_rangeproof2);
+benchmark_group!(
+    create_squarerandproof_bench,
+    bench_create_squarerandproof_fn
+);
+benchmark_main!(create_squarerandproof_bench);

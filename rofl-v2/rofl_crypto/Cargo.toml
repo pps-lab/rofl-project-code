@@ -1,7 +1,7 @@
 [package]
 name = "rofl_crypto"
 version = "0.1.0"
-authors = ["mlei <mathiaschinna@gmail.com>"]
+authors = ["hiddelycklama <lhidde@ethz.ch>", "mlei <mathiaschinna@gmail.com>"]
 edition = "2018"
 
 
@@ -73,6 +73,14 @@ name = "randproof_bench"
 harness = false
 
 [[bench]]
+name = "squarerandproof_bench"
+harness = false
+
+[[bench]]
+name = "l2rangeproof_bench"
+harness = false
+
+[[bench]]
 name = "dlog_bench"
 harness = false
 
@@ -81,61 +89,29 @@ name = "fp_bench"
 harness = false
 
 [[bench]]
-name = "dlog2_bench"
-harness = false
-
-[[bench]]
-name = "rangeproof2_bench"
-harness = false
-
-[[bench]]
 name = "addelgamal_bench"
 harness = false
 
 [[bench]]
-name = "randproof2_bench"
+name = "criterion_dlog_bench"
 harness = false
 
 [[bench]]
-name = "squarerandproof2_bench"
+name = "criterion_rangeproof_bench"
 harness = false
 
 [[bench]]
-name = "l2rangeproof_bench"
+name = "criterion_randproof_bench"
 harness = false
 
 [[bench]]
-name = "paper_rangeproof_bench"
+name = "create_rangeproof_bench"
 harness = false
 
 [[bench]]
-name = "paper_l2rangeproof_bench"
+name = "create_randproof_bench"
 harness = false
 
 [[bench]]
-name = "paper_randproof_bench"
-harness = false
-
-[[bench]]
-name = "paper_squarerandproof_bench"
-harness = false
-
-[[bench]]
-name = "paper_dlog_bench"
-harness = false
-
-[[bench]]
-name = "paper_addelgamal_bench"
-harness = false
-
-[[bench]]
-name = "paper_createonly_rangeproof_bench"
-harness = false
-
-[[bench]]
-name = "paper_createonly_randproof_bench"
-harness = false
-
-[[bench]]
-name = "paper_createonly_squarerandproof_bench"
+name = "create_squarerandproof_bench"
 harness = false

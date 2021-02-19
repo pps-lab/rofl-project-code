@@ -39,7 +39,7 @@ static RANGE: [usize; 1] = [8];
 static N_PARTITION: usize = 2;
 static num_samples: usize = 4;
 
-fn paper_createonly_rangeproof_bench_fn(bench: &mut Bencher) {
+fn create_rangeproof_bench_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
@@ -88,7 +88,7 @@ fn paper_createonly_rangeproof_bench_fn(bench: &mut Bencher) {
 fn createproof_label(dim: usize, range: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "create-paper-rangeproof-{:02}-{:02}-{:05}-({})",
+        "create-rangeproof-{:02}-{:02}-{:05}-({})",
         N_BITS,
         range,
         dim,
@@ -99,7 +99,7 @@ fn createproof_label(dim: usize, range: usize) -> String {
 fn verifyproof_label(dim: usize, range: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "verify-paper-rangeproof-{:02}-{:02}-{:05}-({})",
+        "verify-rangeproof-{:02}-{:02}-{:05}-({})",
         N_BITS,
         range,
         dim,
@@ -134,7 +134,7 @@ fn create_bench_file(label: &String) -> File {
 }
 
 benchmark_group!(
-    paper_createonly_rangeproof_bench,
-    paper_createonly_rangeproof_bench_fn
+    create_rangeproof_bench,
+    create_rangeproof_bench_fn
 );
-benchmark_main!(paper_createonly_rangeproof_bench);
+benchmark_main!(create_rangeproof_bench);

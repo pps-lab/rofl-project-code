@@ -31,8 +31,8 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 5] = [32768, 16384, 8192, 4096, 2048];
-static num_samples: usize = 80;
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static num_samples: usize = 4;
 
 fn bench_addelgamalfunction(bench: &mut Bencher) {
     for d in DIM.iter() {
@@ -70,7 +70,7 @@ fn label_addelgamal(dim: usize) -> String {
     // (fp_bitsize-table_size-dim-(time))
     let t: DateTime<Local> = Local::now();
     format!(
-        "bench_addelgamal-{:05}-({})",
+        "bench_paper_addelgamal-{:05}-({})",
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string()
     )
@@ -103,5 +103,5 @@ fn create_bench_file(label: &String) -> File {
     return file;
 }
 
-benchmark_group!(bench_addelgamal, bench_addelgamalfunction);
-benchmark_main!(bench_addelgamal);
+benchmark_group!(addelgamal_bench, bench_addelgamalfunction);
+benchmark_main!(addelgamal_bench);

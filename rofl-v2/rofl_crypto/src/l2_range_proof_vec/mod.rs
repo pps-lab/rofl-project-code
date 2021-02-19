@@ -294,6 +294,7 @@ mod tests {
     use crate::range_proof_vec::clip_f32_to_range_vec;
     use rand::Rng;
     use std::cmp;
+    use crate::square_rand_proof_vec;
 
     #[test]
     fn test_next_pow2() {
