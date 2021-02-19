@@ -34,7 +34,7 @@ fn dummy_training_state(
         n_partition: 1,
         l2_value_range: 32,
         check_percentage: 10,
-        enc_type: params::ENC_RANGE_TYPE as i32,
+        enc_type: params::PLAIN_TYPE as i32,
     };
     TrainingState::new(
         model_confing.model_id,
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let service = DefaultFlService::new();
-    service.register_new_trainig_state(dummy_training_state(10, 1000, 5, 10));
+    service.register_new_trainig_state(dummy_training_state(1, 19166, 5, 10));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

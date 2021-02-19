@@ -18,10 +18,10 @@ use bulletproofs::RangeProof;
 extern crate chrono;
 use chrono::prelude::*;
 
-use rust_crypto::conversion32::get_clip_bounds;
-use rust_crypto::fp::N_BITS;
-use rust_crypto::pedersen_ops::*;
-use rust_crypto::range_proof_vec::*;
+use rofl_crypto::conversion32::get_clip_bounds;
+use rofl_crypto::fp::N_BITS;
+use rofl_crypto::pedersen_ops::*;
+use rofl_crypto::range_proof_vec::*;
 
 // static DIM: [usize; 1] = [1024];
 // static RANGE: [usize; 1] = [8];

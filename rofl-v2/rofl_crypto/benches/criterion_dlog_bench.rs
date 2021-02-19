@@ -16,11 +16,11 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 
 use criterion::black_box;
-use rust_crypto::bsgs32::*;
-use rust_crypto::conversion32::*;
-use rust_crypto::fp::N_BITS;
-use rust_crypto::pedersen_ops::*;
-use rust_crypto::range_proof_vec::*;
+use rofl_crypto::bsgs32::*;
+use rofl_crypto::conversion32::*;
+use rofl_crypto::fp::N_BITS;
+use rofl_crypto::pedersen_ops::*;
+use rofl_crypto::range_proof_vec::*;
 
 static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
 //static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];

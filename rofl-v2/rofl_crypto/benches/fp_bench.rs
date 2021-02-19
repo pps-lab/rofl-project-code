@@ -16,16 +16,14 @@ extern crate curve25519_dalek;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 
-use rust_crypto::bsgs32::*;
-use rust_crypto::conversion32::*;
-use rust_crypto::fp::N_BITS;
-use rust_crypto::pedersen_ops::*;
-use rust_crypto::range_proof_vec::*;
-use std::env;
-use std::fs::File;
-use std::fs::OpenOptions;
+use rofl_crypto::bsgs32::*;
+use rofl_crypto::conversion32::*;
+use rofl_crypto::fp::N_BITS;
+use rofl_crypto::pedersen_ops::*;
+use rofl_crypto::range_proof_vec::*;
+use rofl_crypto::util::{create_bench_file,get_bench_dir};
+
 use std::io::prelude::*;
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use std::thread::sleep;
@@ -39,7 +37,7 @@ static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];
 static num_samples: usize = 100;
 
 fn bench_convert_from_float_to_fixed(c: &mut Criterion) {
-    let mut bench_file = create_bench_file("hello".to_string());
+    let mut bench_file = create_bench_file(&"hello".to_string());
     // let now = Instant::now();
 
     // // we sleep for 2 seconds
@@ -101,33 +99,6 @@ fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {
         dim,
         t.format("%Y-%m-%d/%H:%M:%S").to_string()
     )
-}
-
-fn get_bench_dir() -> PathBuf {
-    let mut cwd = env::current_exe().unwrap();
-    println!("current path: {}", cwd.display());
-    cwd.pop();
-    cwd.pop();
-    cwd.pop();
-    cwd.push("criterion");
-    println!("new path: {}", cwd.display());
-    cwd
-}
-
-fn create_bench_file(label: String) -> File {
-    let mut bench_file = get_bench_dir();
-    //bench_file.push("asdf");
-    bench_file.push(label);
-    bench_file.set_extension("bench");
-    let file = match OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(bench_file)
-    {
-        Err(err) => panic!("Could not find {}", err),
-        Ok(f) => f,
-    };
-    return file;
 }
 
 criterion_group! {

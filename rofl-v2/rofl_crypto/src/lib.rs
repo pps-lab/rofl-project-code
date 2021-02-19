@@ -17,5 +17,6 @@ pub mod range_proof_vec;
 pub mod serde_vec;
 pub mod square_rand_proof;
 pub mod square_rand_proof_vec;
+pub mod util;
 
 pub use self::bindings32::*;

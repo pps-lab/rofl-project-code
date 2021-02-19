@@ -12,11 +12,11 @@ extern crate curve25519_dalek;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 
-use rust_crypto::conversion32::get_clip_bounds;
-use rust_crypto::fp::N_BITS;
-use rust_crypto::pedersen_ops::rnd_scalar_vec;
-use rust_crypto::rand_proof::{ElGamalPair, RandProof};
-use rust_crypto::rand_proof_vec::{create_randproof_vec, verify_randproof_vec};
+use rofl_crypto::conversion32::get_clip_bounds;
+use rofl_crypto::fp::N_BITS;
+use rofl_crypto::pedersen_ops::rnd_scalar_vec;
+use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
+use rofl_crypto::rand_proof_vec::{create_randproof_vec, verify_randproof_vec};
 
 static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];
 

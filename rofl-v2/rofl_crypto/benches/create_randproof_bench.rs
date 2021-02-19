@@ -19,18 +19,16 @@ use curve25519_dalek::scalar::Scalar;
 extern crate bulletproofs;
 use bulletproofs::RangeProof;
 
-use rust_crypto::bsgs32::*;
-use rust_crypto::conversion32::*;
-use rust_crypto::fp::N_BITS;
-use rust_crypto::pedersen_ops::*;
-use rust_crypto::rand_proof::{ElGamalPair, RandProof};
-use rust_crypto::rand_proof_vec::*;
-use rust_crypto::range_proof_vec::*;
-use std::env;
-use std::fs::File;
-use std::fs::OpenOptions;
+use rofl_crypto::bsgs32::*;
+use rofl_crypto::conversion32::*;
+use rofl_crypto::fp::N_BITS;
+use rofl_crypto::pedersen_ops::*;
+use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
+use rofl_crypto::rand_proof_vec::*;
+use rofl_crypto::range_proof_vec::*;
+use rofl_crypto::util::{create_bench_file,get_bench_dir};
+
 use std::io::prelude::*;
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use std::thread::sleep;
@@ -92,32 +90,6 @@ fn verifyproof_label(dim: usize) -> String {
         dim,
         t.format("%Y-%m-%d-%H-%M-%S").to_string()
     )
-}
-
-fn get_bench_dir() -> PathBuf {
-    let mut cwd = env::current_exe().unwrap();
-    cwd.pop();
-    cwd.pop();
-    cwd.pop();
-    cwd.push("criterion");
-    cwd
-}
-
-fn create_bench_file(label: &String) -> File {
-    let mut bench_file = get_bench_dir();
-    //bench_file.push("asdf");
-    bench_file.push(label);
-    bench_file.set_extension("bench");
-    println!("bench file: {}", bench_file.display());
-    let file = match OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(bench_file)
-    {
-        Err(err) => panic!("Could not find {}", err),
-        Ok(f) => f,
-    };
-    return file;
 }
 
 benchmark_group!(
