@@ -62,6 +62,8 @@ fn bench_addelgamal_fn(bench: &mut Bencher) {
             bench_file.flush();
         }
     }
+
+    std::process::exit(0); // Exit because we are actually using the benchmarking library wrong.
 }
 
 fn label_addelgamal(dim: usize) -> String {

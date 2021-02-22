@@ -69,6 +69,9 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
             bench_file.flush();
         }
     }
+
+    std::process::exit(0); // Exit because we are actually using the benchmarking library wrong.
+
 }
 
 fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {

@@ -81,6 +81,8 @@ fn bench_randproof_fn(bench: &mut Bencher) {
             verifyproof_file.flush();
         }
     }
+
+    std::process::exit(0); // Exit because we are actually using the benchmarking library wrong.
 }
 
 fn createproof_label(dim: usize) -> String {

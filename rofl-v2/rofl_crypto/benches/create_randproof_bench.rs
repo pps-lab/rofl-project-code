@@ -33,6 +33,8 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
+// static DIM: [usize; 1] = [100];
+
 static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static num_samples: usize = 4;
 
@@ -70,6 +72,8 @@ fn create_randproof_bench_fn(bench: &mut Bencher) {
             createproof_file.flush();
         }
     }
+
+    std::process::exit(0); // Exit because we are actually using the benchmarking library wrong.
 }
 
 fn createproof_label(dim: usize) -> String {
