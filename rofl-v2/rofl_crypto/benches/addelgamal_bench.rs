@@ -32,7 +32,7 @@ use std::thread::sleep;
 static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static num_samples: usize = 4;
 
-fn bench_addelgamalfunction(bench: &mut Bencher) {
+fn bench_addelgamal_fn(bench: &mut Bencher) {
     for d in DIM.iter() {
         let label: String = label_addelgamal(*d);
         let mut bench_file = create_bench_file(&label);
@@ -74,5 +74,5 @@ fn label_addelgamal(dim: usize) -> String {
     )
 }
 
-benchmark_group!(addelgamal_bench, bench_addelgamalfunction);
+benchmark_group!(addelgamal_bench, bench_addelgamal_fn);
 benchmark_main!(addelgamal_bench);

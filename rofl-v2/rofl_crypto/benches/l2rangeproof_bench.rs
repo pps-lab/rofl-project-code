@@ -38,7 +38,7 @@ static RANGE: [usize; 1] = [8];
 static N_PARTITION: usize = 1;
 static num_samples: usize = 4;
 
-fn bench_rangeproof_l2(bench: &mut Bencher) {
+fn bench_rangeproof_l2_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
@@ -130,5 +130,5 @@ fn verifyproof_label(dim: usize, range: usize) -> String {
     )
 }
 
-benchmark_group!(l2rangeproof_bench, bench_rangeproof_l2);
+benchmark_group!(l2rangeproof_bench, bench_rangeproof_l2_fn);
 benchmark_main!(l2rangeproof_bench);

@@ -35,7 +35,7 @@ use std::thread::sleep;
 static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static num_samples: usize = 4;
 
-fn bench_create_squarerandproof_fn(bench: &mut Bencher) {
+fn create_squarerandproof_bench_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
@@ -98,6 +98,6 @@ fn verifyproof_label(dim: usize) -> String {
 
 benchmark_group!(
     create_squarerandproof_bench,
-    bench_create_squarerandproof_fn
+    create_squarerandproof_bench_fn
 );
 benchmark_main!(create_squarerandproof_bench);

@@ -33,7 +33,7 @@ static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static TABLE_SIZE: [usize; 1] = [16];
 static num_samples: usize = 4;
 
-fn bench_solve_discrete_log2(bench: &mut Bencher) {
+fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
@@ -83,5 +83,5 @@ fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {
     )
 }
 
-benchmark_group!(dlog_bench, bench_solve_discrete_log2);
+benchmark_group!(dlog_bench, bench_solve_discrete_log2_fn);
 benchmark_main!(dlog_bench);
