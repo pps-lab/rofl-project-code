@@ -5,7 +5,6 @@ use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
-use reduce::Reduce;
 
 pub mod errors;
 use self::errors::L2RangeProofError;

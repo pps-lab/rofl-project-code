@@ -58,6 +58,8 @@ frac10 = []
 frac11 = []
 frac12 = []
 
+avx2_backend = ["curve25519-dalek/avx2_backend"]
+
 [profile.dev]
 opt-level = 2
 

@@ -6,8 +6,8 @@ use std::slice;
 
 use bulletproofs::RangeProof;
 use curve25519_dalek::ristretto::RistrettoPoint;
+
 use curve25519_dalek::scalar::Scalar;
-use reduce::Reduce;
 
 use crate::conversion32::*;
 use crate::l2_range_proof_vec;
