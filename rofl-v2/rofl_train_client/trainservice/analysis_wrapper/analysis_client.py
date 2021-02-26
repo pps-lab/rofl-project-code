@@ -16,11 +16,12 @@ import logging
 
 class AnalysisClientWrapper():
 
-    def __init__(self, config_path):
+    def __init__(self, config_path, dataset_path):
         self.config = cnf.load_config(config_path)
         print(self.config)
 
-        dataset = load_dataset(self.config)
+        batch_size = self.config.client.batch_size
+        dataset = load_dataset(dataset_path, batch_size)
 
         malicious = False
         self.client = Client("dummy_id", self.config.client, dataset, malicious)

@@ -4,9 +4,12 @@ import numpy as np
 from src.data.tf_data import Dataset
 # Load dataset from working directory.
 
-def load_dataset(config) -> Dataset:
+def load_dataset(dataset_path, batch_size) -> Dataset:
 
-    return load_mnist_dummy()
+    (x_train, y_train), (x_test, y_test) = np.load(dataset_path, allow_pickle=True)
+    return Dataset(x_train, y_train, batch_size=batch_size, x_test=x_test, y_test=y_test)
+
+    # return load_mnist_dummy()
 
 def load_federated_mnist_dummy():
     total_clients = 3383

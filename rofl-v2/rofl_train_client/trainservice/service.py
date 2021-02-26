@@ -3,6 +3,16 @@ from trainservice import flservice_pb2_grpc
 from concurrent import futures
 import logging
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(description='Run the trainer')
+parser.add_argument('--config', type=str, default='"../configs/example_config.yml"',
+                    help='Path to config')
+parser.add_argument('--dataset_path', type=str, default='"../configs/example_config.yml"',
+                    help='Path to local client dataset')
+parser.add_argument('--port', type=int, default=50016,
+                    help='Default port to run on')
+args = parser.parse_args()
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -19,7 +29,7 @@ from analysis_wrapper import AnalysisClientWrapper
 
 NUM_FLOATS_PER_BLOCK = 10000
 
-client = AnalysisClientWrapper("../configs/example_config.yml")
+client = AnalysisClientWrapper(args.config, args.dataset_path)
 
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
@@ -75,5 +85,5 @@ def serve(service, port):
 
 if __name__ == '__main__':
     logging.basicConfig()
-    serve(FLClientTrainService(), 50016)
+    serve(FLClientTrainService(), args.port)
     # serve(DummyFLClientTrainService(), 50016)
