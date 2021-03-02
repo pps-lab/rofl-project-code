@@ -6,7 +6,8 @@ from src.data.tf_data import Dataset
 
 def load_dataset(dataset_path, batch_size) -> Dataset:
 
-    (x_train, y_train), (x_test, y_test) = np.load(dataset_path, allow_pickle=True)
+    val = np.load(dataset_path, allow_pickle=True)
+    (x_train, y_train), (x_test, y_test) = (val[0], val[1]), (val[2], val[3])
     return Dataset(x_train, y_train, batch_size=batch_size, x_test=x_test, y_test=y_test)
 
     # return load_mnist_dummy()
