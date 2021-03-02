@@ -25,4 +25,5 @@ scikit-learn
 orderedset
 psutil
 
+IPython==7.12.0
 mashumaro
