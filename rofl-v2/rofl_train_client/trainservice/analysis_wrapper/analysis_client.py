@@ -20,7 +20,7 @@ class AnalysisClientWrapper():
         self.config = cnf.load_config(config_path)
         print(self.config)
 
-        batch_size = self.config.client.batch_size
+        batch_size = self.config.client.benign_training.batch_size
         dataset = load_dataset(dataset_path, batch_size)
 
         malicious = False
