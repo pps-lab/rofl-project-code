@@ -4,8 +4,17 @@ from trainservice import flservice_pb2_grpc
 import grpc
 import logging
 import sys
-
+import argparse
 from trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
+
+parser = argparse.ArgumentParser(description='Run the trainer')
+parser.add_argument('--config', type=str, default='../configs/example_config.yml',
+                    help='Path to config')
+# parser.add_argument('--dataset_path', type=str, default='"../configs/example_config.yml"',
+                    # help='Path to local client dataset')
+parser.add_argument('--port', type=int, default=50051,
+                    help='Default port to connect to')
+args = parser.parse_args()
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -18,7 +27,7 @@ root.addHandler(handler)
 class FLClientTrainObserver:
     def __init__(self, server_addr):
         channel = grpc.insecure_channel(server_addr)
-        self.evaluator = AnalysisObserver("../configs/example_config.yml")
+        self.evaluator = AnalysisObserver(args.config)
         self.stub = flservice_pb2_grpc.FlserviceStub(channel)
         logging.info("Ready for models")
 
@@ -66,5 +75,5 @@ class FLClientTrainObserver:
 
 
 if __name__ == '__main__':
-    observer = FLClientTrainObserver('localhost:50051')
+    observer = FLClientTrainObserver('localhost:' + str(args.port))
     observer.observe_model_training(1)
