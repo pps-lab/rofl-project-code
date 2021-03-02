@@ -12,6 +12,8 @@ parser.add_argument('--config', type=str, default='../configs/example_config.yml
                     help='Path to config')
 # parser.add_argument('--dataset_path', type=str, default='"../configs/example_config.yml"',
                     # help='Path to local client dataset')
+parser.add_argument('--address', type=str, default='localhost',
+                    help='Default address to connect to')
 parser.add_argument('--port', type=int, default=50051,
                     help='Default port to connect to')
 args = parser.parse_args()
@@ -75,5 +77,5 @@ class FLClientTrainObserver:
 
 
 if __name__ == '__main__':
-    observer = FLClientTrainObserver('localhost:' + str(args.port))
+    observer = FLClientTrainObserver(args.address + ':' + str(args.port))
     observer.observe_model_training(1)
