@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut tasks = Vec::with_capacity(num_clients as usize);
     let mut port = trainer_port;
-    for i in (start_id + 1)..num_clients {
+    for i in (start_id + 1)..(num_clients + start_id) {
         let client_id = i;
         let local_uri = uri.clone();
         if i % (num_clients/num_trainiers) == 0 {
