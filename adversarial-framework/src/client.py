@@ -110,7 +110,7 @@ class Client:
             raise ConfigurationError("Invalid attack configuration", e)
 
         args = attack_config.objective['args'].copy()
-        args['loss_object'] = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        args['loss_object'] = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
         args['optimizer'] = self.build_optimizer(args)
         args.pop('learning_rate', None)
         malicious_weights = attack.generate(self.dataset, self.model, **args)
@@ -164,6 +164,7 @@ class Client:
             loss_value = self.loss_object(y_true=batch_y, y_pred=predictions)
             reg = tf.reduce_sum(self.model.losses)
             total_loss = loss_value + reg
+            # tf.print(total_loss)
 
         grads = self._compute_gradients_honest(tape, total_loss)
         self.honest_optimizer.apply_gradients(zip(grads, self.model.trainable_weights))

@@ -1,6 +1,6 @@
 environment:
-  num_clients: 10
-  num_selected_clients: 10
+  num_clients: 1
+  num_selected_clients: 1
   num_malicious_clients: 0
   experiment_name: "backdoor_tasks_noattack"
   use_config_dir: true
@@ -9,27 +9,27 @@ server:
   num_test_batches: 5
   aggregator:
     name: FedAvg
-  global_learning_rate: 1
+  global_learning_rate: 1.0
 client:
   model_name: dev
-  num_params: 1000
+  num_params: 19166
   benign_training:
     num_epochs: 2
     batch_size: 24
     optimizer: Adam
     learning_rate: 0.001
 crypto:
-  enc_type: Range #l2, Range, Plain 
-  value_range: 8
+  enc_type: Range #l2, Range, Plain
+  value_range: 32
   n_partition: 1
   l2_value_range: 32
-  check_percentage: 10 # 0-100 for Range
+  check_percentage: 1 # 0-100 for Range
   fp_bits: 32
-  fp_frac: 7
+  fp_frac: 12
 
 dataset:
-  dataset: femnist
-  data_distribution: nonIID
+  dataset: mnist
+  data_distribution: IID
 job:
   minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
   cpu_cores: 20

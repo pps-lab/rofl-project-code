@@ -5,11 +5,11 @@ use curve25519_dalek::scalar::Scalar;
 
 use hashbrown::HashMap;
 
-// use crate::fp::{N_BITS, URawFix, PRECOMP_BIAS};
+use crate::fp::{N_BITS, URawFix, PRECOMP_BIAS};
 // Fix for 8 bits for L2 evaluation
-pub const N_BITS: usize = 16;
-pub type URawFix = u16;
-pub const PRECOMP_BIAS: usize = 7;
+// pub const N_BITS: usize = 16;
+// pub type URawFix = u16;
+// pub const PRECOMP_BIAS: usize = 7;
 
 pub struct BSGSTable {
     pub table: HashMap<[u8; 32], URawFix>,

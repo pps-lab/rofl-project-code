@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let service = DefaultFlService::new();
-    service.register_new_trainig_state(dummy_training_state(1, 19166, 5, 10));
+    service.register_new_trainig_state(dummy_training_state(4, 19166, 5, 10));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

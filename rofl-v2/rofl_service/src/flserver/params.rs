@@ -15,6 +15,8 @@ use rofl_crypto::{
     square_rand_proof_vec,
 };
 use std::io::Cursor;
+use log::info;
+use rand::distributions::{Normal, Distribution};
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;
@@ -118,6 +120,7 @@ impl EncModelParamsAccumulator {
                 let rp_vec = extract_pedersen_vec(enc_params, enc_params.len());
                 let scalar_vec: Vec<Scalar> = default_discrete_log_vec(&rp_vec);
                 let f32_vec: Vec<f32> = scalar_to_f32_vec(&scalar_vec);
+                // info!("Client result {}", f32_vec[0]);
                 return Some(f32_vec);
             }
         }
@@ -361,6 +364,7 @@ impl EncParamsRange {
         check_percentage: usize,
     ) -> Self {
         let range_clipped = range_proof_vec::clip_f32_to_range_vec(plaintext_vec, prove_range);
+        // info!("First param {}, {}", plaintext_vec[0], range_clipped[0]);
         // Dummy probabilistic checking
         let (range_proofs, enc_com) = if check_percentage == 100 {
             range_proof_vec::create_rangeproof(
@@ -563,8 +567,11 @@ pub struct PlainParams {
 
 impl PlainParams {
     pub fn unity(size: usize) -> Self {
+        // Some basic initialization, as all 0 makes initial training VERY slow.
+        let normal = Normal::new(0.0, 0.05);
+
         return PlainParams {
-            content: vec![0.0; size],
+            content: (0..size).map(|_| normal.sample(&mut rand::thread_rng()) as f32).collect(),
         };
     }
 

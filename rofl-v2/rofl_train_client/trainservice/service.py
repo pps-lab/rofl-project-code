@@ -6,7 +6,7 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description='Run the trainer')
-parser.add_argument('--config', type=str, default='"../configs/example_config.yml"',
+parser.add_argument('--config', type=str, default='../configs/example_config.yml',
                     help='Path to config')
 parser.add_argument('--dataset_path', type=str, default='"../configs/example_config.yml"',
                     help='Path to local client dataset')

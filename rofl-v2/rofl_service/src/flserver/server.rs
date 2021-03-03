@@ -213,6 +213,7 @@ impl TrainingState {
     }
 
     fn update_global_model(&self, mut update: PlainParams) -> bool {
+        // info!("Update params {}", update.content[0]);
         update.multiply_inplace(1.0 / self.get_num_clients() as f32);
         let tmp = Arc::clone(&self.global_model);
         let mut tmp = tmp.write().unwrap();
