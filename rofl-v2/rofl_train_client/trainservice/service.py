@@ -35,7 +35,8 @@ client = AnalysisClientWrapper(args.config, args.dataset_path)
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
     def train_model(self, round_id, config, global_model_weights_list):
         client.set_weights(global_model_weights_list)
-        update = client.train(round_id)
+        new_weights = client.train(round_id)
+        update = [new_weights[i] - global_model_weights_list[i] for i in range(len(new_weights))]
         return update
 
     def TrainForRound(self, request_iterator, context):
