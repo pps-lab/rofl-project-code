@@ -80,4 +80,19 @@ impl TimeState {
         out.push_str(sum.to_string().as_str());
         bench_info!("{}, {}", round_id, out);
     }
+
+    pub fn log_bench_times_with_bandwith(&self, round_id: i32, received: usize, sent: usize) {
+        let ts_list_arc = Arc::clone(&self.instants);
+        let ts_list = ts_list_arc.read().unwrap();
+        let mut out = String::new();
+        let mut sum = 0;
+        &ts_list[0..(ts_list.len()-1)].iter().zip(&ts_list[1..ts_list.len()]).for_each(|(elem1, elem2)| {
+            let millis = elem2.duration_since(*elem1).as_millis();
+            sum += millis;
+            out.push_str(millis.to_string().as_str());
+            out.push_str(", ");
+        });
+        out.push_str(sum.to_string().as_str());
+        bench_info!("{}, {}, {}, {}", round_id, out, received, sent);
+    }
 }

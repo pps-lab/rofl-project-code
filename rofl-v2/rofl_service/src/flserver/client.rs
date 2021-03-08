@@ -16,7 +16,7 @@ use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
-
+use prost::Message;
 use log::info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
@@ -128,7 +128,8 @@ impl FlServiceClient {
         outbound: &mut Sender<TrainRequest>,
         model_id: i32,
         round_id: u32,
-    ) -> () {
+    ) -> usize {
+        let mut data_send = 0;
         let buffer = enc_params.serialize();
         let len_buffer = buffer.len();
         let mut num_packets = len_buffer / NUM_PARAM_BYTES_PER_PACKET;
@@ -147,10 +148,9 @@ impl FlServiceClient {
                 )),
             })),
         };
-
+        data_send += meta_message.encoded_len();
         let _res = outbound.send(meta_message).await;
         //TODO : handle error
-
         for packet_num in 0..num_packets {
             let begin = packet_num * NUM_PARAM_BYTES_PER_PACKET;
             let end = (packet_num + 1) * NUM_PARAM_BYTES_PER_PACKET;
@@ -164,9 +164,11 @@ impl FlServiceClient {
                     })),
                 })),
             };
+            data_send += data_packet.encoded_len();
             let _res = outbound.send(data_packet).await;
             //TODO : handle error
         }
+        data_send
     }
 
     pub async fn train_model(&mut self, model_id: i32, _verbose: bool) -> () {
@@ -194,13 +196,16 @@ impl FlServiceClient {
 
         let mut state = ServerModelDataState::new();
         let time_state = TimeState::new();
+        let mut data_received = 0;
         // Protocol loop
         info!(
             "Client {} starts protocol loop for model {}",
             client_id, model_id
         );
         while let Some(response) = inbound.message().await.unwrap() {
+            data_received += response.encoded_len();
             match response.param_message.unwrap() {
+                
                 train_response::ParamMessage::Params(msg) => match msg.model_message.unwrap() {
                     server_model_data::ModelMessage::Config(config) => {
                         state.update(config);
@@ -235,7 +240,7 @@ impl FlServiceClient {
                                     let encrypted_params = self
                                         .encrypt_data(&trained_params.unwrap(), current_config_ref);
                                     time_state.record_instant();
-                                    let _res = self
+                                    let data_sent = self
                                         .handle_send_data(
                                             encrypted_params.unwrap(),
                                             &mut outbound,
@@ -248,8 +253,9 @@ impl FlServiceClient {
                                         client_id, round_id
                                     );
                                     time_state.record_instant();
-                                    time_state.log_bench_times(round_id as i32);
+                                    time_state.log_bench_times_with_bandwith(round_id as i32, data_received, data_sent);
                                     time_state.reset();
+                                    data_received = 0;
                                 }
                             }
                         }
