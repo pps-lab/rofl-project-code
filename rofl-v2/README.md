@@ -1,3 +1,9 @@
+### Rust Compiler Requirements
+
+```
+Min: 1.52.0-nightly 
+```
+
 ### Benchmark Log Format
 The benchmark files for both the server and the clients can be found in the benchlog folder.
 

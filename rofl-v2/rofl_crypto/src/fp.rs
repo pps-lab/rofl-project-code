@@ -104,16 +104,15 @@ pub type Frac = U5; //default fractional
 #[cfg(not(feature = "fp32"))]
 #[cfg(not(feature = "fp64"))]
 mod fp_config {
-    //default default fixed precision
     use super::*;
-    pub const N_BITS: usize = 32;
-    pub type Fix = FixedU32<Frac>;
-    pub type IRawFix = i32;
-    pub type URawFix = u32;
-    pub fn read_from_bytes(x: &[u8]) -> u32 {
-        LittleEndian::read_u32(x)
+    pub const N_BITS: usize = 16;
+    pub type Fix = FixedU16<Frac>;
+    pub type IRawFix = i16;
+    pub type URawFix = u16;
+    pub fn read_from_bytes(x: &[u8]) -> u16 {
+        LittleEndian::read_u16(x)
     }
-    pub const PRECOMP_BIAS: usize = 6;
+    pub const PRECOMP_BIAS: usize = 7;
 }
 
 pub use self::fp_config::{read_from_bytes, Fix, IRawFix, URawFix, N_BITS, PRECOMP_BIAS};

@@ -12,7 +12,7 @@ use tonic::transport::Server;
 use yaml_rust::YamlLoader;
 use flexi_logger::{LogTarget, Logger, opt_format};
 
-fn get_training_state_from_config(path: &str) -> TrainingState {
+fn get_training_state_from_config(path: &str, lazy_eval: bool) -> TrainingState {
     let config_str = match File::open(path) {
         Ok(mut file) => {
             let mut content = String::new();
@@ -92,7 +92,8 @@ fn get_training_state_from_config(path: &str) -> TrainingState {
         num_in_memory,
         train_until_round,
         GlobalModel::new(num_params as usize, global_learning_rate),
-        true
+        true,
+        lazy_eval
     )
 }
 
@@ -126,13 +127,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .default_value("./configs/example_config.yml")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("dleval")
+                .short("l")
+                .long("dleval")
+                .help("Disable lazy verification")
+        )
         .get_matches();
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let config = matches.value_of("config").unwrap_or("default.conf");
     let service = DefaultFlService::new();
-    service.register_new_trainig_state(get_training_state_from_config(config));
+    service.register_new_trainig_state(get_training_state_from_config(config, !matches.is_present("dleval")));
     Logger::with_str("info")
         .log_target(LogTarget::StdOut)  
         .format_for_stdout(opt_format)

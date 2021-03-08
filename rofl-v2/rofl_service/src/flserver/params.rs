@@ -1,10 +1,11 @@
+use rofl_crypto::bsgs32::BSGSTable;
+use rofl_crypto::pedersen_ops::discrete_log_vec_table;
 use super::flservice::{CryptoConfig, EncNormData, EncRangeData, FloatBlock};
 use bulletproofs::RangeProof;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use prost::Message;
 use rofl_crypto::conversion32::scalar_to_f32_vec;
-use rofl_crypto::pedersen_ops::default_discrete_log_vec;
 use rofl_crypto::rand_proof_vec;
 use rofl_crypto::range_proof_vec;
 use rofl_crypto::{
@@ -103,7 +104,7 @@ impl EncModelParamsAccumulator {
         }
     }
 
-    pub fn extract(&self) -> Option<Vec<f32>> {
+    pub fn extract(&self, table: &BSGSTable) -> Option<Vec<f32>> {
         match self {
             EncModelParamsAccumulator::Plain(params) => {
                 return Some(params.content.clone());
@@ -118,7 +119,7 @@ impl EncModelParamsAccumulator {
                 }
 
                 let rp_vec = extract_pedersen_vec(enc_params, enc_params.len());
-                let scalar_vec: Vec<Scalar> = default_discrete_log_vec(&rp_vec);
+                let scalar_vec: Vec<Scalar> = discrete_log_vec_table(&rp_vec, table);
                 let f32_vec: Vec<f32> = scalar_to_f32_vec(&scalar_vec);
                 // info!("Client result {}", f32_vec[0]);
                 return Some(f32_vec);
@@ -656,7 +657,7 @@ mod tests {
     ) {
         acumulator.accumulate_other(&p1);
         acumulator.accumulate_other(&p2);
-        assert_eq!(&acumulator.extract().unwrap()[..], &vec![2.0; 10][..]);
+        assert_eq!(&acumulator.extract(&BSGSTable::default()).unwrap()[..], &vec![2.0; 10][..]);
         assert!(p1.verifiable() == false);
         let ser = p1.serialize();
         println!("{}", ser.len());

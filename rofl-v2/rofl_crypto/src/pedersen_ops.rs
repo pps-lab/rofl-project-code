@@ -44,6 +44,14 @@ pub fn discrete_log_vec(rp_vec: &Vec<RistrettoPoint>, table_size: usize) -> Vec<
     scalar_vec
 }
 
+pub fn discrete_log_vec_table(rp_vec: &Vec<RistrettoPoint>, bsgs: &BSGSTable) -> Vec<Scalar> {
+    let scalar_vec: Vec<Scalar> = rp_vec
+        .par_iter()
+        .map(|x| bsgs.solve_discrete_log_with_neg(*x))
+        .collect();
+    scalar_vec
+}
+
 /// in place addition
 pub(crate) fn add_rp_vec(a_vec: &mut Vec<RistrettoPoint>, b_vec: &Vec<RistrettoPoint>) {
     assert_eq!(a_vec.len(), b_vec.len());

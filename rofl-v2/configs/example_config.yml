@@ -1,6 +1,6 @@
 environment:
-  num_clients: 1
-  num_selected_clients: 1
+  num_clients: 20
+  num_selected_clients: 10
   num_malicious_clients: 0
   experiment_name: "backdoor_tasks_noattack"
   use_config_dir: true

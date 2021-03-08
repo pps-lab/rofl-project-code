@@ -18,6 +18,7 @@ use std::{collections::HashMap, sync::Condvar};
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicI16, Ordering};
 use std::sync::{Arc, RwLock};
+use rofl_crypto::bsgs32::BSGSTable;
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
@@ -28,6 +29,7 @@ use log::info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
+const BSGS_TABLE_SIZE: usize = 1 << 16;
 
 #[derive(Clone, PartialEq)]
 enum TrainingStatusType {
@@ -45,6 +47,7 @@ pub struct TrainingState {
     in_memory_rounds: i32,
     train_until_round: i32,
     terminate_on_done: bool,
+    bsgs_table: Arc<BSGSTable>,
     training_status: Arc<RwLock<TrainingStatusType>>,
     crypto_config: CryptoConfig,
     global_model: Arc<RwLock<GlobalModel>>,
@@ -52,6 +55,7 @@ pub struct TrainingState {
     channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
     channels_observer: Arc<RwLock<Vec<Sender<Result<TrainResponse, Status>>>>>,
     rounds: Arc<RwLock<Vec<TrainingRoundState>>>,
+    do_lazy: bool
 }
 
 impl TrainingState {
@@ -63,7 +67,8 @@ impl TrainingState {
         in_memory_rounds: i32,
         train_until_round: i32,
         global_model: GlobalModel,
-        terminate_on_done: bool
+        terminate_on_done: bool,
+        do_lazy_verification: bool
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -72,6 +77,7 @@ impl TrainingState {
             in_memory_rounds: in_memory_rounds,
             train_until_round: train_until_round,
             terminate_on_done: terminate_on_done,
+            bsgs_table: Arc::new(BSGSTable::new(BSGS_TABLE_SIZE)),
             training_status: Arc::new(RwLock::new(TrainingStatusType::Register)),
             crypto_config: crypto_config.clone(),
             global_model: Arc::new(RwLock::new(global_model)),
@@ -80,6 +86,7 @@ impl TrainingState {
             channels: Arc::new(RwLock::new(HashMap::new())),
             channels_observer: Arc::new(RwLock::new(Vec::new())),
             rounds: Arc::new(RwLock::new(Vec::new())),
+            do_lazy: do_lazy_verification
         }
     }
 
@@ -151,10 +158,18 @@ impl TrainingState {
     fn get_previous_round_state(&self) -> Option<TrainingRoundState> {
         let tmp = Arc::clone(&self.rounds);
         let tmp = tmp.read().unwrap();
-        if tmp.len() < 2 {
-            None
+        if self.do_lazy {
+            if tmp.len() < 2 {
+                return None;
+            } else {
+                return Some(tmp[tmp.len() - 2].clone());
+            }
         } else {
-            Some(tmp[tmp.len() - 2].clone())
+            if tmp.len() < 1 {
+                return None;
+            } else {
+                return Some(tmp.last().unwrap().clone());
+            }
         }
     }
 
@@ -376,6 +391,7 @@ pub struct TrainingRoundState {
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
     notify_aggr: Arc<Notify>,
+    notify_aggr_blocking:Arc<(std::sync::Mutex<bool>, Condvar)>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
     time_state: TimeState
 }
@@ -394,6 +410,7 @@ impl TrainingRoundState {
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
             notify_aggr: Arc::new(Notify::new()),
+            notify_aggr_blocking: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             time_state: TimeState::new()
         };
@@ -401,10 +418,10 @@ impl TrainingRoundState {
         out
     }
 
-    fn extract_model_data(&self) -> Option<PlainParams> {
+    fn extract_model_data(&self, table: &BSGSTable) -> Option<PlainParams> {
         let tmp = Arc::clone(&self.param_aggr);
         let tmp = tmp.read().unwrap();
-        match tmp.extract() {
+        match tmp.extract(table) {
             None => None,
             Some(content) => Some(PlainParams { content: content }),
         }
@@ -422,6 +439,12 @@ impl TrainingRoundState {
             {
                 let tmp_notify = Arc::clone(&self.notify_aggr);
                 tmp_notify.notify();
+            }
+            {
+                let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
+                let mut started = tmp_notify.lock().unwrap();
+                *started = true;
+                cond.notify_all();
             }
             {
                 let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
@@ -462,6 +485,16 @@ impl TrainingRoundState {
     async fn wait_for_verif_completion(&self) {
         let tmp_notify = Arc::clone(&self.notify_aggr);
         tmp_notify.notified().await;
+    }
+
+    fn wait_for_verif_completion_blocking(&self) {
+        {
+            let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
+            let mut started = tmp_notify.lock().unwrap();
+            while !*started {
+                started = cond.wait(started).unwrap();
+            }
+        }
     }
 
     fn notify_model_complete_for_round(&self) {
@@ -576,6 +609,7 @@ impl Flservice for DefaultFlService {
                     continue;
                 }
                 let req = message.unwrap();
+               
                 match req.param_message.unwrap() {
                     train_request::ParamMessage::StartMessage(_) => {
                         panic!("This is not covered yet")
@@ -610,10 +644,18 @@ impl Flservice for DefaultFlService {
                                     ));
                                     block_storage.reset_mem();
 
+                                    let last_group_state = training_state_local.get_previous_round_state();
                                     //TODO: maybe use a seperate thread pool for verification
                                     let blocking_enc_params = Arc::clone(&local_enc_params);
+                                    let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
+                                    
                                     if blocking_enc_params.verifiable() {
                                         let _res = tokio::task::spawn_blocking(move || {
+                                            if wait_for_last_verify_to_comlete && last_group_state.is_some() {
+                                                last_group_state
+                                                    .unwrap()
+                                                    .wait_for_verif_completion_blocking();
+                                            }
                                             let ok = blocking_enc_params.verify();
                                             if ok {
                                                 info!(
@@ -650,11 +692,20 @@ impl Flservice for DefaultFlService {
                                         let mut model = None;
                                         if done + 1 == local_group_state.expected_clients as i16 {
                                             // Aggregation has finished for this round, start the next round
+                                            info!(
+                                                "Start extracting plaintext model for round {}",
+                                                local_group_state.round_id
+                                            );
                                             local_group_state.time_state.record_instant();
-                                            model = local_group_state.extract_model_data();
+                                            let bsgs_table_ref = Arc::clone(&training_state_local.bsgs_table);
+                                            model = local_group_state.extract_model_data(bsgs_table_ref.as_ref());
                                             if model.is_none() {
                                                 todo!();
                                             }
+                                            info!(
+                                                "Plaintext model extracted for round {}",
+                                                local_group_state.round_id
+                                            );
                                         }
                                         model
                                     } else {
