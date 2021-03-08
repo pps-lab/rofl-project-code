@@ -458,6 +458,10 @@ impl TrainingRoundState {
             if let RoundState::InProgress = *mut_ref_state {
                 *mut_ref_state = RoundState::Done;
             }
+            info!(
+                "Update verifications done for round {}",
+                self.round_id
+            );
             self.time_state.record_instant();
             self.time_state.log_bench_times(self.round_id);
         }
@@ -719,11 +723,6 @@ impl Flservice for DefaultFlService {
                                             training_state_local.get_previous_round_state();
                                         
                                         // round is done, broadcast the new model
-                                        info!(
-                                            "All client models received for round {}",
-                                            local_group_state.round_id
-                                        );
-                                        
                                         let params = model.unwrap();
                                         training_state_local.update_global_model(params);
                                         local_group_state.time_state.record_instant();
