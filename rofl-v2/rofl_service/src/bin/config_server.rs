@@ -11,6 +11,7 @@ use std::io::Read;
 use tonic::transport::Server;
 use yaml_rust::YamlLoader;
 use flexi_logger::{LogTarget, Logger, opt_format};
+use num_cpus;
 
 fn get_training_state_from_config(path: &str, lazy_eval: bool) -> TrainingState {
     let config_str = match File::open(path) {
@@ -133,12 +134,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("dleval")
                 .help("Disable lazy verification")
         )
+        .arg(
+            Arg::with_name("vthreads")
+                .short("t")
+                .long("vthreads")
+                .help("The number of verification threads Default: Num CPU's")
+                .takes_value(true),
+        )
         .get_matches();
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let config = matches.value_of("config").unwrap_or("default.conf");
-    let service = DefaultFlService::new();
+    let num_threads = matches.value_of("vthreads");
+    let num_threads = match num_threads {
+        Some(str) => {str.parse::<i32>().unwrap() as usize}
+        None => {num_cpus::get() as usize}
+    };
+    let service = DefaultFlService::new(num_threads);
     service.register_new_trainig_state(get_training_state_from_config(config, !matches.is_present("dleval")));
     Logger::with_str("info")
         .log_target(LogTarget::StdOut)  

@@ -24,6 +24,7 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
 use tokio::fs;
 use tonic::{Request, Response, Status, Streaming};
+use rayon;
 
 use log::info;
 
@@ -375,6 +376,10 @@ impl TrainingState {
     }
 }
 
+fn create_blocking_thread_pool(num_threads: usize) -> rayon::ThreadPool {
+    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build().unwrap()
+}
+
 #[derive(Clone, PartialEq)]
 enum RoundState {
     InProgress,
@@ -517,12 +522,14 @@ impl TrainingRoundState {
 
 pub struct DefaultFlService {
     training_states: Arc<RwLock<Vec<TrainingState>>>,
+    verification_pool: Arc<rayon::ThreadPool>
 }
 
 impl DefaultFlService {
-    pub fn new() -> Self {
+    pub fn new(num_verif_threads: usize) -> Self {
         DefaultFlService {
             training_states: Arc::new(RwLock::new(Vec::new())),
+            verification_pool: Arc::new(create_blocking_thread_pool(num_verif_threads)),
         }
     }
 
@@ -605,6 +612,7 @@ impl Flservice for DefaultFlService {
             info!("First training round has started");
         }
 
+        let local_thread_pool = Arc::clone(&self.verification_pool);
         let training_state_local = training_state.clone();
         tokio::spawn(async move {
             let mut block_storage = DataBlockStorage::new();
@@ -654,7 +662,7 @@ impl Flservice for DefaultFlService {
                                     let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
                                     
                                     if blocking_enc_params.verifiable() {
-                                        let _res = tokio::task::spawn_blocking(move || {
+                                        local_thread_pool.as_ref().spawn(move || {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
                                                 last_group_state
                                                     .unwrap()
