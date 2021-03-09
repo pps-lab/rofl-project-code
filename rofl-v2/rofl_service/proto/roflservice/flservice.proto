@@ -60,7 +60,7 @@ message CryptoConfig {
     int32 value_range = 1;
     int32 n_partition = 2;
     int32 l2_value_range = 3;
-    int32 check_percentage = 4;
+    float check_percentage = 4;
     int32 enc_type = 5;
 }
         
@@ -77,7 +77,7 @@ message EncRangeData {
     bytes rand_proof = 2;
     repeated bytes range_proof = 3;
     int32 range_bits = 4;
-    int32 check_percentage = 5;
+    float check_percentage = 5;
 }
 
 message EncNormData {

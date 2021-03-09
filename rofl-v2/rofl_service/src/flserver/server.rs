@@ -25,7 +25,6 @@ use std::sync::{Arc, RwLock};
 use std::{collections::HashMap, sync::Condvar};
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::Notify;
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tonic::{Request, Response, Status, Streaming};
 
@@ -400,8 +399,7 @@ pub struct TrainingRoundState {
     verifed_counter: Arc<AtomicI16>,
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
-    notify_aggr: Arc<Notify>,
-    notify_aggr_blocking: Arc<std::sync::atomic::AtomicBool>,
+    notify_aggr: Arc<(std::sync::Mutex<bool>, Condvar)>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
     time_state: TimeState,
 }
@@ -419,8 +417,7 @@ impl TrainingRoundState {
             verifed_counter: Arc::new(AtomicI16::new(0)),
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
-            notify_aggr: Arc::new(Notify::new()),
-            notify_aggr_blocking: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            notify_aggr: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             time_state: TimeState::new(),
         };
@@ -447,12 +444,12 @@ impl TrainingRoundState {
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         if done + 1 == self.expected_clients as i16 {
             {
-                let tmp_notify = Arc::clone(&self.notify_aggr);
-                tmp_notify.notify();
-            }
-            {
-                let atomic_bool = &*Arc::clone(&self.notify_aggr_blocking);
-                atomic_bool.store(true, Ordering::SeqCst);
+                /*let tmp_notify = Arc::clone(&self.notify_aggr);
+                tmp_notify.notify();*/
+                let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
+                let mut started = tmp_notify.lock().unwrap();
+                *started = true;
+                cond.notify_all();
             }
             {
                 let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
@@ -480,8 +477,10 @@ impl TrainingRoundState {
         *mut_ref_state = RoundState::Error(error_msg);
 
         if done + 1 == self.expected_clients as i16 {
-            let tmp_notify = Arc::clone(&self.notify_aggr);
-            tmp_notify.notify();
+            let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
+            let mut started = tmp_notify.lock().unwrap();
+            *started = true;
+            cond.notify_all();
         }
     }
 
@@ -492,13 +491,13 @@ impl TrainingRoundState {
     }
 
     async fn wait_for_verif_completion(&self) {
-        let tmp_notify = Arc::clone(&self.notify_aggr);
-        tmp_notify.notified().await;
-    }
-
-    fn wait_for_verif_completion_blocking(&self) -> bool {
-        let atomic_bool = &*Arc::clone(&self.notify_aggr_blocking);
-        atomic_bool.load(Ordering::SeqCst)
+        /*let tmp_notify = Arc::clone(&self.notify_aggr);
+        tmp_notify.notified().await;*/
+        let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
+            let mut started = tmp_notify.lock().unwrap();
+            while !*started {
+            started = cond.wait(started).unwrap();
+        }
     }
 
     fn notify_model_complete_for_round(&self) {
@@ -659,36 +658,45 @@ impl Flservice for DefaultFlService {
                                         training_state_local.do_lazy;
 
                                     if blocking_enc_params.verifiable() {
-                                        local_thread_pool.as_ref().spawn_fifo(move || {
+                                        let local_thread_pool_m = Arc::clone(&local_thread_pool);
+                                        tokio::spawn(async move {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
-                                                let should_run = last_group_state
+                                                last_group_state
                                                     .unwrap()
-                                                    .wait_for_verif_completion_blocking();
-                                                if !should_run {
+                                                    .wait_for_verif_completion()
+                                                    .await;
+                                            }
+                                            local_thread_pool_m.as_ref().spawn(move || {
+                                                /*if wait_for_last_verify_to_comlete && last_group_state.is_some() {
+                                                    let should_run = last_group_state
+                                                        .unwrap()
+                                                        .wait_for_verif_completion_blocking();
+                                                    if !should_run {
+                                                        info!(
+                                                            "A verification task was executed before the last round verification ended"
+                                                        );
+                                                    }
+                                                }*/
+                                                let ok = blocking_enc_params.verify();
+                                                if ok {
                                                     info!(
-                                                        "A verification task was executed before the last round verification ended"
+                                                        "Model of client {} for round {} is valid!",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    );
+                                                    local_blocking_group_state.verifaction_done();
+                                                } else {
+                                                    info!(
+                                                        "Model of client {} for round {} is not valid!",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    );
+                                                    local_blocking_group_state.verifaction_error(
+                                                        format!(
+                                                        "Verification for client {} round {} failed",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    ),
                                                     );
                                                 }
-                                            }
-                                            let ok = blocking_enc_params.verify();
-                                            if ok {
-                                                info!(
-                                                    "Model of client {} for round {} is valid!",
-                                                    client_id, local_blocking_group_state.round_id
-                                                );
-                                                local_blocking_group_state.verifaction_done();
-                                            } else {
-                                                info!(
-                                                    "Model of client {} for round {} is not valid!",
-                                                    client_id, local_blocking_group_state.round_id
-                                                );
-                                                local_blocking_group_state.verifaction_error(
-                                                    format!(
-                                                    "Verification for client {} round {} failed",
-                                                    client_id, local_blocking_group_state.round_id
-                                                ),
-                                                );
-                                            }
+                                            });
                                         });
                                     } else {
                                         local_blocking_group_state.verifaction_done();

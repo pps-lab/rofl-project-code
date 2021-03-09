@@ -33,7 +33,7 @@ fn dummy_training_state(
         value_range: 8,
         n_partition: 1,
         l2_value_range: 32,
-        check_percentage: 10,
+        check_percentage: 0.1,
         enc_type: params::PLAIN_TYPE as i32,
     };
     TrainingState::new(
