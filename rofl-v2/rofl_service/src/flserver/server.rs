@@ -451,6 +451,10 @@ impl TrainingRoundState {
                 *started = true;
                 cond.notify_all();
             }
+            info!(
+                "Waiting for lock round {}",
+                self.round_id
+            );
             {
                 let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
                 let mut started = tmp_notify.lock().unwrap();
@@ -510,7 +514,7 @@ impl TrainingRoundState {
         let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
         let mut started = tmp_notify.lock().unwrap();
         *started = true;
-        cond.notify_one();
+        cond.notify_all();
     }
 
     pub fn accumulate(&self, param_aggr: &EncModelParams) -> bool {
@@ -662,7 +666,7 @@ impl Flservice for DefaultFlService {
                                     let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
                                     
                                     if blocking_enc_params.verifiable() {
-                                        local_thread_pool.as_ref().spawn(move || {
+                                        local_thread_pool.as_ref().spawn_fifo(move || {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
                                                 last_group_state
                                                     .unwrap()
@@ -736,7 +740,8 @@ impl Flservice for DefaultFlService {
                                         local_group_state.time_state.record_instant();
                                         
                                         local_group_state.notify_model_complete_for_round();
-
+                                        
+                                        // ERROR HERE
                                         if last_group_state.is_some() {
                                             last_group_state
                                                 .unwrap()
