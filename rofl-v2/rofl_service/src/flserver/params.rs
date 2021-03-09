@@ -1,11 +1,12 @@
-use rofl_crypto::bsgs32::BSGSTable;
-use rofl_crypto::pedersen_ops::discrete_log_vec_table;
 use super::flservice::{CryptoConfig, EncNormData, EncRangeData, FloatBlock};
 use bulletproofs::RangeProof;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use prost::Message;
+use rand_distr::{Distribution, Normal};
+use rofl_crypto::bsgs32::BSGSTable;
 use rofl_crypto::conversion32::scalar_to_f32_vec;
+use rofl_crypto::pedersen_ops::discrete_log_vec_table;
 use rofl_crypto::rand_proof_vec;
 use rofl_crypto::range_proof_vec;
 use rofl_crypto::{
@@ -16,8 +17,6 @@ use rofl_crypto::{
     square_rand_proof_vec,
 };
 use std::io::Cursor;
-use log::info;
-use rand::distributions::{Normal, Distribution};
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;
@@ -569,10 +568,13 @@ pub struct PlainParams {
 impl PlainParams {
     pub fn unity(size: usize) -> Self {
         // Some basic initialization, as all 0 makes initial training VERY slow.
-        let normal = Normal::new(0.0, 0.05);
+        /*let normal = Normal::new(0.0, 0.05);
 
         return PlainParams {
             content: (0..size).map(|_| normal.sample(&mut rand::thread_rng()) as f32).collect(),
+        };*/
+        return PlainParams {
+            content: vec![0.0; size],
         };
     }
 
@@ -639,6 +641,18 @@ impl GlobalModel {
         }
     }
 
+    pub fn new_from_normal_distribution(size: usize, learning_rate: f32, std: f32) -> Self {
+        let normal = Normal::new(0.0, std).unwrap();
+        GlobalModel {
+            params: PlainParams {
+                content: (0..size)
+                    .map(|_| normal.sample(&mut rand::thread_rng()) as f32)
+                    .collect(),
+            },
+            learning_rate: learning_rate,
+        }
+    }
+
     pub fn update(&mut self, aggregated_update: &PlainParams) -> bool {
         self.params
             .ml_update_in_place(aggregated_update, self.learning_rate)
@@ -657,7 +671,10 @@ mod tests {
     ) {
         acumulator.accumulate_other(&p1);
         acumulator.accumulate_other(&p2);
-        assert_eq!(&acumulator.extract(&BSGSTable::default()).unwrap()[..], &vec![2.0; 10][..]);
+        assert_eq!(
+            &acumulator.extract(&BSGSTable::default()).unwrap()[..],
+            &vec![2.0; 10][..]
+        );
         assert!(p1.verifiable() == false);
         let ser = p1.serialize();
         println!("{}", ser.len());

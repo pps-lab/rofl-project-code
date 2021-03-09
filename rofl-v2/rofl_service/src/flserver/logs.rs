@@ -1,33 +1,31 @@
-use std::time::Instant;
-use std::sync::{Arc, RwLock};
 use log::*;
+use std::sync::{Arc, RwLock};
+use std::time::Instant;
 
-use flexi_logger::DeferredNow;
 use flexi_logger::writers::FileLogWriter;
+use flexi_logger::DeferredNow;
 
-pub const  BENCH_TAG: &'static str = "Bench";
+pub const BENCH_TAG: &'static str = "Bench";
 
 pub fn bench_format(
     w: &mut dyn std::io::Write,
     _now: &mut DeferredNow,
     record: &Record,
 ) -> Result<(), std::io::Error> {
-    write!(
-        w,
-        "{}",
-        &record.args()
-    )
+    write!(w, "{}", &record.args())
 }
 
 // Configure a FileLogWriter for bench messages
 pub fn bench_logger() -> Box<FileLogWriter> {
-    Box::new(FileLogWriter::builder()
-        .directory("benchlog")
-        .format(bench_format)
-        .discriminant(BENCH_TAG)
-        .suffix("bench")
-        .try_build()
-        .unwrap())
+    Box::new(
+        FileLogWriter::builder()
+            .directory("benchlog")
+            .format(bench_format)
+            .discriminant(BENCH_TAG)
+            .suffix("bench")
+            .try_build()
+            .unwrap(),
+    )
 }
 
 // Define a macro for writing messages to the bench log and to the normal log
@@ -71,12 +69,15 @@ impl TimeState {
         let ts_list = ts_list_arc.read().unwrap();
         let mut out = String::new();
         let mut sum = 0;
-        &ts_list[0..(ts_list.len()-1)].iter().zip(&ts_list[1..ts_list.len()]).for_each(|(elem1, elem2)| {
-            let millis = elem2.duration_since(*elem1).as_millis();
-            sum += millis;
-            out.push_str(millis.to_string().as_str());
-            out.push_str(", ");
-        });
+        &ts_list[0..(ts_list.len() - 1)]
+            .iter()
+            .zip(&ts_list[1..ts_list.len()])
+            .for_each(|(elem1, elem2)| {
+                let millis = elem2.duration_since(*elem1).as_millis();
+                sum += millis;
+                out.push_str(millis.to_string().as_str());
+                out.push_str(", ");
+            });
         out.push_str(sum.to_string().as_str());
         bench_info!("{}, {}", round_id, out);
     }
@@ -86,12 +87,15 @@ impl TimeState {
         let ts_list = ts_list_arc.read().unwrap();
         let mut out = String::new();
         let mut sum = 0;
-        &ts_list[0..(ts_list.len()-1)].iter().zip(&ts_list[1..ts_list.len()]).for_each(|(elem1, elem2)| {
-            let millis = elem2.duration_since(*elem1).as_millis();
-            sum += millis;
-            out.push_str(millis.to_string().as_str());
-            out.push_str(", ");
-        });
+        &ts_list[0..(ts_list.len() - 1)]
+            .iter()
+            .zip(&ts_list[1..ts_list.len()])
+            .for_each(|(elem1, elem2)| {
+                let millis = elem2.duration_since(*elem1).as_millis();
+                sum += millis;
+                out.push_str(millis.to_string().as_str());
+                out.push_str(", ");
+            });
         out.push_str(sum.to_string().as_str());
         bench_info!("{}, {}, {}, {}", round_id, out, received, sent);
     }

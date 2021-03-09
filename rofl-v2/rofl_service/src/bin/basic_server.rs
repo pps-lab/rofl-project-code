@@ -45,7 +45,7 @@ fn dummy_training_state(
         train_until_round,
         GlobalModel::new(num_params as usize, 1.0),
         false,
-        true
+        true,
     )
 }
 

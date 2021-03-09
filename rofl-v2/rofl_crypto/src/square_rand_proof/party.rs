@@ -9,8 +9,6 @@ use super::super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
 use super::errors::*;
 use super::pedersen::SquareRandProofCommitments;
 
-
-
 use bulletproofs::PedersenGens;
 
 pub struct PartyExisting {}

@@ -1,7 +1,3 @@
-use super::{flservice::{
-    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters,
-    ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
-}, logs::TimeState};
 use super::{
     flservice::flservice_server::Flservice,
     params::{EncModelParamType, EncModelParams, PlainParams},
@@ -12,19 +8,26 @@ use super::{
     },
     params::GlobalModel,
 };
+use super::{
+    flservice::{
+        Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelSelection,
+        ServerModelData, StatusMessage, TrainRequest, TrainResponse,
+    },
+    logs::TimeState,
+};
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use std::{collections::HashMap, sync::Condvar};
+use rayon;
+use rofl_crypto::bsgs32::BSGSTable;
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicI16, Ordering};
 use std::sync::{Arc, RwLock};
-use rofl_crypto::bsgs32::BSGSTable;
-use tokio::{io::AsyncWriteExt, sync::mpsc};
+use std::{collections::HashMap, sync::Condvar};
+use tokio::fs;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Notify;
-use tokio::fs;
+use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tonic::{Request, Response, Status, Streaming};
-use rayon;
 
 use log::info;
 
@@ -56,7 +59,7 @@ pub struct TrainingState {
     channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
     channels_observer: Arc<RwLock<Vec<Sender<Result<TrainResponse, Status>>>>>,
     rounds: Arc<RwLock<Vec<TrainingRoundState>>>,
-    do_lazy: bool
+    do_lazy: bool,
 }
 
 impl TrainingState {
@@ -69,7 +72,7 @@ impl TrainingState {
         train_until_round: i32,
         global_model: GlobalModel,
         terminate_on_done: bool,
-        do_lazy_verification: bool
+        do_lazy_verification: bool,
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -87,7 +90,7 @@ impl TrainingState {
             channels: Arc::new(RwLock::new(HashMap::new())),
             channels_observer: Arc::new(RwLock::new(Vec::new())),
             rounds: Arc::new(RwLock::new(Vec::new())),
-            do_lazy: do_lazy_verification
+            do_lazy: do_lazy_verification,
         }
     }
 
@@ -131,7 +134,6 @@ impl TrainingState {
         let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
         for (_key, sender) in &*tmp {
             out.push(sender.clone());
-            
         }
         out
     }
@@ -377,7 +379,10 @@ impl TrainingState {
 }
 
 fn create_blocking_thread_pool(num_threads: usize) -> rayon::ThreadPool {
-    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build().unwrap()
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .unwrap()
 }
 
 #[derive(Clone, PartialEq)]
@@ -396,9 +401,9 @@ pub struct TrainingRoundState {
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
     notify_aggr: Arc<Notify>,
-    notify_aggr_blocking:Arc<(std::sync::atomic::AtomicBool)>,
+    notify_aggr_blocking: Arc<std::sync::atomic::AtomicBool>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
-    time_state: TimeState
+    time_state: TimeState,
 }
 
 impl TrainingRoundState {
@@ -407,7 +412,7 @@ impl TrainingRoundState {
         expected_clients: i32,
         param_aggr: EncModelParamsAccumulator,
     ) -> Self {
-        let out =  TrainingRoundState {
+        let out = TrainingRoundState {
             round_id: round_id,
             expected_clients: expected_clients,
             param_aggr: Arc::new(RwLock::new(param_aggr)),
@@ -417,7 +422,7 @@ impl TrainingRoundState {
             notify_aggr: Arc::new(Notify::new()),
             notify_aggr_blocking: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
-            time_state: TimeState::new()
+            time_state: TimeState::new(),
         };
         out.time_state.record_instant();
         out
@@ -449,12 +454,8 @@ impl TrainingRoundState {
                 let atomic_bool = &*Arc::clone(&self.notify_aggr_blocking);
                 atomic_bool.store(true, Ordering::SeqCst);
             }
-            info!(
-                "Waiting for lock round {}",
-                self.round_id
-            );
             {
-                let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+                let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
                 let mut started = tmp_notify.lock().unwrap();
                 while !*started {
                     started = cond.wait(started).unwrap();
@@ -465,10 +466,7 @@ impl TrainingRoundState {
             if let RoundState::InProgress = *mut_ref_state {
                 *mut_ref_state = RoundState::Done;
             }
-            info!(
-                "Update verifications done for round {}",
-                self.round_id
-            );
+            info!("Update verifications done for round {}", self.round_id);
             self.time_state.record_instant();
             self.time_state.log_bench_times(self.round_id);
         }
@@ -498,13 +496,13 @@ impl TrainingRoundState {
         tmp_notify.notified().await;
     }
 
-    fn wait_for_verif_completion_blocking(&self) ->bool {
-        let atomic_bool= &*Arc::clone(&self.notify_aggr_blocking);
+    fn wait_for_verif_completion_blocking(&self) -> bool {
+        let atomic_bool = &*Arc::clone(&self.notify_aggr_blocking);
         atomic_bool.load(Ordering::SeqCst)
     }
 
     fn notify_model_complete_for_round(&self) {
-        let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+        let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
         let mut started = tmp_notify.lock().unwrap();
         *started = true;
         cond.notify_all();
@@ -519,7 +517,7 @@ impl TrainingRoundState {
 
 pub struct DefaultFlService {
     training_states: Arc<RwLock<Vec<TrainingState>>>,
-    verification_pool: Arc<rayon::ThreadPool>
+    verification_pool: Arc<rayon::ThreadPool>,
 }
 
 impl DefaultFlService {
@@ -618,7 +616,7 @@ impl Flservice for DefaultFlService {
                     continue;
                 }
                 let req = message.unwrap();
-               
+
                 match req.param_message.unwrap() {
                     train_request::ParamMessage::StartMessage(_) => {
                         panic!("This is not covered yet")
@@ -653,11 +651,13 @@ impl Flservice for DefaultFlService {
                                     ));
                                     block_storage.reset_mem();
 
-                                    let last_group_state = training_state_local.get_previous_round_state();
+                                    let last_group_state =
+                                        training_state_local.get_previous_round_state();
 
                                     let blocking_enc_params = Arc::clone(&local_enc_params);
-                                    let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
-                                    
+                                    let wait_for_last_verify_to_comlete =
+                                        training_state_local.do_lazy;
+
                                     if blocking_enc_params.verifiable() {
                                         local_thread_pool.as_ref().spawn_fifo(move || {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
@@ -711,8 +711,10 @@ impl Flservice for DefaultFlService {
                                                 local_group_state.round_id
                                             );
                                             local_group_state.time_state.record_instant();
-                                            let bsgs_table_ref = Arc::clone(&training_state_local.bsgs_table);
-                                            model = local_group_state.extract_model_data(bsgs_table_ref.as_ref());
+                                            let bsgs_table_ref =
+                                                Arc::clone(&training_state_local.bsgs_table);
+                                            model = local_group_state
+                                                .extract_model_data(bsgs_table_ref.as_ref());
                                             if model.is_none() {
                                                 todo!();
                                             }
@@ -731,14 +733,14 @@ impl Flservice for DefaultFlService {
                                         // todo: add suport for lacy verification
                                         let last_group_state =
                                             training_state_local.get_previous_round_state();
-                                        
+
                                         // round is done, broadcast the new model
                                         let params = model.unwrap();
                                         training_state_local.update_global_model(params);
                                         local_group_state.time_state.record_instant();
-                                        
+
                                         local_group_state.notify_model_complete_for_round();
-                                        
+
                                         // ERROR HERE
                                         if last_group_state.is_some() {
                                             last_group_state

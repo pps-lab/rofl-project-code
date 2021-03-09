@@ -26,7 +26,7 @@ use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
 use rofl_crypto::rand_proof_vec::*;
 use rofl_crypto::range_proof_vec::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
 use std::time::{Duration, Instant};

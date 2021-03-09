@@ -1,23 +1,21 @@
-use super::{flservice::flservice_client::FlserviceClient, logs::TimeState};
 use super::flservice::{model_parameters, server_model_data, train_request, train_response};
 use super::flservice::{
     Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, TrainRequest,
     WorkerRegisterMessage,
 };
-use super::{
-    params::{EncModelParamType, EncModelParams, PlainParams},
-};
+use super::params::{EncModelParamType, EncModelParams, PlainParams};
+use super::{flservice::flservice_client::FlserviceClient, logs::TimeState};
 use crate::flserver::trainclient::FlTraining;
 use crate::flserver::util::DataBlockStorage;
 use curve25519_dalek::scalar::Scalar;
+use log::info;
 use model_parameters::{ModelParametersMeta, ParamMessage};
+use prost::Message;
 use rofl_crypto::pedersen_ops::zero_scalar_vec;
 use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
-use prost::Message;
-use log::info;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -205,7 +203,6 @@ impl FlServiceClient {
         while let Some(response) = inbound.message().await.unwrap() {
             data_received += response.encoded_len();
             match response.param_message.unwrap() {
-                
                 train_response::ParamMessage::Params(msg) => match msg.model_message.unwrap() {
                     server_model_data::ModelMessage::Config(config) => {
                         state.update(config);
@@ -253,7 +250,11 @@ impl FlServiceClient {
                                         client_id, round_id
                                     );
                                     time_state.record_instant();
-                                    time_state.log_bench_times_with_bandwith(round_id as i32, data_received, data_sent);
+                                    time_state.log_bench_times_with_bandwith(
+                                        round_id as i32,
+                                        data_received,
+                                        data_sent,
+                                    );
                                     time_state.reset();
                                     data_received = 0;
                                 }

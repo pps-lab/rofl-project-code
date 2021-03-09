@@ -8,9 +8,7 @@ use rayon::prelude::*;
 
 pub mod errors;
 use self::errors::L2RangeProofError;
-use crate::conversion32::{
-    f32_to_scalar, get_clip_bounds, get_l2_clip_bounds, scalar_to_f32,
-};
+use crate::conversion32::{f32_to_scalar, get_clip_bounds, get_l2_clip_bounds, scalar_to_f32};
 use crate::fp::{read_from_bytes, Fix, URawFix};
 
 /// prove that value x is element of [-2^((prove_range-1)/n_frac), 2^((prove_range-1)/n_frac)]
@@ -287,13 +285,13 @@ fn crp_to_rp_vec(crp_vec: &Vec<CompressedRistretto>) -> Vec<RistrettoPoint> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::conversion32::{scalar_to_f32_vec};
+    use crate::conversion32::scalar_to_f32_vec;
     use crate::fp::N_BITS;
     use crate::pedersen_ops::*;
     use crate::range_proof_vec::clip_f32_to_range_vec;
+    use crate::square_rand_proof_vec;
     use rand::Rng;
     use std::cmp;
-    use crate::square_rand_proof_vec;
 
     #[test]
     fn test_next_pow2() {

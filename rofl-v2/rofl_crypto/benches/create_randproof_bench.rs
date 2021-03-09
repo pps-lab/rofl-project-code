@@ -26,7 +26,7 @@ use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
 use rofl_crypto::rand_proof_vec::*;
 use rofl_crypto::range_proof_vec::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
 use std::time::{Duration, Instant};
@@ -96,8 +96,5 @@ fn verifyproof_label(dim: usize) -> String {
     )
 }
 
-benchmark_group!(
-    create_randproof_bench,
-    create_randproof_bench_fn
-);
+benchmark_group!(create_randproof_bench, create_randproof_bench_fn);
 benchmark_main!(create_randproof_bench);

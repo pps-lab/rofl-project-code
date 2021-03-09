@@ -24,7 +24,7 @@ use rofl_crypto::conversion32::*;
 use rofl_crypto::fp::N_BITS;
 use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::range_proof_vec::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
 use std::time::{Duration, Instant};
@@ -108,8 +108,5 @@ fn verifyproof_label(dim: usize, range: usize) -> String {
     )
 }
 
-benchmark_group!(
-    create_rangeproof_bench,
-    create_rangeproof_bench_fn
-);
+benchmark_group!(create_rangeproof_bench, create_rangeproof_bench_fn);
 benchmark_main!(create_rangeproof_bench);

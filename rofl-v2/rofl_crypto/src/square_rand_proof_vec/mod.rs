@@ -2,9 +2,9 @@ use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
-use crate::conversion32::{f32_to_scalar_vec};
+use crate::conversion32::f32_to_scalar_vec;
 
-use crate::rand_proof::{ElGamalGens};
+use crate::rand_proof::ElGamalGens;
 use crate::square_rand_proof::ProofError;
 use crate::square_rand_proof::SquareRandProof;
 pub mod errors;
@@ -12,9 +12,8 @@ pub use self::errors::L2RangeProofError;
 
 use crate::square_rand_proof::pedersen::SquareRandProofCommitments;
 
-use curve25519_dalek::ristretto::{RistrettoPoint};
+use curve25519_dalek::ristretto::RistrettoPoint;
 use itertools::Itertools;
-
 
 pub fn create_l2rangeproof_vec_existing(
     value_vec: &Vec<f32>,

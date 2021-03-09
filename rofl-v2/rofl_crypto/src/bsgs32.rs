@@ -5,7 +5,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use hashbrown::HashMap;
 
-use crate::fp::{N_BITS, URawFix, PRECOMP_BIAS};
+use crate::fp::{URawFix, N_BITS, PRECOMP_BIAS};
 // Fix for 8 bits for L2 evaluation
 // pub const N_BITS: usize = 16;
 // pub type URawFix = u16;
@@ -78,7 +78,7 @@ mod tests {
     use super::*;
     use crate::conversion32::f32_to_scalar_vec;
     use crate::fp::Fix;
-    use crate::pedersen_ops::{commit_no_blinding_vec};
+    use crate::pedersen_ops::commit_no_blinding_vec;
     use rand::Rng;
 
     #[test]

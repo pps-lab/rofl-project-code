@@ -1,19 +1,19 @@
 use clap::{App, Arg};
+use flexi_logger::{opt_format, LogTarget, Logger};
+use num_cpus;
 use params::GlobalModel;
 use rofl_service::flserver::flservice::flservice_server::FlserviceServer;
 use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
+use rofl_service::flserver::logs::{bench_logger, BENCH_TAG};
 use rofl_service::flserver::params;
 use rofl_service::flserver::server::DefaultFlService;
 use rofl_service::flserver::server::TrainingState;
-use rofl_service::flserver::logs::{BENCH_TAG, bench_logger};
 use std::fs::File;
 use std::io::Read;
 use tonic::transport::Server;
 use yaml_rust::YamlLoader;
-use flexi_logger::{LogTarget, Logger, opt_format};
-use num_cpus;
 
-fn get_training_state_from_config(path: &str, lazy_eval: bool) -> TrainingState {
+fn get_training_state_from_config(path: &str, lazy_eval: bool, std_init: f32) -> TrainingState {
     let config_str = match File::open(path) {
         Ok(mut file) => {
             let mut content = String::new();
@@ -92,9 +92,13 @@ fn get_training_state_from_config(path: &str, lazy_eval: bool) -> TrainingState 
         num_params,
         num_in_memory,
         train_until_round,
-        GlobalModel::new(num_params as usize, global_learning_rate),
+        GlobalModel::new_from_normal_distribution(
+            num_params as usize,
+            global_learning_rate,
+            std_init,
+        ),
         true,
-        lazy_eval
+        lazy_eval,
     )
 }
 
@@ -141,22 +145,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .help("The number of verification threads Default: Num CPU's")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("initstd")
+                .short("s")
+                .long("initstd")
+                .help("The standard deviation of the normal distribution to initialize the global model")
+                .default_value("0.05")
+                .takes_value(true),
+        )
         .get_matches();
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let config = matches.value_of("config").unwrap_or("default.conf");
+    let std_init = matches
+        .value_of("initstd")
+        .unwrap_or("default.conf")
+        .parse::<f32>()
+        .unwrap();
     let num_threads = matches.value_of("vthreads");
     let num_threads = match num_threads {
-        Some(str) => {str.parse::<i32>().unwrap() as usize}
-        None => {num_cpus::get() as usize}
+        Some(str) => str.parse::<i32>().unwrap() as usize,
+        None => num_cpus::get() as usize,
     };
     let service = DefaultFlService::new(num_threads);
-    service.register_new_trainig_state(get_training_state_from_config(config, !matches.is_present("dleval")));
+    service.register_new_trainig_state(get_training_state_from_config(
+        config,
+        !matches.is_present("dleval"),
+        std_init,
+    ));
     Logger::with_str("info")
-        .log_target(LogTarget::StdOut)  
+        .log_target(LogTarget::StdOut)
         .format_for_stdout(opt_format)
-        .add_writer(BENCH_TAG, bench_logger())                 
+        .add_writer(BENCH_TAG, bench_logger())
         .start()?;
 
     Server::builder()

@@ -3,14 +3,13 @@ use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
-use crate::conversion32::{f32_to_scalar_vec};
+use crate::conversion32::f32_to_scalar_vec;
 
 use crate::rand_proof::ProofError;
 use crate::rand_proof::RandProof;
 use crate::rand_proof::{ElGamalGens, ElGamalPair};
 mod errors;
 pub use self::errors::RandProofError;
-
 
 pub fn create_randproof_vec(
     value_vec: &Vec<f32>,

@@ -22,7 +22,7 @@ use rofl_crypto::conversion32::*;
 use rofl_crypto::fp::N_BITS;
 use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::range_proof_vec::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
 use std::time::{Duration, Instant};
@@ -71,7 +71,6 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
     }
 
     std::process::exit(0); // Exit because we are actually using the benchmarking library wrong.
-
 }
 
 fn label_solve_discrete_log(dim: usize, table_size: usize) -> String {

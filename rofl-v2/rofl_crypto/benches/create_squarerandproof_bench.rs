@@ -24,7 +24,7 @@ use rofl_crypto::conversion32::*;
 use rofl_crypto::fp::N_BITS;
 use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::square_rand_proof_vec::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 use std::io::prelude::*;
 use std::time::{Duration, Instant};
 
