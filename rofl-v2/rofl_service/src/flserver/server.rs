@@ -396,7 +396,7 @@ pub struct TrainingRoundState {
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
     notify_aggr: Arc<Notify>,
-    notify_aggr_blocking:Arc<(std::sync::Mutex<bool>, Condvar)>,
+    notify_aggr_blocking:Arc<(std::sync::atomic::AtomicBool)>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
     time_state: TimeState
 }
@@ -415,7 +415,7 @@ impl TrainingRoundState {
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
             notify_aggr: Arc::new(Notify::new()),
-            notify_aggr_blocking: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
+            notify_aggr_blocking: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             time_state: TimeState::new()
         };
@@ -446,10 +446,8 @@ impl TrainingRoundState {
                 tmp_notify.notify();
             }
             {
-                let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
-                let mut started = tmp_notify.lock().unwrap();
-                *started = true;
-                cond.notify_all();
+                let atomic_bool = &*Arc::clone(&self.notify_aggr_blocking);
+                atomic_bool.store(true, Ordering::SeqCst);
             }
             info!(
                 "Waiting for lock round {}",
@@ -500,14 +498,9 @@ impl TrainingRoundState {
         tmp_notify.notified().await;
     }
 
-    fn wait_for_verif_completion_blocking(&self) {
-        {
-            let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
-            let mut started = tmp_notify.lock().unwrap();
-            while !*started {
-                started = cond.wait(started).unwrap();
-            }
-        }
+    fn wait_for_verif_completion_blocking(&self) ->bool {
+        let atomic_bool= &*Arc::clone(&self.notify_aggr_blocking);
+        atomic_bool.load(Ordering::SeqCst)
     }
 
     fn notify_model_complete_for_round(&self) {
@@ -661,16 +654,21 @@ impl Flservice for DefaultFlService {
                                     block_storage.reset_mem();
 
                                     let last_group_state = training_state_local.get_previous_round_state();
-                                    //TODO: maybe use a seperate thread pool for verification
+
                                     let blocking_enc_params = Arc::clone(&local_enc_params);
                                     let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
                                     
                                     if blocking_enc_params.verifiable() {
                                         local_thread_pool.as_ref().spawn_fifo(move || {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
-                                                last_group_state
+                                                let should_run = last_group_state
                                                     .unwrap()
                                                     .wait_for_verif_completion_blocking();
+                                                if !should_run {
+                                                    info!(
+                                                        "A verification task was executed before the last round verification ended"
+                                                    );
+                                                }
                                             }
                                             let ok = blocking_enc_params.verify();
                                             if ok {
