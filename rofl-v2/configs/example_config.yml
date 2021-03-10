@@ -23,7 +23,7 @@ crypto:
   value_range: 32
   n_partition: 1
   l2_value_range: 32
-  check_percentage: 1 # 0-100 for Range
+  check_percentage: 1.0 # 0.0-1.0 for Range i.e., round(num_rangeproofs * check_percentage)
   fp_bits: 32
   fp_frac: 12
 

@@ -1,7 +1,3 @@
-use super::{flservice::{
-    Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters,
-    ModelSelection, ServerModelData, StatusMessage, TrainRequest, TrainResponse,
-}, logs::TimeState};
 use super::{
     flservice::flservice_server::Flservice,
     params::{EncModelParamType, EncModelParams, PlainParams},
@@ -12,17 +8,24 @@ use super::{
     },
     params::GlobalModel,
 };
+use super::{
+    flservice::{
+        Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, ModelSelection,
+        ServerModelData, StatusMessage, TrainRequest, TrainResponse,
+    },
+    logs::TimeState,
+};
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
-use std::{collections::HashMap, sync::Condvar};
+use rayon;
+use rofl_crypto::bsgs32::BSGSTable;
 use std::iter::FromIterator;
 use std::sync::atomic::{AtomicI16, Ordering};
 use std::sync::{Arc, RwLock};
-use rofl_crypto::bsgs32::BSGSTable;
-use tokio::{io::AsyncWriteExt, sync::mpsc};
-use tokio::sync::mpsc::Sender;
-use tokio::sync::Notify;
+use std::{collections::HashMap, sync::Condvar};
 use tokio::fs;
+use tokio::sync::mpsc::Sender;
+use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tonic::{Request, Response, Status, Streaming};
 
 use log::info;
@@ -55,7 +58,7 @@ pub struct TrainingState {
     channels: Arc<RwLock<HashMap<i32, Sender<Result<TrainResponse, Status>>>>>,
     channels_observer: Arc<RwLock<Vec<Sender<Result<TrainResponse, Status>>>>>,
     rounds: Arc<RwLock<Vec<TrainingRoundState>>>,
-    do_lazy: bool
+    do_lazy: bool,
 }
 
 impl TrainingState {
@@ -68,7 +71,7 @@ impl TrainingState {
         train_until_round: i32,
         global_model: GlobalModel,
         terminate_on_done: bool,
-        do_lazy_verification: bool
+        do_lazy_verification: bool,
     ) -> Self {
         TrainingState {
             model_id: model_id,
@@ -86,7 +89,7 @@ impl TrainingState {
             channels: Arc::new(RwLock::new(HashMap::new())),
             channels_observer: Arc::new(RwLock::new(Vec::new())),
             rounds: Arc::new(RwLock::new(Vec::new())),
-            do_lazy: do_lazy_verification
+            do_lazy: do_lazy_verification,
         }
     }
 
@@ -130,7 +133,6 @@ impl TrainingState {
         let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
         for (_key, sender) in &*tmp {
             out.push(sender.clone());
-            
         }
         out
     }
@@ -375,6 +377,13 @@ impl TrainingState {
     }
 }
 
+fn create_blocking_thread_pool(num_threads: usize) -> rayon::ThreadPool {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .unwrap()
+}
+
 #[derive(Clone, PartialEq)]
 enum RoundState {
     InProgress,
@@ -390,10 +399,9 @@ pub struct TrainingRoundState {
     verifed_counter: Arc<AtomicI16>,
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
-    notify_aggr: Arc<Notify>,
-    notify_aggr_blocking:Arc<(std::sync::Mutex<bool>, Condvar)>,
+    notify_aggr: Arc<(std::sync::Mutex<bool>, Condvar)>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
-    time_state: TimeState
+    time_state: TimeState,
 }
 
 impl TrainingRoundState {
@@ -402,17 +410,16 @@ impl TrainingRoundState {
         expected_clients: i32,
         param_aggr: EncModelParamsAccumulator,
     ) -> Self {
-        let out =  TrainingRoundState {
+        let out = TrainingRoundState {
             round_id: round_id,
             expected_clients: expected_clients,
             param_aggr: Arc::new(RwLock::new(param_aggr)),
             verifed_counter: Arc::new(AtomicI16::new(0)),
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
-            notify_aggr: Arc::new(Notify::new()),
-            notify_aggr_blocking: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
+            notify_aggr: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
-            time_state: TimeState::new()
+            time_state: TimeState::new(),
         };
         out.time_state.record_instant();
         out
@@ -437,17 +444,15 @@ impl TrainingRoundState {
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         if done + 1 == self.expected_clients as i16 {
             {
-                let tmp_notify = Arc::clone(&self.notify_aggr);
-                tmp_notify.notify();
-            }
-            {
-                let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
+                /*let tmp_notify = Arc::clone(&self.notify_aggr);
+                tmp_notify.notify();*/
+                let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
                 let mut started = tmp_notify.lock().unwrap();
                 *started = true;
                 cond.notify_all();
             }
             {
-                let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+                let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
                 let mut started = tmp_notify.lock().unwrap();
                 while !*started {
                     started = cond.wait(started).unwrap();
@@ -458,6 +463,7 @@ impl TrainingRoundState {
             if let RoundState::InProgress = *mut_ref_state {
                 *mut_ref_state = RoundState::Done;
             }
+            info!("Update verifications done for round {}", self.round_id);
             self.time_state.record_instant();
             self.time_state.log_bench_times(self.round_id);
         }
@@ -471,8 +477,10 @@ impl TrainingRoundState {
         *mut_ref_state = RoundState::Error(error_msg);
 
         if done + 1 == self.expected_clients as i16 {
-            let tmp_notify = Arc::clone(&self.notify_aggr);
-            tmp_notify.notify();
+            let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
+            let mut started = tmp_notify.lock().unwrap();
+            *started = true;
+            cond.notify_all();
         }
     }
 
@@ -483,25 +491,20 @@ impl TrainingRoundState {
     }
 
     async fn wait_for_verif_completion(&self) {
-        let tmp_notify = Arc::clone(&self.notify_aggr);
-        tmp_notify.notified().await;
-    }
-
-    fn wait_for_verif_completion_blocking(&self) {
-        {
-            let (tmp_notify, cond )= &*Arc::clone(&self.notify_aggr_blocking);
+        /*let tmp_notify = Arc::clone(&self.notify_aggr);
+        tmp_notify.notified().await;*/
+        let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
             let mut started = tmp_notify.lock().unwrap();
             while !*started {
-                started = cond.wait(started).unwrap();
-            }
+            started = cond.wait(started).unwrap();
         }
     }
 
     fn notify_model_complete_for_round(&self) {
-        let (tmp_notify, cond )= &*Arc::clone(&self.notify_verify);
+        let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
         let mut started = tmp_notify.lock().unwrap();
         *started = true;
-        cond.notify_one();
+        cond.notify_all();
     }
 
     pub fn accumulate(&self, param_aggr: &EncModelParams) -> bool {
@@ -513,12 +516,14 @@ impl TrainingRoundState {
 
 pub struct DefaultFlService {
     training_states: Arc<RwLock<Vec<TrainingState>>>,
+    verification_pool: Arc<rayon::ThreadPool>,
 }
 
 impl DefaultFlService {
-    pub fn new() -> Self {
+    pub fn new(num_verif_threads: usize) -> Self {
         DefaultFlService {
             training_states: Arc::new(RwLock::new(Vec::new())),
+            verification_pool: Arc::new(create_blocking_thread_pool(num_verif_threads)),
         }
     }
 
@@ -601,6 +606,7 @@ impl Flservice for DefaultFlService {
             info!("First training round has started");
         }
 
+        let local_thread_pool = Arc::clone(&self.verification_pool);
         let training_state_local = training_state.clone();
         tokio::spawn(async move {
             let mut block_storage = DataBlockStorage::new();
@@ -609,7 +615,7 @@ impl Flservice for DefaultFlService {
                     continue;
                 }
                 let req = message.unwrap();
-               
+
                 match req.param_message.unwrap() {
                     train_request::ParamMessage::StartMessage(_) => {
                         panic!("This is not covered yet")
@@ -644,37 +650,53 @@ impl Flservice for DefaultFlService {
                                     ));
                                     block_storage.reset_mem();
 
-                                    let last_group_state = training_state_local.get_previous_round_state();
-                                    //TODO: maybe use a seperate thread pool for verification
+                                    let last_group_state =
+                                        training_state_local.get_previous_round_state();
+
                                     let blocking_enc_params = Arc::clone(&local_enc_params);
-                                    let wait_for_last_verify_to_comlete = training_state_local.do_lazy;
-                                    
+                                    let wait_for_last_verify_to_comlete =
+                                        training_state_local.do_lazy;
+
                                     if blocking_enc_params.verifiable() {
-                                        let _res = tokio::task::spawn_blocking(move || {
+                                        let local_thread_pool_m = Arc::clone(&local_thread_pool);
+                                        tokio::spawn(async move {
                                             if wait_for_last_verify_to_comlete && last_group_state.is_some() {
                                                 last_group_state
                                                     .unwrap()
-                                                    .wait_for_verif_completion_blocking();
+                                                    .wait_for_verif_completion()
+                                                    .await;
                                             }
-                                            let ok = blocking_enc_params.verify();
-                                            if ok {
-                                                info!(
-                                                    "Model of client {} for round {} is valid!",
-                                                    client_id, local_blocking_group_state.round_id
-                                                );
-                                                local_blocking_group_state.verifaction_done();
-                                            } else {
-                                                info!(
-                                                    "Model of client {} for round {} is not valid!",
-                                                    client_id, local_blocking_group_state.round_id
-                                                );
-                                                local_blocking_group_state.verifaction_error(
-                                                    format!(
-                                                    "Verification for client {} round {} failed",
-                                                    client_id, local_blocking_group_state.round_id
-                                                ),
-                                                );
-                                            }
+                                            local_thread_pool_m.as_ref().spawn(move || {
+                                                /*if wait_for_last_verify_to_comlete && last_group_state.is_some() {
+                                                    let should_run = last_group_state
+                                                        .unwrap()
+                                                        .wait_for_verif_completion_blocking();
+                                                    if !should_run {
+                                                        info!(
+                                                            "A verification task was executed before the last round verification ended"
+                                                        );
+                                                    }
+                                                }*/
+                                                let ok = blocking_enc_params.verify();
+                                                if ok {
+                                                    info!(
+                                                        "Model of client {} for round {} is valid!",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    );
+                                                    local_blocking_group_state.verifaction_done();
+                                                } else {
+                                                    info!(
+                                                        "Model of client {} for round {} is not valid!",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    );
+                                                    local_blocking_group_state.verifaction_error(
+                                                        format!(
+                                                        "Verification for client {} round {} failed",
+                                                        client_id, local_blocking_group_state.round_id
+                                                    ),
+                                                    );
+                                                }
+                                            });
                                         });
                                     } else {
                                         local_blocking_group_state.verifaction_done();
@@ -697,8 +719,10 @@ impl Flservice for DefaultFlService {
                                                 local_group_state.round_id
                                             );
                                             local_group_state.time_state.record_instant();
-                                            let bsgs_table_ref = Arc::clone(&training_state_local.bsgs_table);
-                                            model = local_group_state.extract_model_data(bsgs_table_ref.as_ref());
+                                            let bsgs_table_ref =
+                                                Arc::clone(&training_state_local.bsgs_table);
+                                            model = local_group_state
+                                                .extract_model_data(bsgs_table_ref.as_ref());
                                             if model.is_none() {
                                                 todo!();
                                             }
@@ -717,19 +741,15 @@ impl Flservice for DefaultFlService {
                                         // todo: add suport for lacy verification
                                         let last_group_state =
                                             training_state_local.get_previous_round_state();
-                                        
+
                                         // round is done, broadcast the new model
-                                        info!(
-                                            "All client models received for round {}",
-                                            local_group_state.round_id
-                                        );
-                                        
                                         let params = model.unwrap();
                                         training_state_local.update_global_model(params);
                                         local_group_state.time_state.record_instant();
-                                        
+
                                         local_group_state.notify_model_complete_for_round();
 
+                                        // ERROR HERE
                                         if last_group_state.is_some() {
                                             last_group_state
                                                 .unwrap()

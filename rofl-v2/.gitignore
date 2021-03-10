@@ -1,1 +1,2 @@
-benchlog/*
+benchlog/
+.vscode/

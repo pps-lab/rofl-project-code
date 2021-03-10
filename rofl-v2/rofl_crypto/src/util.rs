@@ -1,9 +1,7 @@
-
-
+use std::env;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
-use std::env;
 
 pub fn get_bench_dir() -> PathBuf {
     let mut cwd = env::current_exe().unwrap();
@@ -16,7 +14,7 @@ pub fn get_bench_dir() -> PathBuf {
 
 pub fn create_bench_file(label: &String) -> File {
     let mut bench_file = get_bench_dir();
-    std::fs::create_dir_all(&bench_file);
+    let _res = std::fs::create_dir_all(&bench_file);
     bench_file.push(label);
     bench_file.set_extension("bench");
     println!("bench file: {}", bench_file.display());

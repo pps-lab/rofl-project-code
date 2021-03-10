@@ -1,12 +1,12 @@
-use rofl_service::flserver::logs::bench_logger;
-use rofl_service::flserver::logs::BENCH_TAG;
 use clap::{App, Arg};
+use flexi_logger::{opt_format, LogTarget, Logger};
 use http::Uri;
 use rofl_service::flserver::client::FlServiceClient;
+use rofl_service::flserver::logs::bench_logger;
+use rofl_service::flserver::logs::BENCH_TAG;
 use rofl_service::flserver::trainclient::FlTrainClient;
 use rofl_service::flserver::trainclient::FlTraining;
 use tonic::transport::Channel;
-use flexi_logger::{LogTarget, Logger, opt_format};
 
 async fn start_client(
     channel: Channel,
@@ -126,11 +126,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .path_and_query("/")
         .build()
         .unwrap();
-    
+
     Logger::with_str("info")
-        .log_target(LogTarget::StdOut)  
-        .format_for_stdout(opt_format)    
-        .add_writer(BENCH_TAG, bench_logger())                      
+        .log_target(LogTarget::StdOut)
+        .format_for_stdout(opt_format)
+        .add_writer(BENCH_TAG, bench_logger())
         .start()?;
 
     let mut tasks = Vec::with_capacity(num_clients as usize);
@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in (start_id + 1)..(num_clients + start_id) {
         let client_id = i;
         let local_uri = uri.clone();
-        if i % (num_clients/num_trainiers) == 0 {
+        if i % (num_clients / num_trainiers) == 0 {
             port += 1;
         }
         println!("Client {} connects to trainer at port {}", client_id, port);
@@ -154,7 +154,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect()
         .await
         .expect("Connection to FlService failed");
-    println!("Client {} connects to trainer at port {}", start_id, trainer_port);
+    println!(
+        "Client {} connects to trainer at port {}",
+        start_id, trainer_port
+    );
     start_client(channel, start_id, model_id, true, trainer_port).await;
     for task in tasks {
         let _ou = task.await;

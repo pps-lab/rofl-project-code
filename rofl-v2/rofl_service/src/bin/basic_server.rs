@@ -33,7 +33,7 @@ fn dummy_training_state(
         value_range: 8,
         n_partition: 1,
         l2_value_range: 32,
-        check_percentage: 10,
+        check_percentage: 0.1,
         enc_type: params::PLAIN_TYPE as i32,
     };
     TrainingState::new(
@@ -45,7 +45,7 @@ fn dummy_training_state(
         train_until_round,
         GlobalModel::new(num_params as usize, 1.0),
         false,
-        true
+        true,
     )
 }
 
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ip = matches.value_of("address").unwrap_or("default.conf");
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
-    let service = DefaultFlService::new();
+    let service = DefaultFlService::new(8);
     service.register_new_trainig_state(dummy_training_state(4, 19166, 5, 10));
     Server::builder()
         .tcp_nodelay(true)

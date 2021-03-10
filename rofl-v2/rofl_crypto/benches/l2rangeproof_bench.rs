@@ -25,7 +25,7 @@ use rofl_crypto::fp::Fix;
 use rofl_crypto::fp::N_BITS;
 use rofl_crypto::l2_range_proof_vec::*;
 use rofl_crypto::pedersen_ops::*;
-use rofl_crypto::util::{create_bench_file,get_bench_dir};
+use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
 use std::time::{Duration, Instant};
@@ -76,8 +76,7 @@ fn bench_rangeproof_l2_fn(bench: &mut Bencher) {
         // let value_clipped = value_vec.iter().map(|x| scalar_to_f32(&f32_to_scalar(&(x / norm)))).collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof, commit_vec): (RangeProof, RistrettoPoint) =
-            create_rangeproof_l2(&value_vec, &
-                blinding_vec, black_box(*r), N_PARTITION).unwrap();
+            create_rangeproof_l2(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
         verify_rangeproof_l2(&rangeproof, &commit_vec, black_box(*r)).unwrap();
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
