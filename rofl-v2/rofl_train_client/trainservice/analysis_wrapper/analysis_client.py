@@ -21,10 +21,10 @@ class AnalysisClientWrapper():
         print(self.config)
 
         batch_size = self.config.client.benign_training.batch_size
-        dataset = load_dataset(dataset_path, batch_size)
+        self.dataset = load_dataset(dataset_path, batch_size)
 
         malicious = False
-        self.client = Client("dummy_id", self.config.client, dataset, malicious)
+        self.client = Client("dummy_id", self.config.client, self.dataset, malicious)
 
         self.model = self.load_model(self.config)
 
@@ -38,6 +38,8 @@ class AnalysisClientWrapper():
 
     def train(self, round):
         logging.info(f"Training round {round}")
+        self.model.set_weights(self.client.weights)
+        self.evaluate()
         self.client.set_model(self.model)
         self.client.train(round)
         logging.info(f"Done training round {round}")
@@ -51,4 +53,10 @@ class AnalysisClientWrapper():
                 config.client.model_name, config.server.intrinsic_dimension, config.client.model_weight_regularization)
         return model
 
+    def evaluate(self):
+        self.model.compile(tf.keras.optimizers.SGD(), # Dummy, as we are not training
+                           tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+                           metrics=['acc'])
+        score = self.model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=1)
+        print(f"Score {score}")
 
