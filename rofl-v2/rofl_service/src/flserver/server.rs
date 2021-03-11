@@ -20,6 +20,7 @@ use crate::flserver::util::DataBlockStorage;
 use futures::Stream;
 use rayon;
 use rofl_crypto::bsgs32::BSGSTable;
+use core::panic;
 use std::iter::FromIterator;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicI16, Ordering};
@@ -27,7 +28,7 @@ use std::sync::{Arc, RwLock};
 use std::{collections::HashMap, sync::Condvar};
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tokio::{io::AsyncWriteExt, sync::mpsc};
+use tokio::{io::AsyncWriteExt, sync::mpsc, sync::watch};
 use tonic::{Request, Response, Status, Streaming};
 
 use log::info;
@@ -401,9 +402,18 @@ pub struct TrainingRoundState {
     verifed_counter: Arc<AtomicI16>,
     done_counter: Arc<AtomicI16>,
     state: Arc<RwLock<RoundState>>,
-    notify_aggr: Arc<(std::sync::Mutex<bool>, Condvar)>,
+    notify_aggr: Arc<(watch::Sender<bool>, watch::Receiver<bool>)>,
     notify_verify: Arc<(std::sync::Mutex<bool>, Condvar)>,
     time_state: TimeState,
+}
+
+async fn verify_wait(receiver: &mut watch::Receiver<bool>) {
+    let done = {
+        *receiver.borrow()
+    };
+    if !done {
+        let _res = receiver.changed().await;
+    }
 }
 
 impl TrainingRoundState {
@@ -419,7 +429,7 @@ impl TrainingRoundState {
             verifed_counter: Arc::new(AtomicI16::new(0)),
             done_counter: Arc::new(AtomicI16::new(0)),
             state: Arc::new(RwLock::new(RoundState::InProgress)),
-            notify_aggr: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
+            notify_aggr: Arc::new(watch::channel(false)),
             notify_verify: Arc::new((std::sync::Mutex::new(false), Condvar::new())),
             time_state: TimeState::new(),
         };
@@ -446,12 +456,8 @@ impl TrainingRoundState {
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         if done + 1 == self.expected_clients as i16 {
             {
-                /*let tmp_notify = Arc::clone(&self.notify_aggr);
-                tmp_notify.notify();*/
-                let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
-                let mut started = tmp_notify.lock().unwrap();
-                *started = true;
-                cond.notify_all();
+                let (sender, _receivr) = &*Arc::clone(&self.notify_aggr);
+                let _res = sender.send(true);
             }
             {
                 let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
@@ -479,10 +485,7 @@ impl TrainingRoundState {
         *mut_ref_state = RoundState::Error(error_msg);
 
         if done + 1 == self.expected_clients as i16 {
-            let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
-            let mut started = tmp_notify.lock().unwrap();
-            *started = true;
-            cond.notify_all();
+            panic!("ERROR occured");
         }
     }
 
@@ -493,13 +496,8 @@ impl TrainingRoundState {
     }
 
     async fn wait_for_verif_completion(&self) {
-        /*let tmp_notify = Arc::clone(&self.notify_aggr);
-        tmp_notify.notified().await;*/
-        let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
-        let mut started = tmp_notify.lock().unwrap();
-        while !*started {
-            started = cond.wait(started).unwrap();
-        }
+        let (_sender, receivr) = &*Arc::clone(&self.notify_aggr);
+        verify_wait(&mut receivr.clone()).await;
     }
 
     fn notify_model_complete_for_round(&self) {
@@ -549,8 +547,6 @@ impl DefaultFlService {
 
 #[tonic::async_trait]
 impl Flservice for DefaultFlService {
-    //type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
-    //type RouteChatStream = Pin<Box<dyn Stream<Item = Result<RouteNote, Status>> + Send + Sync + 'static>>;
     type TrainModelStream =
         Pin<Box<dyn Stream<Item = Result<TrainResponse, Status>> + Send + Sync + 'static>>;
     type ObserverModelTrainingStream =
@@ -675,16 +671,6 @@ impl Flservice for DefaultFlService {
                                                     .await;
                                             }
                                             local_thread_pool_m.as_ref().spawn(move || {
-                                                /*if wait_for_last_verify_to_comlete && last_group_state.is_some() {
-                                                    let should_run = last_group_state
-                                                        .unwrap()
-                                                        .wait_for_verif_completion_blocking();
-                                                    if !should_run {
-                                                        info!(
-                                                            "A verification task was executed before the last round verification ended"
-                                                        );
-                                                    }
-                                                }*/
                                                 let ok = blocking_enc_params.verify();
                                                 if ok {
                                                     info!(
@@ -757,7 +743,6 @@ impl Flservice for DefaultFlService {
 
                                         local_group_state.notify_model_complete_for_round();
 
-                                        // ERROR HERE
                                         if last_group_state.is_some() {
                                             last_group_state
                                                 .unwrap()
