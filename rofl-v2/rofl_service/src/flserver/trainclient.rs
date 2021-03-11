@@ -54,7 +54,7 @@ impl FlTrainClient {
         model_id: i32,
     ) -> Option<Vec<f32>> {
         let (outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
-        let mut outbound_local = outbound.clone();
+        let outbound_local = outbound.clone();
         let num_elems = params.len();
         tokio::spawn(async move {
             let request = ClientModelMessage {
@@ -96,7 +96,13 @@ impl FlTrainClient {
             }
         });
 
-        let response = self.grpc.train_for_round(Request::new(rx)).await.unwrap();
+        let response = self
+            .grpc
+            .train_for_round(Request::new(Box::pin(
+                tokio_stream::wrappers::ReceiverStream::new(rx),
+            )))
+            .await
+            .unwrap();
         let mut inbound = response.into_inner();
 
         let mut trained_model: Vec<f32> = Vec::with_capacity(num_elems);

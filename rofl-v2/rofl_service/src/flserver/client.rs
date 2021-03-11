@@ -174,7 +174,7 @@ impl FlServiceClient {
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
 
         let client_id = self.client_id;
-        let mut outbound_local = outbound.clone();
+        let outbound_local = outbound.clone();
         tokio::spawn(async move {
             info!("Client {} registers to train model {}", client_id, model_id);
             // Register phase
@@ -189,7 +189,13 @@ impl FlServiceClient {
             let _res = outbound_local.send(request).await;
         });
 
-        let response = self.grpc.train_model(Request::new(rx)).await.unwrap();
+        let response = self
+            .grpc
+            .train_model(Request::new(Box::pin(
+                tokio_stream::wrappers::ReceiverStream::new(rx),
+            )))
+            .await
+            .unwrap();
         let mut inbound = response.into_inner();
 
         let mut state = ServerModelDataState::new();

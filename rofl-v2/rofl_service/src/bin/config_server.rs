@@ -87,26 +87,32 @@ fn get_training_state_from_config(path: &str, lazy_eval: bool, std_init: f32) ->
     };
     let global_model = if let Some(model_path) = init_model_path {
         info!("Global model loaded from file: {}", model_path);
-        GlobalModel::new_from_file(
-            global_learning_rate,
-            model_path,
-        )
-        
+        GlobalModel::new_from_file(global_learning_rate, model_path)
     } else {
-        info!("Global model initialized with normal distribution std: {}", std_init);
+        info!(
+            "Global model initialized with normal distribution std: {}",
+            std_init
+        );
         GlobalModel::new_from_normal_distribution(
             num_params.unwrap() as usize,
             global_learning_rate,
             std_init,
         )
     };
-    info!("Global model has {} parameters and learning rate {}", global_model.get_num_params(), global_model.learning_rate);
-    info!("Lazy verification {}, Train until round {}", lazy_eval, train_until_round);
+    info!(
+        "Global model has {} parameters and learning rate {}",
+        global_model.get_num_params(),
+        global_model.learning_rate
+    );
+    info!(
+        "Lazy verification {}, Train until round {}",
+        lazy_eval, train_until_round
+    );
     TrainingState::new(
         model_confing.model_id,
         model_confing,
         crypto_config,
-        global_model.get_num_params()as i32,
+        global_model.get_num_params() as i32,
         num_in_memory,
         train_until_round,
         global_model,
@@ -186,14 +192,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .format_for_stdout(opt_format)
         .add_writer(BENCH_TAG, bench_logger())
         .start()?;
-    
+
     let service = DefaultFlService::new(num_threads);
     service.register_new_trainig_state(get_training_state_from_config(
         config,
         !matches.is_present("dleval"),
         std_init,
     ));
-    
+
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

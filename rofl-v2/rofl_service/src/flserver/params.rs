@@ -16,8 +16,8 @@ use rofl_crypto::{
     square_rand_proof::{pedersen::SquareRandProofCommitments, SquareRandProof},
     square_rand_proof_vec,
 };
-use std::io::Cursor;
 use std::io::BufRead;
+use std::io::Cursor;
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;
@@ -168,7 +168,8 @@ impl EncModelParams {
                     rand_proof_vec::verify_randproof_vec(&params.rand_proofs, &params.enc_values);
                 if let Ok(ok) = res {
                     //Check range proof
-                    let num_elems = (params.enc_values.len() as f32 * params.check_percentage).round() as usize;
+                    let num_elems =
+                        (params.enc_values.len() as f32 * params.check_percentage).round() as usize;
                     let vec_tmp = extract_pedersen_vec(&params.enc_values, num_elems);
                     let range_res = range_proof_vec::verify_rangeproof(
                         &params.range_proofs,
@@ -670,9 +671,7 @@ impl GlobalModel {
             }
         }
         GlobalModel {
-            params: PlainParams {
-                content: vec_out
-            },
+            params: PlainParams { content: vec_out },
             learning_rate: learning_rate,
         }
     }

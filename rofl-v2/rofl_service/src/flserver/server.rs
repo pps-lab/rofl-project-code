@@ -17,9 +17,11 @@ use super::{
 };
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
+use futures::Stream;
 use rayon;
 use rofl_crypto::bsgs32::BSGSTable;
 use std::iter::FromIterator;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicI16, Ordering};
 use std::sync::{Arc, RwLock};
 use std::{collections::HashMap, sync::Condvar};
@@ -258,12 +260,12 @@ impl TrainingState {
         };
         let channels = self.get_channels_to_broadcast();
         for chan in &channels {
-            let mut out = chan.clone();
+            let out = chan.clone();
             let _res = out.send(Ok(done_message.clone())).await;
         }
         let channels_observer = self.get_channels_observer_to_broadcast();
         for chan in &channels_observer {
-            let mut out = chan.clone();
+            let out = chan.clone();
             let _res = out.send(Ok(done_message.clone())).await;
         }
     }
@@ -335,7 +337,7 @@ impl TrainingState {
         let data_messages_arc = Arc::new(data_messages);
         let mut join_handlers = Vec::with_capacity(channels.len());
         for chan in &channels {
-            let mut out = chan.clone();
+            let out = chan.clone();
             let data_messages_local = Arc::clone(&data_messages_arc);
             let meta_packet_local = meta_packet.clone();
             let config_packet_local = config_message.clone();
@@ -357,7 +359,7 @@ impl TrainingState {
         if observer_channels.len() > 0 {
             let mut join_handlers = Vec::with_capacity(channels.len());
             for chan in &observer_channels {
-                let mut out = chan.clone();
+                let out = chan.clone();
                 let data_messages_local = Arc::clone(&data_messages_arc);
                 let meta_packet_local = meta_packet.clone();
                 let config_packet_local = config_message.clone();
@@ -494,8 +496,8 @@ impl TrainingRoundState {
         /*let tmp_notify = Arc::clone(&self.notify_aggr);
         tmp_notify.notified().await;*/
         let (tmp_notify, cond) = &*Arc::clone(&self.notify_aggr);
-            let mut started = tmp_notify.lock().unwrap();
-            while !*started {
+        let mut started = tmp_notify.lock().unwrap();
+        while !*started {
             started = cond.wait(started).unwrap();
         }
     }
@@ -547,8 +549,12 @@ impl DefaultFlService {
 
 #[tonic::async_trait]
 impl Flservice for DefaultFlService {
-    type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
-    type ObserverModelTrainingStream = mpsc::Receiver<Result<TrainResponse, Status>>;
+    //type TrainModelStream = mpsc::Receiver<Result<TrainResponse, Status>>;
+    //type RouteChatStream = Pin<Box<dyn Stream<Item = Result<RouteNote, Status>> + Send + Sync + 'static>>;
+    type TrainModelStream =
+        Pin<Box<dyn Stream<Item = Result<TrainResponse, Status>> + Send + Sync + 'static>>;
+    type ObserverModelTrainingStream =
+        Pin<Box<dyn Stream<Item = Result<TrainResponse, Status>> + Send + Sync + 'static>>;
 
     async fn train_model(
         &self,
@@ -660,7 +666,9 @@ impl Flservice for DefaultFlService {
                                     if blocking_enc_params.verifiable() {
                                         let local_thread_pool_m = Arc::clone(&local_thread_pool);
                                         tokio::spawn(async move {
-                                            if wait_for_last_verify_to_comlete && last_group_state.is_some() {
+                                            if wait_for_last_verify_to_comlete
+                                                && last_group_state.is_some()
+                                            {
                                                 last_group_state
                                                     .unwrap()
                                                     .wait_for_verif_completion()
@@ -795,8 +803,9 @@ impl Flservice for DefaultFlService {
                 }
             }
         });
-
-        Ok(Response::new(rx))
+        Ok(Response::new(Box::pin(
+            tokio_stream::wrappers::ReceiverStream::new(rx),
+        )))
     }
 
     async fn terminate_model_training(
@@ -828,7 +837,9 @@ impl Flservice for DefaultFlService {
         match training_state {
             Some(state) => {
                 state.register_observer_channel(tx);
-                Ok(Response::new(rx))
+                Ok(Response::new(Box::pin(
+                    tokio_stream::wrappers::ReceiverStream::new(rx),
+                )))
             }
             None => Err(Status::invalid_argument("Model does not exists")),
         }

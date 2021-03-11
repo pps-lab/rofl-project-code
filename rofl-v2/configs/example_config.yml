@@ -13,6 +13,7 @@ server:
 client:
   model_name: dev
   num_params: 19166
+  # model_init_path = "./init_model.txt"  -> Loads the initial global model from a file, num_params is then ignored
   benign_training:
     num_epochs: 2
     batch_size: 24
