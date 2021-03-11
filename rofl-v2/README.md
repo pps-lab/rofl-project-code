@@ -29,5 +29,5 @@ t4: model update encryption + proofs completed
 t5: model sent to server
 
 Format of a benchmark log line:
-<Round ID>, <t2 - t1>, <t3 - t2>, <t4 - t3>, <t5 - t4>, <total duration>
+<Round ID>, <t2 - t1>, <t3 - t2>, <t4 - t3>, <t5 - t4>, <total duration>, <bytes received>,  <bytes sent>
 ```
