@@ -27,7 +27,7 @@ async fn start_client(
         let channel = tonic::transport::Channel::builder(uri)
             .connect()
             .await
-            .expect(format!("Failed to connect to trainer at port {}", trainer_port).as_str());
+            .unwrap_or_else(|_| panic!("Failed to connect to trainer at port {}", trainer_port));
         Box::new(FlTraining::Grpc(FlTrainClient::new(channel)))
     };
     let mut client = FlServiceClient::new(client_id, channel, trainer);

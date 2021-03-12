@@ -807,7 +807,7 @@ fn create_pyres_from_success<T>(content_ptr: *mut T) -> PyRes {
         msg: ptr::null(),
         res: content_ptr as *const c_void,
     };
-    mem::forget(content_ptr);
+    //mem::forget(content_ptr);
     pyres
 }
 

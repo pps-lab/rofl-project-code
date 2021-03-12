@@ -18,10 +18,8 @@ use super::{
 use crate::flserver::params::EncModelParamsAccumulator;
 use crate::flserver::util::DataBlockStorage;
 use futures::Stream;
-use rayon;
 use rofl_crypto::bsgs32::BSGSTable;
 use core::panic;
-use std::iter::FromIterator;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicI16, Ordering};
 use std::sync::{Arc, RwLock};
@@ -77,12 +75,12 @@ impl TrainingState {
         do_lazy_verification: bool,
     ) -> Self {
         TrainingState {
-            model_id: model_id,
-            model_config: model_config,
+            model_id,
+            model_config,
             num_params: num_parmas,
-            in_memory_rounds: in_memory_rounds,
-            train_until_round: train_until_round,
-            terminate_on_done: terminate_on_done,
+            in_memory_rounds,
+            train_until_round,
+            terminate_on_done,
             bsgs_table: Arc::new(BSGSTable::new(BSGS_TABLE_SIZE)),
             training_status: Arc::new(RwLock::new(TrainingStatusType::Register)),
             crypto_config: crypto_config.clone(),
@@ -134,7 +132,7 @@ impl TrainingState {
         let tmp = Arc::clone(&self.channels);
         let tmp = tmp.read().unwrap();
         let mut out: Vec<Sender<Result<TrainResponse, Status>>> = Vec::with_capacity(tmp.len());
-        for (_key, sender) in &*tmp {
+        for sender in (*tmp).values() {
             out.push(sender.clone());
         }
         out
@@ -165,16 +163,14 @@ impl TrainingState {
         let tmp = tmp.read().unwrap();
         if self.do_lazy {
             if tmp.len() < 2 {
-                return None;
+                None
             } else {
-                return Some(tmp[tmp.len() - 2].clone());
+                Some(tmp[tmp.len() - 2].clone())
             }
+        } else if tmp.len() < 1 {
+            None
         } else {
-            if tmp.len() < 1 {
-                return None;
-            } else {
-                return Some(tmp.last().unwrap().clone());
-            }
+            Some(tmp.last().unwrap().clone())
         }
     }
 
@@ -203,7 +199,7 @@ impl TrainingState {
     }
 
     fn init_params(&self) -> PlainParams {
-        return PlainParams::unity(self.num_params as usize);
+        PlainParams::unity(self.num_params as usize)
     }
 
     fn init_round(&self) {
@@ -322,7 +318,7 @@ impl TrainingState {
                             param_message: Some(model_parameters::ParamMessage::ParamBlock(
                                 DataBlock {
                                     block_number: packet_num as u32,
-                                    data: Vec::from_iter(buffer[begin..end].iter().cloned()),
+                                    data: buffer[begin..end].to_vec(),
                                 },
                             )),
                         },
@@ -357,7 +353,7 @@ impl TrainingState {
 
         // Broadcast to observers
         let observer_channels = self.get_channels_observer_to_broadcast();
-        if observer_channels.len() > 0 {
+        if !observer_channels.is_empty() {
             let mut join_handlers = Vec::with_capacity(channels.len());
             for chan in &observer_channels {
                 let out = chan.clone();
@@ -423,8 +419,8 @@ impl TrainingRoundState {
         param_aggr: EncModelParamsAccumulator,
     ) -> Self {
         let out = TrainingRoundState {
-            round_id: round_id,
-            expected_clients: expected_clients,
+            round_id,
+            expected_clients,
             param_aggr: Arc::new(RwLock::new(param_aggr)),
             verifed_counter: Arc::new(AtomicI16::new(0)),
             done_counter: Arc::new(AtomicI16::new(0)),
@@ -440,10 +436,7 @@ impl TrainingRoundState {
     fn extract_model_data(&self, table: &BSGSTable) -> Option<PlainParams> {
         let tmp = Arc::clone(&self.param_aggr);
         let tmp = tmp.read().unwrap();
-        match tmp.extract(table) {
-            None => None,
-            Some(content) => Some(PlainParams { content: content }),
-        }
+        tmp.extract(table).map(|content| PlainParams { content })
     }
 
     fn increment_done_counter(&self) -> i16 {
@@ -451,7 +444,7 @@ impl TrainingRoundState {
         compl_counter.fetch_add(1, Ordering::SeqCst)
     }
 
-    fn verifaction_done(&self) -> () {
+    fn verifaction_done(&self) {
         let compl_counter = self.verifed_counter.clone();
         let done = compl_counter.fetch_add(1, Ordering::SeqCst);
         if done + 1 == self.expected_clients as i16 {
@@ -477,7 +470,7 @@ impl TrainingRoundState {
         }
     }
 
-    fn verifaction_error(&self, error_msg: String) -> () {
+    fn verifaction_error(&self, error_msg: String) {
         let compl_counter = self.verifed_counter.clone();
         let tmp_state = Arc::clone(&self.state);
         let mut mut_ref_state = tmp_state.write().unwrap();
@@ -600,7 +593,7 @@ impl Flservice for DefaultFlService {
         let num_channels = training_state.register_channel(init.client_id, tx.clone());
 
         // Are all clients registered?
-        if (num_channels == training_state.get_num_clients() as usize) {
+        if num_channels == training_state.get_num_clients() as usize {
             info!("Initialize model and broadcast it to clients");
             training_state.set_traning_running();
             training_state.init_round();
@@ -662,13 +655,12 @@ impl Flservice for DefaultFlService {
                                     if blocking_enc_params.verifiable() {
                                         let local_thread_pool_m = Arc::clone(&local_thread_pool);
                                         tokio::spawn(async move {
-                                            if wait_for_last_verify_to_comlete
-                                                && last_group_state.is_some()
-                                            {
-                                                last_group_state
-                                                    .unwrap()
+                                            if wait_for_last_verify_to_comlete {
+                                                if let Some(last_group_state) = last_group_state {
+                                                    last_group_state
                                                     .wait_for_verif_completion()
                                                     .await;
+                                                }
                                             }
                                             local_thread_pool_m.as_ref().spawn(move || {
                                                 let ok = blocking_enc_params.verify();
@@ -730,22 +722,19 @@ impl Flservice for DefaultFlService {
                                         panic!("Should not happen no error handling yet");
                                     };
 
-                                    if model.is_some() {
+                                    if let Some(params) = model {
                                         // wait for verify to complete
                                         // todo: add suport for lacy verification
                                         let last_group_state =
                                             training_state_local.get_previous_round_state();
-
                                         // round is done, broadcast the new model
-                                        let params = model.unwrap();
                                         training_state_local.update_global_model(params);
                                         local_group_state.time_state.record_instant();
 
                                         local_group_state.notify_model_complete_for_round();
 
-                                        if last_group_state.is_some() {
+                                        if let Some(last_group_state) = last_group_state {
                                             last_group_state
-                                                .unwrap()
                                                 .wait_for_verif_completion()
                                                 .await;
                                         }

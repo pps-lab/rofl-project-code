@@ -69,8 +69,8 @@ impl FlTrainClient {
             let request = ClientModelMessage {
                 model_message: Some(client_model_message::ModelMessage::MetaBlockMessage(
                     MetaFloatBlockMessage {
-                        model_id: model_id,
-                        round_id: round_id,
+                        model_id,
+                        round_id,
                         num_blocks: num_blocks as i32,
                         num_floats: num_elems as i32,
                     },

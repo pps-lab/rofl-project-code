@@ -5,7 +5,7 @@ use std::time::Instant;
 use flexi_logger::writers::FileLogWriter;
 use flexi_logger::DeferredNow;
 
-pub const BENCH_TAG: &'static str = "Bench";
+pub const BENCH_TAG: &str = "Bench";
 
 pub fn bench_format(
     w: &mut dyn std::io::Write,
@@ -44,6 +44,12 @@ pub struct TimeState {
     instants: Arc<RwLock<Vec<Instant>>>,
 }
 
+impl Default for TimeState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TimeState {
     pub fn new() -> Self {
         TimeState {
@@ -69,7 +75,7 @@ impl TimeState {
         let ts_list = ts_list_arc.read().unwrap();
         let mut out = String::new();
         let mut sum = 0;
-        &ts_list[0..(ts_list.len() - 1)]
+        ts_list[0..(ts_list.len() - 1)]
             .iter()
             .zip(&ts_list[1..ts_list.len()])
             .for_each(|(elem1, elem2)| {
@@ -87,7 +93,7 @@ impl TimeState {
         let ts_list = ts_list_arc.read().unwrap();
         let mut out = String::new();
         let mut sum = 0;
-        &ts_list[0..(ts_list.len() - 1)]
+        ts_list[0..(ts_list.len() - 1)]
             .iter()
             .zip(&ts_list[1..ts_list.len()])
             .for_each(|(elem1, elem2)| {

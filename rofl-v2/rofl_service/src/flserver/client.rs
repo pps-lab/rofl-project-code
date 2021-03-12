@@ -12,7 +12,6 @@ use log::info;
 use model_parameters::{ModelParametersMeta, ParamMessage};
 use prost::Message;
 use rofl_crypto::pedersen_ops::zero_scalar_vec;
-use std::iter::FromIterator;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
@@ -81,9 +80,9 @@ impl FlServiceClient {
         training_client: Box<FlTraining>,
     ) -> Self {
         FlServiceClient {
-            client_id: client_id,
+            client_id,
             grpc: Box::new(FlserviceClient::new(channel)),
-            training_client: training_client,
+            training_client,
         }
     }
 
@@ -99,13 +98,7 @@ impl FlServiceClient {
             .training_client
             .train_for_round(model_config.clone(), params.into_vec(), round_id, model_id)
             .await;
-        if let Some(trained_params) = trained_params_opt {
-            Some(PlainParams {
-                content: trained_params,
-            })
-        } else {
-            None
-        }
+        trained_params_opt.map(|trained_params| PlainParams {content: trained_params,})
     }
 
     pub fn encrypt_data(&self, params: &PlainParams, conifg: &Config) -> Option<EncModelParams> {
@@ -139,7 +132,7 @@ impl FlServiceClient {
             param_message: Some(train_request::ParamMessage::Params(ModelParameters {
                 param_message: Some(model_parameters::ParamMessage::ParamMeta(
                     ModelParametersMeta {
-                        model_id: model_id,
+                        model_id,
                         round_id: round_id as i32,
                         num_blocks: num_packets as i32,
                     },
@@ -158,7 +151,7 @@ impl FlServiceClient {
                 param_message: Some(train_request::ParamMessage::Params(ModelParameters {
                     param_message: Some(model_parameters::ParamMessage::ParamBlock(DataBlock {
                         block_number: packet_num as u32,
-                        data: Vec::from_iter(buffer[begin..end].iter().cloned()),
+                        data: buffer[begin..end].to_vec(),
                     })),
                 })),
             };
@@ -169,7 +162,7 @@ impl FlServiceClient {
         data_send
     }
 
-    pub async fn train_model(&mut self, model_id: i32, _verbose: bool) -> () {
+    pub async fn train_model(&mut self, model_id: i32, _verbose: bool) {
         info!("Client {} starts training model", self.client_id);
         let (mut outbound, rx) = mpsc::channel(CHAN_BUFFER_SIZE);
 
@@ -181,8 +174,8 @@ impl FlServiceClient {
             let request = TrainRequest {
                 param_message: Some(train_request::ParamMessage::StartMessage(
                     WorkerRegisterMessage {
-                        model_id: model_id,
-                        client_id: client_id,
+                        model_id,
+                        client_id,
                     },
                 )),
             };

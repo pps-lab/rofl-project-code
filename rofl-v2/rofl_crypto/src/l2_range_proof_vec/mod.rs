@@ -50,7 +50,7 @@ pub fn create_rangeproof_l2(
         .unwrap();
 
     // Check for overflows, strictly not required in proving but otherwise we prove bogus
-    if scalar_to_f32(&val) != val_float {
+    if (scalar_to_f32(&val) - val_float).abs() > f32::EPSILON {
         return Err(L2RangeProofError::OverflowError(
             scalar_to_f32(&val).to_string(),
             val_float.to_string(),

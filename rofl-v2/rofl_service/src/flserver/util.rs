@@ -6,6 +6,11 @@ pub struct DataBlockStorage {
     block_counter: u32,
     data: Vec<u8>,
 }
+impl Default for DataBlockStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl DataBlockStorage {
     pub fn new() -> Self {

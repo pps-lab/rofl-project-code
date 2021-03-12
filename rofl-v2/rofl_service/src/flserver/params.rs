@@ -96,10 +96,10 @@ impl EncModelParamsAccumulator {
                 false
             }
             EncModelParams::EncRange(params) => {
-                return self.gamal_accumulate(&params.enc_values);
+                self.gamal_accumulate(&params.enc_values)
             }
             EncModelParams::EncL2(params) => {
-                return self.l2_vec_accumulate(&params.enc_values);
+                self.l2_vec_accumulate(&params.enc_values)
             }
         }
     }
@@ -107,7 +107,7 @@ impl EncModelParamsAccumulator {
     pub fn extract(&self, table: &BSGSTable) -> Option<Vec<f32>> {
         match self {
             EncModelParamsAccumulator::Plain(params) => {
-                return Some(params.content.clone());
+                Some(params.content.clone())
             }
             EncModelParamsAccumulator::Enc(enc_params) => {
                 // Check if aggregation is correct
@@ -122,7 +122,7 @@ impl EncModelParamsAccumulator {
                 let scalar_vec: Vec<Scalar> = discrete_log_vec_table(&rp_vec, table);
                 let f32_vec: Vec<f32> = scalar_to_f32_vec(&scalar_vec);
                 // info!("Client result {}", f32_vec[0]);
-                return Some(f32_vec);
+                Some(f32_vec)
             }
         }
     }
@@ -144,15 +144,15 @@ impl EncModelParams {
     pub fn unity(param_type: &EncModelParamType, size: usize) -> EncModelParamsAccumulator {
         match param_type {
             EncModelParamType::Plain => {
-                return EncModelParamsAccumulator::Plain(PlainParams {
+                EncModelParamsAccumulator::Plain(PlainParams {
                     content: vec![0.0; size],
-                });
+                })
             }
             EncModelParamType::EncRange => {
-                return EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size]);
+                EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size])
             }
             EncModelParamType::EncL2 => {
-                return EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size]);
+                EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size])
             }
         }
     }
@@ -160,7 +160,7 @@ impl EncModelParams {
     pub fn verify(&self) -> bool {
         match self {
             EncModelParams::Plain(_) => {
-                return true;
+                true
             }
             EncModelParams::EncRange(params) => {
                 //Check rand proof
@@ -180,7 +180,7 @@ impl EncModelParams {
                         return ok && ok_range;
                     }
                 }
-                return false;
+                false
             }
             EncModelParams::EncL2(params) => {
                 //Check rand proof
@@ -209,7 +209,7 @@ impl EncModelParams {
                         }
                     }
                 }
-                return false;
+                false
             }
         }
     }
@@ -217,32 +217,32 @@ impl EncModelParams {
     pub fn verifiable(&self) -> bool {
         match self {
             EncModelParams::Plain(_) => {
-                return false;
+                false
             }
             _ => {
-                return true;
+                true
             }
         }
     }
 
     pub fn length(&self) -> usize {
         match self {
-            EncModelParams::Plain(params) => return params.content.len(),
-            EncModelParams::EncRange(params) => return params.enc_values.len(),
-            EncModelParams::EncL2(params) => return params.enc_values.len(),
+            EncModelParams::Plain(params) => params.content.len(),
+            EncModelParams::EncRange(params) => params.enc_values.len(),
+            EncModelParams::EncL2(params) => params.enc_values.len(),
         }
     }
 
     pub fn serialize(&self) -> Vec<u8> {
         match self {
             EncModelParams::Plain(params) => {
-                return bincode::serialize(&params.content).unwrap();
+                bincode::serialize(&params.content).unwrap()
             }
             EncModelParams::EncRange(params) => {
-                return params.serialize();
+                params.serialize()
             }
             EncModelParams::EncL2(params) => {
-                return params.serialize();
+                params.serialize()
             }
         }
     }
@@ -250,15 +250,15 @@ impl EncModelParams {
     pub fn deserialize(param_type: &EncModelParamType, data: &Vec<u8>) -> Self {
         match param_type {
             EncModelParamType::Plain => {
-                return EncModelParams::Plain(PlainParams {
+                EncModelParams::Plain(PlainParams {
                     content: bincode::deserialize(data).unwrap(),
-                });
+                })
             }
             EncModelParamType::EncRange => {
-                return EncModelParams::EncRange(EncParamsRange::deserialize(data));
+                EncModelParams::EncRange(EncParamsRange::deserialize(data))
             }
             EncModelParamType::EncL2 => {
-                return EncModelParams::EncL2(EncParamsL2::deserialize(data));
+                EncModelParams::EncL2(EncParamsL2::deserialize(data))
             }
         }
     }
@@ -271,27 +271,27 @@ impl EncModelParams {
     ) -> Option<Self> {
         match param_type {
             EncModelParamType::Plain => {
-                return Some(EncModelParams::Plain(PlainParams {
+                Some(EncModelParams::Plain(PlainParams {
                     content: plain_params.content.clone(),
-                }));
+                }))
             }
             EncModelParamType::EncRange => {
-                return Some(EncModelParams::EncRange(EncParamsRange::encrypt(
+                Some(EncModelParams::EncRange(EncParamsRange::encrypt(
                     &plain_params.content,
                     blindings,
                     config.value_range as usize,
                     config.n_partition as usize,
                     config.check_percentage,
-                )));
+                )))
             }
             EncModelParamType::EncL2 => {
-                return Some(EncModelParams::EncL2(EncParamsL2::encrypt(
+                Some(EncModelParams::EncL2(EncParamsL2::encrypt(
                     &plain_params.content,
                     blindings,
                     config.value_range as usize,
                     config.n_partition as usize,
                     config.l2_value_range as usize,
-                )));
+                )))
             }
         }
     }
@@ -396,10 +396,10 @@ impl EncParamsRange {
         };
         EncParamsRange {
             enc_values: enc_update,
-            rand_proofs: rand_proofs,
-            range_proofs: range_proofs,
-            prove_range: prove_range,
-            check_percentage: check_percentage,
+            rand_proofs,
+            range_proofs,
+            prove_range,
+            check_percentage,
         }
     }
 
@@ -408,7 +408,7 @@ impl EncParamsRange {
         let rand_proofs = encode_rand_proof_vec(&self.rand_proofs);
         let range_proofs = encode_range_proof_vec(&self.range_proofs);
         let enc_data = EncRangeData {
-            enc_values: enc_values,
+            enc_values,
             rand_proof: rand_proofs,
             range_proof: range_proofs,
             range_bits: self.prove_range as i32,
@@ -425,9 +425,9 @@ impl EncParamsRange {
         let rand_proofs = decode_rand_proof_vec(&msg.rand_proof);
         let range_proofs = decode_range_proof_vec(&msg.range_proof);
         EncParamsRange {
-            enc_values: enc_values,
-            rand_proofs: rand_proofs,
-            range_proofs: range_proofs,
+            enc_values,
+            rand_proofs,
+            range_proofs,
             prove_range: msg.range_bits as usize,
             check_percentage: msg.check_percentage,
         }
@@ -439,7 +439,7 @@ pub struct EncParamsL2 {
     pub enc_values: Vec<SquareRandProofCommitments>,
     pub square_proofs: Vec<SquareRandProof>,
     pub range_proofs: Vec<RangeProof>,
-    pub square_range_proof: RangeProof,
+    pub square_range_proof: Box<RangeProof>,
     pub prove_range: usize,
     pub l2_prove_range: usize,
 }
@@ -514,9 +514,9 @@ impl EncParamsL2 {
         EncParamsL2 {
             enc_values: enc_update,
             square_proofs: rand_proofs,
-            range_proofs: range_proofs,
-            prove_range: prove_range,
-            square_range_proof: sum_range_proofs,
+            range_proofs,
+            prove_range,
+            square_range_proof: Box::new(sum_range_proofs),
             l2_prove_range: l2_range,
         }
     }
@@ -526,7 +526,7 @@ impl EncParamsL2 {
         let square_proofs = encode_square_proof_vec(&self.square_proofs);
         let range_proofs = encode_range_proof_vec(&self.range_proofs);
         let enc_data = EncNormData {
-            enc_values: enc_values,
+            enc_values,
             square_proof: square_proofs,
             range_proof: range_proofs,
             square_range_proof: self.square_range_proof.to_bytes(),
@@ -544,11 +544,11 @@ impl EncParamsL2 {
         let square_proofs = decode_square_proof_vec(&msg.square_proof);
         let range_proofs = decode_range_proof_vec(&msg.range_proof);
         EncParamsL2 {
-            enc_values: enc_values,
-            square_proofs: square_proofs,
-            range_proofs: range_proofs,
+            enc_values,
+            square_proofs,
+            range_proofs,
             prove_range: msg.range_bits as usize,
-            square_range_proof: RangeProof::from_bytes(&msg.square_range_proof).unwrap(),
+            square_range_proof: Box::new(RangeProof::from_bytes(&msg.square_range_proof).unwrap()),
             l2_prove_range: msg.l2_range_bits as usize,
         }
     }
@@ -575,9 +575,9 @@ impl PlainParams {
         return PlainParams {
             content: (0..size).map(|_| normal.sample(&mut rand::thread_rng()) as f32).collect(),
         };*/
-        return PlainParams {
+        PlainParams {
             content: vec![0.0; size],
-        };
+        }
     }
 
     pub fn into_vec(self) -> Vec<f32> {
@@ -592,7 +592,7 @@ impl PlainParams {
             .iter_mut()
             .zip(other.content.iter())
             .for_each(|(local_v, other_v)| *local_v += other_v);
-        return true;
+        true
     }
 
     pub fn ml_update_in_place(&mut self, other: &PlainParams, learning_rate: f32) -> bool {
@@ -603,7 +603,7 @@ impl PlainParams {
             .iter_mut()
             .zip(other.content.iter())
             .for_each(|(local_v, other_v)| *local_v += other_v * learning_rate);
-        return true;
+        true
     }
 
     pub fn multiply_inplace(&mut self, value: f32) {
@@ -623,9 +623,9 @@ impl PlainParams {
 
     pub fn deserialize(data: &[u8]) -> Self {
         let msg = FloatBlock::decode(&mut Cursor::new(data)).unwrap();
-        return PlainParams {
+        PlainParams {
             content: msg.floats,
-        };
+        }
     }
 }
 
@@ -639,7 +639,7 @@ impl GlobalModel {
     pub fn new(size: usize, learning_rate: f32) -> Self {
         GlobalModel {
             params: PlainParams::unity(size),
-            learning_rate: learning_rate,
+            learning_rate,
         }
     }
 
@@ -651,7 +651,7 @@ impl GlobalModel {
                     .map(|_| normal.sample(&mut rand::thread_rng()) as f32)
                     .collect(),
             },
-            learning_rate: learning_rate,
+            learning_rate,
         }
     }
 
@@ -662,17 +662,15 @@ impl GlobalModel {
     pub fn new_from_file(learning_rate: f32, file_path: &str) -> Self {
         let file = std::fs::File::open(file_path).unwrap();
         let mut vec_out = Vec::new();
-        for line in std::io::BufReader::new(file).lines() {
-            if let Ok(data) = line {
-                let num = data.trim().parse::<f32>();
-                if let Ok(param) = num {
-                    vec_out.push(param);
-                }
+        for data in std::io::BufReader::new(file).lines().flatten() {
+            let num = data.trim().parse::<f32>();
+            if let Ok(param) = num {
+                vec_out.push(param);
             }
         }
         GlobalModel {
             params: PlainParams { content: vec_out },
-            learning_rate: learning_rate,
+            learning_rate,
         }
     }
 

@@ -100,7 +100,7 @@ impl RandProof {
         if slice.len() != 4 * 32 {
             return Err(ProofError::FormatError);
         }
-        let C_prime_opt = ElGamalPair::from_bytes(&slice[0 * 32..2 * 32]);
+        let C_prime_opt = ElGamalPair::from_bytes(&slice[0..2 * 32]);
         let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[2 * 32..3 * 32]));
         let Z_r_opt = Scalar::from_canonical_bytes(read32(&slice[3 * 32..4 * 32]));
         if C_prime_opt.is_err() || Z_m_opt.is_none() || Z_r_opt.is_none() {

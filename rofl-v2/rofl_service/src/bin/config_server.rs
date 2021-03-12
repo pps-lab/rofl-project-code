@@ -1,7 +1,6 @@
 use clap::{App, Arg};
 use flexi_logger::{opt_format, LogTarget, Logger};
 use log::info;
-use num_cpus;
 use params::GlobalModel;
 use rofl_service::flserver::flservice::flservice_server::FlserviceServer;
 use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
@@ -74,15 +73,15 @@ fn get_training_state_from_config(path: &str, lazy_eval: bool, std_init: f32) ->
         lr_decay: 0.0,
         model_id: 1,
         probabilistic_quantization: false,
-        fp_bits: fp_bits,
-        fp_frac: fp_frac,
+        fp_bits,
+        fp_frac,
         range_bits: 8,
     };
     let crypto_config = CryptoConfig {
-        value_range: value_range,
-        n_partition: n_partition,
-        l2_value_range: l2_value_range,
-        check_percentage: check_percentage,
+        value_range,
+        n_partition,
+        l2_value_range,
+        check_percentage,
         enc_type: enc_type as i32,
     };
     let global_model = if let Some(model_path) = init_model_path {

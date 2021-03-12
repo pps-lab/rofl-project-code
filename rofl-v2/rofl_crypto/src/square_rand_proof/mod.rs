@@ -128,7 +128,7 @@ impl SquareRandProof {
         if slice.len() != 6 * 32 {
             return Err(ProofError::FormatError);
         }
-        let C_prime_opt = SquareRandProofCommitments::from_bytes(&slice[0 * 32..3 * 32]);
+        let C_prime_opt = SquareRandProofCommitments::from_bytes(&slice[0..3 * 32]);
         let Z_m_opt = Scalar::from_canonical_bytes(read32(&slice[3 * 32..4 * 32]));
         let Z_r_1_opt = Scalar::from_canonical_bytes(read32(&slice[4 * 32..5 * 32]));
         let Z_r_2_opt = Scalar::from_canonical_bytes(read32(&slice[5 * 32..6 * 32]));
