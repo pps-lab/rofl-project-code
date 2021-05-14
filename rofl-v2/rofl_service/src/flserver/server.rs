@@ -452,6 +452,7 @@ impl TrainingRoundState {
                 let (sender, _receivr) = &*Arc::clone(&self.notify_aggr);
                 let _res = sender.send(true);
             }
+            
             {
                 let (tmp_notify, cond) = &*Arc::clone(&self.notify_verify);
                 let mut started = tmp_notify.lock().unwrap();
@@ -685,7 +686,9 @@ impl Flservice for DefaultFlService {
                                             });
                                         });
                                     } else {
-                                        local_blocking_group_state.verifaction_done();
+                                        tokio::spawn(async move {
+                                            local_blocking_group_state.verifaction_done();
+                                        });
                                     }
 
                                     let local_enc_params_aggr = Arc::clone(&local_enc_params);
