@@ -88,16 +88,20 @@ class Client:
         self._apply_dropout(grads)
         return grads
 
-    def apply_quantization(self, update):
+    def apply_quantization(self, old_weights, new_weights):
         if self.config.quantization is None:
-            return update
+            return new_weights
+        update = [new_weights[i] - old_weights[i]
+                  for i in range(len(old_weights))]
         quantization = self.config.quantization
         if quantization.type == 'deterministic':
-            return prob_clip.clip(update, quantization.bits, quantization.frac, False)
+            update = prob_clip.clip(update, quantization.bits, quantization.frac, False)
         elif quantization.type == 'probabilistic':
-            return prob_clip.clip(update, quantization.bits, quantization.frac, True)
+            update = prob_clip.clip(update, quantization.bits, quantization.frac, True)
         else:
             raise Exception('Selected quantization method does not exist!')
+
+        return [old_weights[i] + update[i] for i in range(len(old_weights))]
 
     def perform_attack(self):
         try:
@@ -113,6 +117,8 @@ class Client:
         args['loss_object'] = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
         args['optimizer'] = self.build_optimizer(args)
         args.pop('learning_rate', None)
+        args.pop('reduce_lr', None)
+        args.pop('attacker_full_dataset', None)
         malicious_weights = attack.generate(self.dataset, self.model, **args)
         return malicious_weights
 
@@ -123,12 +129,20 @@ class Client:
         step_decay = optimizer_config['step_decay'] if 'step_decay' in optimizer_config else None
         if opt == "Adam":
             if lr is not None:
-                if step_decay is not None:
+                if step_decay is not None and step_decay:
                     decay = StepDecay(lr,
                                       optimizer_config['num_epochs'] * optimizer_config['num_batch'])
                     optimizer_config['step_decay'] = decay
                     return tf.keras.optimizers.Adam(learning_rate=decay)
                 return tf.keras.optimizers.Adam(learning_rate=lr)
+        if opt == "SGD":
+            if lr is not None:
+                if step_decay is not None and step_decay:
+                    decay = StepDecay(lr,
+                                      optimizer_config['num_epochs'] * optimizer_config['num_batch'])
+                    optimizer_config['step_decay'] = decay
+                    return tf.keras.optimizers.SGD(learning_rate=decay)
+                return tf.keras.optimizers.SGD(learning_rate=lr)
         return tf.keras.optimizers.Adam()
 
 
@@ -145,7 +159,7 @@ class Client:
         from src.attack import evasion
         cls = getattr(evasion, evasion_name)
         if evasion_name == 'NormBoundPGDEvasion':
-            return cls(old_weights=self.weights, **args)
+            return cls(old_weights=self.weights, benign_updates=self.benign_updates_this_round, **args)
         elif evasion_name == 'TrimmedMeanEvasion':
             assert self.benign_updates_this_round is not None, "Only full knowledge attack is supported at this moment"
             return cls(benign_updates_this_round=self.benign_updates_this_round, **args)
@@ -164,7 +178,6 @@ class Client:
             loss_value = self.loss_object(y_true=batch_y, y_pred=predictions)
             reg = tf.reduce_sum(self.model.losses)
             total_loss = loss_value + reg
-            # tf.print(total_loss)
 
         grads = self._compute_gradients_honest(tape, total_loss)
         self.honest_optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
@@ -482,7 +495,7 @@ class Client:
         else:
             raise Exception('Unknown type of attack!')
 
-        if self.config.estimate_other_updates:
+        if self.config.malicious.estimate_other_updates:
             # I guess new_weights should be updated based on this difference
             new_weights = self.apply_estimation(self.weights, new_weights)
 
@@ -511,7 +524,7 @@ class Client:
         # self.eval_train(loss_object)
 
         new_weights = self.apply_defense(self.weights, new_weights)
-        new_weights = self.apply_quantization(new_weights)
+        new_weights = self.apply_quantization(self.weights, new_weights)
 
         # print("Post clip")
         # self.model.set_weights(new_weights)
@@ -621,7 +634,7 @@ class Client:
         l2_norm_tensor = tf.constant(l2)
         layers_to_clip = [tf.reshape(delta_weights[i], [-1]) for i in range(len(delta_weights)) if
                           i in clip_layers]  # for norm calculation
-        norm = tf.norm(tf.concat(layers_to_clip, axis=0))
+        norm = max(tf.norm(tf.concat(layers_to_clip, axis=0)), 0.00001)
         # print(f"Norm: {norm}")
         multiply = min((l2_norm_tensor / norm).numpy(), 1.0)
 
