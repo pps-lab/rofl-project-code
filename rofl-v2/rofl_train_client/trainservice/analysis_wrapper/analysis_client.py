@@ -21,7 +21,8 @@ class AnalysisClientWrapper():
         print(self.config)
 
         batch_size = self.config.client.benign_training.batch_size
-        self.dataset = load_dataset(dataset_path, batch_size)
+        augment_data = self.config.dataset.augment_data
+        self.dataset = load_dataset(dataset_path, batch_size, augment_data)
 
         malicious = False
         self.client = Client("dummy_id", self.config.client, self.dataset, malicious)
@@ -39,7 +40,7 @@ class AnalysisClientWrapper():
     def train(self, round):
         logging.info(f"Training round {round}")
         self.model.set_weights(self.client.weights)
-        self.evaluate()
+        # self.evaluate()
         self.client.set_model(self.model)
         self.client.train(round)
         logging.info(f"Done training round {round}")
