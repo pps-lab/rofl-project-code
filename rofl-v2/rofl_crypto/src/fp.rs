@@ -43,6 +43,9 @@ mod fp_config {
         *x.first().unwrap()
     }
     pub const PRECOMP_BIAS: usize = 3;
+
+    pub const BSGS_N_BITS: usize = N_BITS;
+    pub type BSGS_URawFix = URawFix;
 }
 
 #[cfg(feature = "fp16")]
@@ -56,6 +59,9 @@ mod fp_config {
         LittleEndian::read_u16(x)
     }
     pub const PRECOMP_BIAS: usize = 7;
+
+    pub const BSGS_N_BITS: usize = N_BITS;
+    pub type BSGS_URawFix = URawFix;
 }
 
 #[cfg(feature = "fp32")]
@@ -68,7 +74,15 @@ mod fp_config {
     pub fn read_from_bytes(x: &[u8]) -> u32 {
         LittleEndian::read_u32(x)
     }
-    pub const PRECOMP_BIAS: usize = 6;
+    pub const PRECOMP_BIAS: usize = 7;
+
+    // here, use smaller lookup table
+    // The reason we would want to use fp32 is for the L2, as the norm sum may take a lot of space
+    // due to the multiplication of fixed-point represented integers, every mult will shift the number
+    // up by 2^frac. However, since the individual parameters stay small, in the order of 16, we
+    // only have to use a 16-bit lookup table
+    pub const BSGS_N_BITS: usize = 16;
+    pub type BSGS_URawFix = u16;
 }
 
 #[cfg(feature = "fp64")]
@@ -82,6 +96,10 @@ mod fp_config {
         LittleEndian::read_u64(x)
     }
     pub const PRECOMP_BIAS: usize = 0;
+
+    // here, use smaller lookup table
+    pub const BSGS_N_BITS: usize = 16;
+    pub type BSGS_URawFix = u16;
 }
 
 #[cfg(not(feature = "frac0"))]
@@ -97,7 +115,7 @@ mod fp_config {
 #[cfg(not(feature = "frac10"))]
 #[cfg(not(feature = "frac11"))]
 #[cfg(not(feature = "frac12"))]
-pub type Frac = U5; //default fractional
+pub type Frac = U7; //default fractional
 
 #[cfg(not(feature = "fp8"))]
 #[cfg(not(feature = "fp16"))]
@@ -113,6 +131,9 @@ mod fp_config {
         LittleEndian::read_u16(x)
     }
     pub const PRECOMP_BIAS: usize = 7;
+
+    pub const BSGS_N_BITS: usize = N_BITS;
+    pub type BSGS_URawFix = URawFix;
 }
 
-pub use self::fp_config::{read_from_bytes, Fix, IRawFix, URawFix, N_BITS, PRECOMP_BIAS};
+pub use self::fp_config::{read_from_bytes, Fix, IRawFix, URawFix, N_BITS, PRECOMP_BIAS, BSGS_URawFix, BSGS_N_BITS};

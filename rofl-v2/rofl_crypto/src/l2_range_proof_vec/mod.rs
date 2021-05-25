@@ -9,7 +9,7 @@ use rayon::prelude::*;
 pub mod errors;
 use self::errors::L2RangeProofError;
 use crate::conversion32::{f32_to_scalar, get_clip_bounds, get_l2_clip_bounds, scalar_to_f32};
-use crate::fp::{read_from_bytes, Fix, URawFix};
+use crate::fp::{read_from_bytes, Fix, URawFix, N_BITS};
 
 /// prove that value x is element of [-2^((prove_range-1)/n_frac), 2^((prove_range-1)/n_frac)]
 pub fn create_rangeproof_l2(
@@ -329,7 +329,7 @@ mod tests {
         // let num_frac = 5
         // let range: f32 = 1023.96875 * 2.0;
         // let
-        let prove_range: usize = 16;
+        let prove_range: usize = 32;
         // let values: Vec<f32> =  clip_f32_to_range_vec(&vec![-1.25, 0.5, -(Fix::max_value().to_float::<f32>())], prove_range);
         let values: Vec<f32> = vec![7.9];
         // let bb = get_l2_clip_bounds(prove_range);
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_rangeproof_bound_negative() {
-        let prove_range: usize = 16;
+        let prove_range: usize = 32;
         let values: Vec<f32> = vec![-7.9];
         let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
         let (range_proof, commit) =
@@ -394,7 +394,7 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         let prove_range: usize = N_BITS; // Because of the square
-        let (fp_min, fp_max) = get_clip_bounds(prove_range / 2); // Otw out of bounds?
+        let (fp_min, fp_max) = get_clip_bounds(8); // Otw out of bounds?
         println!("{} {} {}", prove_range, fp_min, fp_max);
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
@@ -436,10 +436,11 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         // prove_range as to be at least 8 bit
-        let prove_range: usize = cmp::max(N_BITS / 2, 8);
+        let prove_range: usize = N_BITS;
         //let float_range: f32 = 2f32.powi((range_exp-1) as i32) - 1f32/(Fix::frac_nbits() as f32);
         let float_range: f32 =
             Fix::from_bits(((1u128 << prove_range) - 1u128) as URawFix).to_float();
+        println!("float range {:?}", float_range);
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
                 .map(|_| rng.gen_range::<f32>(-float_range, float_range))
@@ -515,9 +516,11 @@ mod tests {
         assert_eq!(Scalar::zero(), f32_to_scalar(&f0));
         let blindings: Vec<Scalar> = (0..x_vec.len()).map(|_| Scalar::zero()).collect();
         let x_vec_clipped: Vec<f32> = clip_f32_to_range_vec(&x_vec, prove_range);
+        // let x_vec_clipped_small: Vec<f32> = x_vec_clipped.iter().collect();
+        println!("{:?} {:?} {:?} {:?}", x_vec_clipped, prove_range, min_val, max_val);
 
         let (_, commitments_x) =
-            create_rangeproof_l2(&x_vec_clipped, &blindings, prove_range, n_partition).unwrap();
+            create_rangeproof_l2(&x_vec_clipped, &blindings, N_BITS, n_partition).unwrap();
         let x_clipped_scalar: Vec<Scalar> = default_discrete_log_vec(&vec![commitments_x]);
         let x_clipped_dlog: Vec<f32> = scalar_to_f32_vec(&x_clipped_scalar);
 

@@ -24,7 +24,8 @@ def clip(updates, num_bits, num_frac, random=True):
     #         val = b + f
     #         bins.append(val)
     fra = 1.0 / pow(2, num_frac)
-    lim = int(pow(2, num_base - 1))
+    lim = int(pow(2, num_base - 1)) - fra
+
     bins = np.arange(-lim, lim, fra)
 
     clipped_all = []

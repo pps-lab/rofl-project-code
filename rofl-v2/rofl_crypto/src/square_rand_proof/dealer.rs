@@ -87,6 +87,8 @@ impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
         let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r_1);
         let src_eg_pair: ElGamalPair = &self.C_prime.c + &(&self.challenge * &self.C.c);
         if dst_eg_pair != src_eg_pair {
+            // If you get this error, it could be that the parameters are outside of the parameter-wise
+            // range-proof range. (for L2)
             return Err(ProofError::ProvingErrorRandomness);
         }
 

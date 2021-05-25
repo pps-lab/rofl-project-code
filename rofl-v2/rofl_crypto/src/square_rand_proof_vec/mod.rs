@@ -164,6 +164,8 @@ mod tests {
     use crate::pedersen_ops::rnd_scalar_vec;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
+    use crate::range_proof_vec::create_rangeproof;
+    use crate::conversion32::get_clip_bounds;
 
     #[test]
     fn test_l2rangeproof_roundtrip() {
@@ -188,4 +190,21 @@ mod tests {
         eg_pair_vec[0].c.R += &one;
         assert!(!verify_l2rangeproof_vec(&rand_proof_vec, &eg_pair_vec).unwrap());
     }
+
+    #[test]
+    fn test_l2rangeproof_existing_roundtrip() {
+        let (min, max) = get_clip_bounds(8);
+        println!("{:?} {:?}", min, max);
+        let values: Vec<f32> = vec![1.2265625, -1.0546875];
+        let blindings: Vec<Scalar> = rnd_scalar_vec(values.len());
+        let (_, values_com) = create_rangeproof(&values, &blindings, 8, 1)
+            .unwrap();
+
+        let blindings_2: Vec<Scalar> = rnd_scalar_vec(values.len());
+        let (rand_proof_vec, eg_pair_vec) =
+            create_l2rangeproof_vec_existing(&values, values_com, &blindings, &blindings_2)
+                .unwrap();
+        assert!(verify_l2rangeproof_vec(&rand_proof_vec, &eg_pair_vec).unwrap());
+    }
+
 }

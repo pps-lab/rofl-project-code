@@ -20,7 +20,11 @@ client:
     num_epochs: 2
     batch_size: 64
     optimizer: SGD
-    learning_rate: 0.01
+    learning_rate: 0.1
+  quantization:
+    type: probabilistic
+    bits: 8
+    frac: 7
 crypto:
   enc_type: Plain #l2, Range, Plain
   value_range: 32
@@ -28,7 +32,7 @@ crypto:
   l2_value_range: 32
   check_percentage: 1.0 # 0.0-1.0 for Range i.e., round(num_rangeproofs * check_percentage)
   fp_bits: 32
-  fp_frac: 12
+  fp_frac: 7
 
 dataset:
   dataset: mnist
