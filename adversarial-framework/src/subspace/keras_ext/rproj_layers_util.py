@@ -214,6 +214,9 @@ class OffsetCreatorSparseProj(object):
         normalizer = tf.Variable(tf.tile([norm], [weight_basis.size]),
                                  trainable=False, name='%s_normalizer' % name)
 
+        self.basis_matrices.append(ww)
+        self.basis_matrix_normalizers.append(normalizer)
+
         return OffsetCreateSparseProjExec(weight_basis, normalizer, ww, shape, name)
 
         # # Pre-multiply the normalizer by the low-rank parameter vector to avoid a sparse matrix - sparse matrix product,

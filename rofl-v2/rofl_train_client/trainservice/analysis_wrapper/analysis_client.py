@@ -4,13 +4,13 @@ import tensorflow as tf
 import numpy as np
 
 from src.client import Client
-from src.tf_model import Model
 import src.config as cnf
 from src.data.tf_data import Dataset
 from src.main import load_model
 
 from . import util
 from .data_loader import load_dataset
+from .model_loader import load_model
 
 import logging
 
@@ -27,7 +27,7 @@ class AnalysisClientWrapper():
         malicious = False
         self.client = Client("dummy_id", self.config.client, self.dataset, malicious)
 
-        self.model = self.load_model(self.config)
+        self.model = load_model(self.config)
 
         self.num_weights = len(util.flatten_update(self.model.get_weights()))
 
@@ -45,14 +45,6 @@ class AnalysisClientWrapper():
         self.client.train(round)
         logging.info(f"Done training round {round}")
         return util.flatten_update(self.client.weights)
-
-    def load_model(self, config):
-        if config.environment.load_model is not None:
-            model = tf.keras.models.load_model(config.environment.load_model) # Load with weights
-        else:
-            model = Model.create_model(
-                config.client.model_name, config.server.intrinsic_dimension, config.client.model_weight_regularization)
-        return model
 
     def evaluate(self):
         self.model.compile(tf.keras.optimizers.SGD(), # Dummy, as we are not training

@@ -1,0 +1,41 @@
+environment:
+  num_clients: 4
+  num_selected_clients: 4
+  num_malicious_clients: 0
+  experiment_name: "intrinsic_noattack"
+  use_config_dir: true
+server:
+  num_rounds: 10
+  num_test_batches: 5
+  aggregator:
+    name: FedAvg
+  global_learning_rate: 1.0
+  intrinsic_dimension: 5000
+client:
+  model_name: dev_intrinsic
+  num_params: 5000
+#  num_params: 19166
+  model_init_path: "../mnist_dev_intrinsic_5k.txt"
+  benign_training:
+    num_epochs: 2
+    batch_size: 64
+    optimizer: SGD
+    learning_rate: 0.01
+crypto:
+  enc_type: Plain #l2, Range, Plain
+  value_range: 32
+  n_partition: 1
+  l2_value_range: 32
+  check_percentage: 1.0 # 0.0-1.0 for Range i.e., round(num_rangeproofs * check_percentage)
+  fp_bits: 32
+  fp_frac: 12
+
+dataset:
+  dataset: mnist
+  data_distribution: IID
+job:
+  minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+  cpu_cores: 20
+  cpu_mem_per_core: 4096
+  use_gpu: 1
+  gpu_memory_min: 10240

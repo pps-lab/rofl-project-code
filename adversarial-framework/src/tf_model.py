@@ -53,9 +53,10 @@ class Model:
                 tf.keras.layers.Dense(10, activation='softmax')
             ])
         elif model_name == 'lenet5_cifar':
-            model = build_lenet5(input_shape=(32, 32, 3))
+            model = build_lenet5(input_shape=(32, 32, 3), l2_reg=regularization_rate)
         elif model_name == 'lenet5_mnist':
-            model = build_lenet5(input_shape=(28, 28, 1))
+            model = build_lenet5(input_shape=(28, 28, 1), l2_reg=regularization_rate)
+            model.summary()
         elif model_name == 'allcnn':
             model = build_modelc(l2_reg=regularization_rate)
             model.summary()
@@ -63,6 +64,7 @@ class Model:
             model = build_cnn_model_cifar_allcnn(vsize=intrinsic_dimension, weight_decay=regularization_rate)
         elif model_name == 'resnet18':
             model = resnet_v1(input_shape=(32, 32, 3), depth=20)
+            model.summary()
         elif model_name == 'resnet32':
             model = resnet_v1(input_shape=(32, 32, 3), depth=32)
         elif model_name == 'resnet44':
@@ -75,52 +77,59 @@ class Model:
             model = resnet_v2(input_shape=(32, 32, 3), depth=20)
         elif model_name == 'resnet56_v2':
             model = resnet_v2(input_shape=(32, 32, 3), depth=56)
+            model.summary()
+            print("HI")
         elif model_name == 'dev_fc_intrinsic':
             model, _ = build_model_mnist_fc(vsize=intrinsic_dimension, width=100)
         elif model_name == 'bhagoji_intrinsic':
             model = build_cnn_model_mnist_bhagoji(vsize=intrinsic_dimension, proj_type='sparse')
         elif model_name == 'dev_intrinsic':
-            model = build_model_cifar_LeNet_fastfood(vsize=intrinsic_dimension)
-            # model = build_cnn_model_mnist_dev_conv(vsize=intrinsic_dimension, proj_type='sparse')
+            # model = build_model_cifar_LeNet_fastfood(vsize=intrinsic_dimension)
+            model = build_cnn_model_mnist_dev_conv(vsize=intrinsic_dimension, proj_type='sparse')
+            Model.normalize(model)
         elif model_name == 'mnistcnn_intrinsic':
             model = build_cnn_model_mnistcnn_conv(vsize=intrinsic_dimension, proj_type='sparse')
         elif model_name =='lenet5_intrinsic':
-            model = build_LeNet_cifar(vsize=intrinsic_dimension, proj_type='sparse')
+            # model = build_lenet_cifar_old(intrinsic_dimension)
+            model = build_LeNet_cifar(vsize=intrinsic_dimension, proj_type='sparse', weight_decay=0.001)
+            Model.normalize(model)
         else:
             raise Exception('model `%s` not supported' % model_name)
 
         return model
 
-    # @staticmethod
-    # def normalize():
-    #     basis_matrices = []
-    #     normalizers = []
-    #
-    #     for layer in model.layers:
-    #         try:
-    #             basis_matrices.extend(layer.offset_creator.basis_matrices)
-    #         except AttributeError:
-    #             continue
-    #         try:
-    #             normalizers.extend(layer.offset_creator.basis_matrix_normalizers)
-    #         except AttributeError:
-    #             continue
-    #
-    #     if len(basis_matrices) > 0 and not args.load:
-    #
-    #         if proj_type == 'sparse':
-    #
-    #             # Norm of overall basis matrix rows (num elements in each sum == total parameters in model)
-    #             bm_row_norms = tf.sqrt(tf.add_n([tf.sparse_reduce_sum(tf.square(bm), 1) for bm in basis_matrices]))
-    #             # Assign `normalizer` Variable to these row norms to achieve normalization of the basis matrix
-    #             # in the TF computational graph
-    #             rescale_basis_matrices = [tf.assign(var, tf.reshape(bm_row_norms, var.shape)) for var in normalizers]
-    #             _ = sess.run(rescale_basis_matrices)
-    #         elif proj_type == 'dense':
-    #             bm_sums = [tf.reduce_sum(tf.square(bm), 1) for bm in basis_matrices]
-    #             divisor = tf.expand_dims(tf.sqrt(tf.add_n(bm_sums)), 1)
-    #             rescale_basis_matrices = [tf.assign(var, var / divisor) for var in basis_matrices]
-    #             _ = sess.run(rescale_basis_matrices)
+    @staticmethod
+    def normalize(model, proj_type='sparse'):
+        basis_matrices = []
+        normalizers = []
+
+        for layer in model.layers:
+            try:
+                basis_matrices.extend(layer.offset_creator.basis_matrices)
+            except AttributeError:
+                continue
+            try:
+                normalizers.extend(layer.offset_creator.basis_matrix_normalizers)
+            except AttributeError:
+                continue
+
+        if proj_type == 'sparse':
+
+            # Norm of overall basis matrix rows (num elements in each sum == total parameters in model)
+            # bm_row_norms = tf.sqrt(tf.add_n([tf.sparse_reduce_sum(tf.square(bm), 1) for bm in basis_matrices]))
+            # # Assign `normalizer` Variable to these row norms to achieve normalization of the basis matrix
+            # # in the TF computational graph
+            # rescale_basis_matrices = [tf.assign(var, tf.reshape(bm_row_norms, var.shape)) for var in normalizers]
+            # _ = sess.run(rescale_basis_matrices)
+            bm_row_norms = tf.sqrt(tf.add_n([tf.sparse.reduce_sum(tf.square(bm), 1) for bm in basis_matrices]))
+            for var in normalizers:
+                var.assign(tf.reshape(bm_row_norms, var.shape))
+
+        elif proj_type == 'dense':
+            bm_sums = [tf.reduce_sum(tf.square(bm), 1) for bm in basis_matrices]
+            divisor = tf.expand_dims(tf.sqrt(tf.add_n(bm_sums)), 1)
+            rescale_basis_matrices = [tf.assign(var, var / divisor) for var in basis_matrices]
+            _ = sess.run(rescale_basis_matrices)
 
     @staticmethod
     def model_supported(model_name, dataset_name):
