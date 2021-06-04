@@ -43,6 +43,7 @@ class AnalysisClientWrapper():
         # self.evaluate()
         self.client.set_model(self.model)
         self.client.train(round)
+        self.evaluate()
         logging.info(f"Done training round {round}")
         return util.flatten_update(self.client.weights)
 
@@ -50,6 +51,6 @@ class AnalysisClientWrapper():
         self.model.compile(tf.keras.optimizers.SGD(), # Dummy, as we are not training
                            tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
                            metrics=['acc'])
-        score = self.model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=1)
-        print(f"Score {score}")
+        score = self.model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=0)
+        print(f"Accuracy {score}")
 
