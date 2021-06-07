@@ -37,10 +37,13 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
-    let table_size: Vec<&usize> = TABLE_SIZE.iter().filter(|x| **x <= N_BITS).collect();
+    let table_size: Vec<usize> = TABLE_SIZE.iter()
+        .filter(|x| **x <= N_BITS)
+        .map(|x| (1 << x) as usize)
+        .collect();
 
     for (d, ts) in iproduct!(&DIM, table_size) {
-        let label: String = label_solve_discrete_log(*d, *ts);
+        let label: String = label_solve_discrete_log(*d, ts);
         let mut bench_file = create_bench_file(&label);
 
         let x_vec: Vec<f32> = (0..*d)
@@ -49,7 +52,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
-        discrete_log_vec(&x_vec_enc, *ts);
+        discrete_log_vec(&x_vec_enc, ts);
         println!("sampling {} / dim: {} / table_size: {}", num_samples, d, ts);
 
         for i in 0..num_samples {
@@ -61,7 +64,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
 
             println!("sample nr: {}", i);
             let now = Instant::now();
-            discrete_log_vec(black_box(&x_vec_enc), black_box(*ts));
+            discrete_log_vec(black_box(&x_vec_enc), black_box(ts));
             let elapsed = now.elapsed().as_millis();
             println!("elapsed: {}", elapsed.to_string());
             bench_file.write_all(elapsed.to_string().as_bytes());
