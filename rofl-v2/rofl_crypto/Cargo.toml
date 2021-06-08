@@ -121,3 +121,7 @@ harness = false
 [[bench]]
 name = "create_squarerandproof_bench"
 harness = false
+
+[[bench]]
+name = "rangeproof_verify_bench"
+harness = false
