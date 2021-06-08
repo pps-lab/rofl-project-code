@@ -95,7 +95,7 @@ fn bench_rangeproof_verify_fn(bench: &mut Bencher) {
 fn createproof_label(dim: usize, range: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "create-rangeproof-{:02}-{:02}-{:05}-({})",
+        "create-rangeproof2-{:02}-{:02}-{:05}-({})",
         N_BITS,
         range,
         dim,
@@ -106,7 +106,7 @@ fn createproof_label(dim: usize, range: usize) -> String {
 fn verifyproof_label(dim: usize, range: usize) -> String {
     let t: DateTime<Local> = Local::now();
     format!(
-        "verify-rangeproof-{:02}-{:02}-{:05}-({})",
+        "verify-rangeproof2-{:02}-{:02}-{:05}-({})",
         N_BITS,
         range,
         dim,
