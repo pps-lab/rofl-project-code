@@ -130,7 +130,7 @@ mod fp_config {
     pub fn read_from_bytes(x: &[u8]) -> u16 {
         LittleEndian::read_u16(x)
     }
-    pub const PRECOMP_BIAS: usize = 7;
+    pub const PRECOMP_BIAS: usize = 8;
 
     pub const BSGS_N_BITS: usize = N_BITS;
     pub type BSGS_URawFix = URawFix;

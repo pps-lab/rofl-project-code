@@ -4,15 +4,25 @@ from concurrent import futures
 import logging
 import sys
 import argparse
+import os
+
+import numpy as np
 
 parser = argparse.ArgumentParser(description='Run the trainer')
 parser.add_argument('--config', type=str, default='../configs/example_config.yml',
                     help='Path to config')
-parser.add_argument('--dataset_path', type=str, default='"../configs/example_config.yml"',
+parser.add_argument('--dataset_path', type=str, default='../configs/example_config.yml',
                     help='Path to local client dataset')
 parser.add_argument('--port', type=int, default=50016,
                     help='Default port to run on')
+parser.add_argument('--framework_path', type=str, default='../../../adversarial-framework',
+                    help='Path to framework')
 args = parser.parse_args()
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+analysis_path = os.path.join(dir_path, args.framework_path)
+print(f"Using analysis framework at {analysis_path}")
+sys.path.insert(0, analysis_path)
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -37,6 +47,7 @@ class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
         client.set_weights(global_model_weights_list)
         new_weights = client.train(round_id)
         update = [new_weights[i] - global_model_weights_list[i] for i in range(len(new_weights))]
+        print(np.sum(np.array(update) * np.array(update)))
         return update
 
     def TrainForRound(self, request_iterator, context):

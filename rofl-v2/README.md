@@ -4,6 +4,23 @@
 Min: 1.52.0-nightly 
 ```
 
+### Running the setup
+
+#### Setting up
+1. Install Cargo
+1. Switch to nightly
+1. `cargo build`
+1. Pip install trainservice
+1. Pip install analysis framework
+
+Server: `./target/debug/flserver`
+Observer: `PYTHONPATH=$(pwd) python trainservice/observer.py`
+Client Trainer: 
+```
+Server: ./target/debug/flserver
+
+```
+
 ### Benchmark Log Format
 The benchmark files for both the server and the clients can be found in the benchlog folder.
 

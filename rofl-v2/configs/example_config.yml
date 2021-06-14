@@ -11,14 +11,15 @@ server:
     name: FedAvg
   global_learning_rate: 1.0
 client:
-  model_name: dev
-  num_params: 19166
+  model_name: resnet18
+  num_params: 274442
+#  num_params: 19166
   # model_init_path = "./init_model.txt"  -> Loads the initial global model from a file, num_params is then ignored
   benign_training:
     num_epochs: 2
-    batch_size: 24
-    optimizer: Adam
-    learning_rate: 0.001
+    batch_size: 64
+    optimizer: SGD
+    learning_rate: 0.01
 crypto:
   enc_type: Range #l2, Range, Plain
   value_range: 32

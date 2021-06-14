@@ -3,7 +3,7 @@ from trainservice import flservice_pb2_grpc
 
 import grpc
 import logging
-import sys
+import sys, os
 import argparse
 from trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
 
@@ -16,7 +16,14 @@ parser.add_argument('--address', type=str, default='localhost',
                     help='Default address to connect to')
 parser.add_argument('--port', type=int, default=50051,
                     help='Default port to connect to')
+parser.add_argument('--framework_path', type=str, default='../../../adversarial-framework',
+                    help='Path to framework')
 args = parser.parse_args()
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+analysis_path = os.path.join(dir_path, args.framework_path)
+print(f"Using analysis framework at {analysis_path}")
+sys.path.insert(0, analysis_path)
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)

@@ -1,5 +1,6 @@
 use clap::{App, Arg};
 use params::GlobalModel;
+use flexi_logger::{opt_format, LogTarget, Logger};
 use rofl_service::flserver::flservice::flservice_server::FlserviceServer;
 use rofl_service::flserver::flservice::{CryptoConfig, ModelConfig};
 use rofl_service::flserver::params;
@@ -34,7 +35,7 @@ fn dummy_training_state(
         n_partition: 1,
         l2_value_range: 32,
         check_percentage: 0.1,
-        enc_type: params::PLAIN_TYPE as i32,
+        enc_type: params::ENC_L2_TYPE as i32,
     };
     TrainingState::new(
         model_confing.model_id,
@@ -43,7 +44,8 @@ fn dummy_training_state(
         num_params,
         num_in_memory,
         train_until_round,
-        GlobalModel::new(num_params as usize, 1.0),
+        // GlobalModel::new(num_params as usize, 1.0),
+        GlobalModel::new_from_file(1.0, "mnist_dev_intrinsic_5k.txt"),
         false,
         true,
     )
@@ -76,7 +78,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = matches.value_of("port").unwrap_or("default.conf");
     let addr = format!("{}:{}", ip, port).parse().unwrap();
     let service = DefaultFlService::new(8);
-    service.register_new_trainig_state(dummy_training_state(4, 19166, 5, 10));
+
+    Logger::with_str("info")
+        .log_target(LogTarget::StdOut)
+        .format_for_stdout(opt_format)
+        .start()?;
+
+    service.register_new_trainig_state(dummy_training_state(1, 5000, 5, 10));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

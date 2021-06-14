@@ -6,6 +6,8 @@ from src.data.tf_data import Dataset, ImageGeneratorDataset
 
 def load_dataset(dataset_path, batch_size, augment_data) -> Dataset:
 
+    return load_mnist_dummy()
+
     val = np.load(dataset_path, allow_pickle=True)
     (x_train, y_train), (x_test, y_test) = (val[0], val[1]), (val[2], val[3])
     if augment_data:
