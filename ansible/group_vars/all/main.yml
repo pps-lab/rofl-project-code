@@ -1,0 +1,92 @@
+runs_dir: runs
+
+analysis_framework_repository_remote: git@github.com:pps-lab/fl-analysis.git
+analysis_framework_dir: fl-analysis
+
+experiment_results_dir: experiment_results
+
+analysis_remote_base_dir: "~"
+
+
+e2e_experiment_results_dir: e2e_experiment_results
+
+e2e_remote_base_dir: "/home/ubuntu"
+
+e2e_framework_dir: rofl-project-code
+
+e2e_framework_repository_remote: "git@github.com:pps-lab/rofl-project-code.git"
+
+e2e_config_path: "/home/ubuntu/config.yml"
+
+e2e_remote_data_dir: /home/ubuntu/data
+e2e_local_data_dir: data
+
+e2e:
+  log_dir: /home/ubuntu/logs
+  results_dir: experiment_results/e2e
+
+
+microbenchmark:
+  log_dir: /home/ubuntu/microbenchmark_logs
+  stdout_log_file: stdout
+  stderr_log_file: stderr
+  results_dir: experiment_results/micro
+
+e2e_base:
+  aws_region: eu-central-1
+  name: frankfurt
+  key_name: aws_ppl #rofl_frankfurt # add key to host file
+  vpc_name: rofl_vpc_server
+  vpc_cidr_block: 10.100.0.0/16
+  vpc_subnet_name: rofl_subnet_az1
+  vpc_subnet_cidr: 10.100.0.0/24
+  sg_name: rofl_sg
+  sg_desc: RoFL Security Group
+  
+micro_client:
+  instance_type: t2.medium
+  ec2_image: ami-0093cac2bf998a669
+  ec2_volume_snapshot: snap-0de0ff3947a9b6577
+  ec2_volume_size: 64
+  instance_tag: rofl_micro_client
+  host_group: tag_Name_rofl_micro_client # instance tag
+  avx_target_cpu: skylake # skylake for non-512 version
+
+
+e2e_client:
+#  instance_type: c5d.9xlarge
+  instance_type: t2.large
+  ec2_image: ami-0093cac2bf998a669
+  ec2_volume_snapshot: snap-0de0ff3947a9b6577
+  ec2_volume_size: 64
+  instance_tag: rofl_client
+  host_group: tag_Name_rofl_client # instance tag
+#  avx_target_cpu: skylake-avx512 # skylake for non-512 version
+  avx_target_cpu: skylake # skylake for non-512 version
+
+  trainer_port: 50016
+
+e2e_server:
+#  instance_type: c5d.9xlarge
+  instance_type: t2.large
+  ec2_image: ami-0093cac2bf998a669
+  ec2_volume_snapshot: snap-0de0ff3947a9b6577
+  ec2_volume_size: 64
+  instance_tag: rofl_server
+  host_group: tag_Name_rofl_server # instance tag
+#  avx_target_cpu: skylake-avx512 # skylake for non-512 version
+  avx_target_cpu: skylake # skylake for non-512 version
+
+  port: 50051
+
+mongodb:
+  username: analysis_admin
+  password: analysis_password
+
+analysis_client:
+  instance_type: p2.xlarge
+  ec2_image: ami-043bd215c6b3ad64e
+  ec2_volume_snapshot: snap-00016e5d2bccf4d0d
+  ec2_volume_size: 100
+  instance_tag: rofl_analysis_client
+  host_group: tag_Name_rofl_analysis_client # instance tag

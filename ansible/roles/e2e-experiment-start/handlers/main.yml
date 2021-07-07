@@ -1,0 +1,7 @@
+- name: reload systemctl
+  become: yes
+  delegate_to: "{{ host }}"
+  command: systemctl daemon-reload
+  loop: "{{ groups[e2e_server.host_group] + groups[e2e_client.host_group]}}"
+  loop_control:
+    loop_var: host

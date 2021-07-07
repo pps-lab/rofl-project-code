@@ -1,0 +1,109 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 0
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+    load_model: ./models/resnet18_080.h5
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip: ~
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.1
+    malicious:
+      attack_start: 5
+      attack_stop: 1005
+      estimate_other_updates: $VARIES$
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 25
+          num_batch: 10
+          poison_samples: 16
+          optimizer: SGD
+          learning_rate: 0.1
+          step_decay: true
+      backdoor:
+        type: semantic
+        train: [ 2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392 ]
+        test: [ 42119,42663,49392 ]
+        target_label: 2
+        remove_from_benign_dataset: true
+        augment_times: 200
+        augment_data: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          pgd_factor: $VARIES$
+          scale_factor: 100
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client:
+    clip: ~
+- client:
+    clip:
+      type: median_l2
+      value: 1.
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 1.
+          norm_type: median_l2
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 1.5
+          norm_type: median_l2
+- client:
+    clip:
+      type: median_l2
+      value: 2.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 2.0
+          norm_type: median_l2
+- client:
+    clip:
+      type: median_l2
+      value: 5.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 5.0
+          norm_type: median_l2
+- client:
+    clip:
+      type: median_l2
+      value: 10.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 10.0
+          norm_type: median_l2

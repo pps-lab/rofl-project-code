@@ -1,0 +1,35 @@
+- assert:
+    that:
+    - server_ec2_instances_num is defined
+    - client_ec2_instances_num is defined
+    # this can usually remain the same as ec2_instances_num. If you want to setup instances that remain stopped until a later stage than you can set a higher number
+    - server_ec2_instances_max_num is defined
+    - client_ec2_instances_max_num is defined
+    - server_ec2_instances_max_num | int >=  server_ec2_instances_num|int
+    - client_ec2_instances_max_num | int >=  client_ec2_instances_num|int
+    - e2e_client is defined
+
+- name: Create VPC in AWS
+  include_role:
+    name: aws-vpc-setup
+
+- name: Create Server EC2 Instances
+  include_role:
+    name: aws-ec2-instances
+  vars:
+    ec2config: "{{ e2e_server | combine( e2e_base ) }}"
+    ec2_instances_num: "{{ server_ec2_instances_num }}"
+    ec2_instances_max_num: "{{ server_ec2_instances_max_num }}" 
+
+- name: Create Client EC2 Instances
+  include_role:
+    name: aws-ec2-instances
+  vars:
+    ec2config: "{{ e2e_client | combine( e2e_base ) }}"
+    ec2_instances_num: "{{ client_ec2_instances_num }}"
+    ec2_instances_max_num: "{{ client_ec2_instances_max_num }}"
+
+- name: Delete VPC in AWS
+  include_role:
+    name: aws-vpc-clear
+  when: server_ec2_instances_max_num|int == 0 and client_ec2_instances_max_num|int == 0

@@ -1,0 +1,66 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 3383
+    num_selected_clients: 30
+    num_malicious_clients: 30
+    malicious_client_indices: $VARIES$
+    experiment_name: "backdoor_tasks_bound_lenet"
+    use_config_dir: true
+    attack_frequency: 1.0
+  server:
+    num_rounds: 300
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: lenet5_mnist
+    clip:
+      type: l2
+      value: 15
+    benign_training:
+      num_epochs: 5
+      batch_size: 32
+      optimizer: Adam
+      learning_rate: 0.001
+    malicious:
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 10
+          num_batch: 5
+          poison_samples: 28
+          optimizer: Adam
+      backdoor:
+        type: tasks
+        tasks: 30
+        source_label: 7
+        target_label: 1
+        aux_samples: -1
+        augment_times: 200
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: ~
+          scale_factor: 30
+  dataset:
+    dataset: femnist
+    data_distribution: nonIID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- environment:
+    malicious_client_indices: [2589,2935,3053,1152,1755,1206,1346,3243,701,151,64,2573,998,197,1720,3118,3304,1198,1281,509,2749,2699,247,1473,752,843,255,1869,740,88] # Prototype
+- environment:
+    malicious_client_indices: [489,3020,2018,2527,2058,1947,2310,2031,2128,2056,162,2418,3293,821,2161,2090,2913,1582,2918,2671,2146,927,2828,2103,2494,643,2419,2896,2170,2525] # Outlier 3
+- environment:
+    malicious_client_indices: [2267,2275,2478,2332,593,1324,1094,1601,1452,2650,2551,2150,1810,2287,2299,2195,1702,2523,2022,2709,2805,176,3321,2860,2752,2885,2305,2377,2228,3140] # Outlier 2
+- environment:
+    malicious_client_indices: [70,1716,1067,1934,2093,405,300,3172,3128,2561,2463,1653,3267,108,1053,2193,2061,3349,2435,2032,3346,2503,2380,2211,2873,1542,2892,2487,2628,2905] # Outlier 1

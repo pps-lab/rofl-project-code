@@ -1,0 +1,78 @@
+---
+  # First Run:                    ansible-playbook analysis.yml -i inventory/analysis -e "exp=demo run=new"
+  # Continue Run with Run Id:     ansible-playbook analysis.yml -i inventory/analysis -e "exp=demo run=1611332286"
+
+- name: Playbook 
+  hosts: localhost
+  vars:
+    n_lsf_monitor_tries: 1
+  tasks:
+  - name: Load an Experiment Run (init a new run if it does not exist yet)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: load
+
+  - name: Setup AWS including VPC and the required EC2 instances
+    include_role:
+      name: aws-all-setup
+    vars:
+      # start one server and one client instance
+      server_ec2_instances_num: 0
+      server_ec2_instances_max_num: 0
+      client_ec2_instances_num: 1
+      client_ec2_instances_max_num: 1
+      e2e_client: "{{ analysis_client }}"
+    when: run == 'new' # only change AWS if it is a new experiment
+
+  - debug:
+      msg: "{{ hostvars['localhost'] }}"
+
+- name: Setup analysis machine with common packages
+  hosts: "{{ hostvars['localhost'].analysis_client.host_group }}"
+  vars:
+    n_lsf_monitor_tries: 1
+  tasks:
+  - name: Transfer localhost state to remote hosts
+    set_fact:
+      cur_exp_idx: "{{ state.cur_exp_idx }}"
+      experiments_ext: "{{ state.experiments_ext }}"
+      lsf_job_ids: "{{ state.lsf_job_ids }}"
+      lsf_job_ids_unfinished: "{{ state.lsf_job_ids_unfinished }}"
+      lsf_job_ids_pending: "{{ state.lsf_job_ids_pending }}"
+      lsf_job_ids_running: "{{ state.lsf_job_ids_running }}"
+      exp_id: "{{ state.exp_id }}"
+      run_id: "{{ state.run_id }}"
+    vars:
+      state: "{{ hostvars['localhost'] }}"
+  - name: Setup experiments environment
+    include_role:
+      name: analysis-setup-exp
+    when: run == 'new' # only submit if it is a new experiment
+
+  - name: Submit the Experiments into the Job-System 
+    include_role:
+      name: aws-submit-job
+    when: run == 'new' # only submit if it is a new experiment
+    loop: "{{ experiments_ext }}"
+    loop_control:
+      loop_var: exp_config
+      index_var: exp_idx
+
+  - name: Save the updated state of the experiment run (save job ids)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: save
+    when: run == 'new' # only persist the state if it is a new experiment
+
+  - name: Monitor the unfinished jobs. (loop up to n_lsf_monitor_tries times (the role has a delay in between), then stop)
+    include_role:
+      name: aws-monitor-jobs
+    when: lsf_job_ids_unfinished | length > 0 # there are some unfinished jobs left
+    loop: "{{ range(0, n_lsf_monitor_tries, 1)|list }}"
+
+  - name: Output the run id of this experiment for convenience
+    debug:
+      var: run_id
+    when: run == 'new'

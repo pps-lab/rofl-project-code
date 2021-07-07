@@ -1,0 +1,22 @@
+  - name: Wait until microbenchmark service stopped (i.e., microbenchmark completes)
+    service_facts:
+    register: services_state
+    until: services_state.ansible_facts.services['microbenchmark.service'].state == 'stopped' # TODO [hidde] maybe change service name
+    retries: 100
+    delay: 15
+
+  - name: Create directory if not exists
+    delegate_to: localhost
+    file:
+      path: "{{ microbenchmark.results_dir }}"
+      state: directory
+
+  - debug:
+      var: hostvars[inventory_hostname]
+
+  - name: Fetch microbenchmark results
+    synchronize:
+      mode: pull
+      src: "{{ microbenchmark.log_dir }}"
+      dest: "{{ microbenchmark.results_dir }}/{{ inventory_hostname }}"
+      recursive: yes

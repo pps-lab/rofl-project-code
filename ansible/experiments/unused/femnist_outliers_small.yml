@@ -1,0 +1,66 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 3383
+    num_selected_clients: 30
+    num_malicious_clients: 5
+    malicious_client_indices: $VARIES$
+    experiment_name: "backdoor_tasks_bound_lenet"
+    use_config_dir: true
+    attack_frequency: 1.0
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: lenet5_mnist
+    clip:
+      type: l2
+      value: 2
+    benign_training:
+      num_epochs: 5
+      batch_size: 32
+      optimizer: Adam
+      learning_rate: 0.001
+    malicious:
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 10
+          num_batch: 5
+          poison_samples: 28
+          optimizer: Adam
+      backdoor:
+        type: tasks
+        tasks: 5
+        source_label: 7
+        target_label: 1
+        aux_samples: -1
+        augment_times: 200
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: 0.3
+          scale_factor: 30
+  dataset:
+    dataset: femnist
+    data_distribution: nonIID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- environment:
+    malicious_client_indices: [2589,2935,3053,1152,1755] # Prototype
+- environment:
+    malicious_client_indices: [3367,3204,482,1423,131] # Average
+- environment:
+    malicious_client_indices: [1716,1067,1934,2093,405] # Outlier
+- environment:
+    malicious_client_indices: [2165,2619,1517,2584,1373] # Random

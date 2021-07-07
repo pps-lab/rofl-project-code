@@ -1,0 +1,14 @@
+
+
+[Unit]
+Description=FL Server Service:
+
+[Service]
+Type=simple
+ExecStart=/home/ubuntu/{{ e2e_framework_dir }}/target/release/config_server -a {{ server_host }} -p {{ e2e_server.port }} -c {{ e2e_config_path }} {{ server_speculative_execution_flag }}
+
+StandardOutput=file:{{ logs_dir }}/server_stdout.log
+StandardError=file:{{ logs_dir }}/server_stderr.log
+
+[Install]
+WantedBy=multi-user.target

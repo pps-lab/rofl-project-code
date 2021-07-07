@@ -1,0 +1,22 @@
+- assert:
+    that:
+    - benchmarks is defined
+
+- name: Stop microbenchmark service
+  become: yes
+  service: name=microbenchmark.service state=stopped enabled=no
+  register: command_result
+  failed_when:  "command_result is failed and ('find' not in command_result.msg and 'found' not in command_result.msg)"
+
+- name: Create Unit File
+  become: yes
+  template:
+    src=microbenchmark.service.j2
+    dest=/lib/systemd/system/microbenchmark.service
+    mode=644
+  notify:
+  - reload systemctl
+
+- name: Start microbenchmark service
+  become: yes
+  service: name=microbenchmark.service state=started enabled=yes

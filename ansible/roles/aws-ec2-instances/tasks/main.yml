@@ -1,0 +1,104 @@
+---
+
+- assert:
+    that:
+    - ec2config is defined
+    - ec2_instances_num is defined
+    - ec2_instances_max_num is defined
+
+- name: Launching ec2 instances
+  ec2:
+    instance_type: '{{ ec2config.instance_type }}'
+    key_name: '{{ ec2config.key_name }}'
+    image: '{{ ec2config.ec2_image }}'
+    region: '{{ ec2config.aws_region }}'
+    group: '{{ ec2config.sg_name }}'
+    exact_count: '{{ ec2_instances_max_num }}'
+    count_tag:
+      Name: '{{ ec2config.instance_tag }}'
+    vpc_subnet_id: '{{ ec2config.vpc_subnet_id }}'
+    wait: yes
+    assign_public_ip: yes
+    volumes:
+      - device_name: /dev/sda1
+        volume_type: gp2
+        snapshot: '{{ ec2config.ec2_volume_snapshot }}'
+        volume_size: '{{ ec2config.ec2_volume_size }}'
+        delete_on_termination: True
+    instance_tags:
+      Name: '{{ ec2config.instance_tag }}'
+  register: ec2_launch
+
+- name: Wait for SSH to come up
+  delegate_to: "{{ item.public_dns_name }}"
+  wait_for_connection:
+    delay: 60
+    timeout: 320
+  loop: "{{ ec2_launch.instances }}"
+  when: "ec2_launch.instances is defined and item.state == 'running'"
+
+- name: Set properties for host
+  delegate_to: "{{ item.public_dns_name }}"
+  set_fact:
+    avx_target_cpu: "{{ ec2config.avx_target_cpu }}"
+  loop: "{{ ec2_launch.instances }}"
+  when: "ec2config.avx_target_cpu is defined"
+
+- name: Collect info about running ec2 instances
+  ec2_instance_info:
+    filters:
+      instance-state-name: [ "running" ]
+      "tag:Name": '{{ ec2config.instance_tag }}'
+    region: "{{ ec2config.aws_region }}"
+  register: running_instances
+
+- name: Collect info about stopped ec2 instances
+  ec2_instance_info:
+    filters:
+      instance-state-name: [ "stopped" ]
+      "tag:Name": '{{ ec2config.instance_tag }}'
+    region: "{{ ec2config.aws_region }}"
+  register: stopped_instances
+
+- debug:
+    var: ec2_instances_num
+
+- set_fact:
+    running_instance_ids: "{{ running_instances.instances | map(attribute='instance_id') | list}}"
+    stopped_instance_ids: "{{ stopped_instances.instances | map(attribute='instance_id') | list}}"
+    num_stop: "{{ [running_instances.instances|length - ec2_instances_num|int, 0] | max}}"
+    num_start: "{{ [ec2_instances_num|int - running_instances.instances|length , 0] | max}}"
+
+- debug:
+    msg="start= {{ num_start }}  stop= {{ num_stop }}"
+
+- name: Stopping surplus ec2 instances
+  ec2:
+    instance_ids:  "{{ hostvars[inventory_hostname]['running_instance_ids'][:num_stop|int] }}"
+    region: "{{ ec2config.aws_region }}"
+    state: stopped
+    wait: yes
+  when: num_stop|int > 0
+
+- name: Starting required ec2 instances
+  ec2:
+    instance_ids: "{{ hostvars[inventory_hostname]['stopped_instance_ids'][:num_start|int] }}"
+    region: "{{ ec2config.aws_region }}"
+    state: running
+    wait: yes
+  when: num_start|int > 0
+  register: ec2_start
+
+- name: Wait for SSH to come up
+  delegate_to: "{{ item.public_dns_name }}"
+  wait_for_connection:
+    delay: 60
+    timeout: 320
+  loop: "{{ ec2_start.instances }}"
+  when: ec2_start.instances is defined
+
+- name: Refresh dynamic ec2 inventory
+  meta: refresh_inventory
+
+- pause:
+    seconds=5

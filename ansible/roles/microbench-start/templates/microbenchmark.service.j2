@@ -1,0 +1,16 @@
+[Unit]
+Description=RoFL Microbenchmark
+
+[Service]
+Environment="RUSTFLAGS=-C target_cpu={{ avx_target_cpu }}"
+
+ExecStart=/bin/bash -c 'PATH=/usr/bin:/home/ubuntu/.cargo/bin:$PATH exec /home/ubuntu/.cargo/bin/cargo bench {{ benchmarks | map('regex_replace', '^(.*)$', '--bench \\1') | join(' ') }} \
+                            --features "avx2_backend"'
+WorkingDirectory=/home/ubuntu/{{ e2e_framework_dir }}/rofl_crypto
+                            
+User=ubuntu
+StandardOutput=file:{{ microbenchmark.log_dir }}/{{ microbenchmark.stdout_log_file }}.log
+StandardError=file:{{ microbenchmark.log_dir }}/{{ microbenchmark.stderr_log_file }}.log
+
+[Install]
+WantedBy=multi-user.target

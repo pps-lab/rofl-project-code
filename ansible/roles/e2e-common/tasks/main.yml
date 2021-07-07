@@ -1,0 +1,122 @@
+
+- assert:
+    that:
+    - e2e_framework_repository_remote is defined
+    - avx_target_cpu is defined
+
+- name: Update repositories cache and install required packages
+  become: True
+  apt:
+    pkg:
+    - unzip
+    - python3.7-dev
+    - python3.7
+    - python3-pip
+    - libfreetype6-dev
+    - libxft-dev
+    update_cache: yes
+
+- name: Change python 37 to point to 3.7
+  command:
+    cmd: update-alternatives --install /usr/bin/python37 python37 /usr/bin/python3.7 1
+  become: True
+- name: Default to python37
+  command:
+    cmd: update-alternatives --config python37
+  become: True
+- name: Upgrade pip
+  become: True
+  command:
+    cmd: python37 -m pip install --upgrade pip
+
+- name: Update e2e repo
+  git:
+    accept_hostkey: yes
+    repo: "{{ e2e_framework_repository_remote }}"
+    dest: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}"
+
+- name: Install rust
+  shell: curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+- name: Switch to nightly rust for crypto library
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
+  shell: |
+    . /etc/profile
+    . $HOME/.cargo/env
+    rustup override set nightly-2021-05-11
+
+- name: Switch to nightly rust for main server code
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}"
+  shell: |
+    . /etc/profile
+    . $HOME/.cargo/env
+    rustup override set nightly-2021-05-11
+
+# Rust nightly is breaking our build of Subtle (sub-package of dalek-cryptography), thats why we set a specific nightly above.
+
+#- name: Ansible copy directory to the remote server
+#  copy:
+#    src: test-playbook
+#    dest: /home/ubuntu
+#
+#
+#- name: Build Demo
+#  shell: cargo build
+#  args:
+#    chdir: /home/ubuntu/test-playbook
+
+- name: Update analysis framework repo
+  git:
+    repo: "{{ analysis_framework_repository_remote }}"
+    dest: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
+
+- name: Install pip dependencies in analysis framework
+  become: True
+  shell: python37 -m pip install --user -r requirements.txt
+  args:
+    chdir: "{{ e2e_remote_base_dir}}/{{ analysis_framework_dir }}"
+
+- name: Install pip dependencies (common.txt) in analysis framework
+  become: True
+  shell: python37 -m pip install --user -r common.txt
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
+
+- name: Install pip dependencies in trainer framework
+  become: True
+  shell: python37 -m pip install --user -r requirements.txt
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_train_client"
+
+- name: Build Cargo crypto # for microbenchmarks, e2e will recompile based on the given config
+  environment:
+    RUSTFLAGS: "-C target_cpu={{ avx_target_cpu }}"
+  shell: |
+    . $HOME/.cargo/env
+    cargo build --release --features "avx2_backend fp{{ fp_bits }} frac{{ frac_bits }}"
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
+  vars:
+    fp_bits: "{{ fp | default('32') }}"
+    frac_bits: "{{ frac | default('8') }}"
+
+
+- name: Setup microbenchmark logs folder
+  file:
+    path: "{{ microbenchmark.log_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Clear e2e benchmark logs folder
+  file:
+    path: "{{ e2e.log_dir }}"
+    state: absent
+    mode: 0755
+- name: Setup e2e benchmark logs folder
+  file:
+    path: "{{ e2e.log_dir }}"
+    state: directory
+    mode: 0755
+

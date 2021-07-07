@@ -1,0 +1,31 @@
+---
+  # Continue Run with Run Id:     ansible-playbook tb.yml -e "exp=demo run=1611332286"
+
+- name: Run tensorboard
+  hosts: leonhard
+  tasks:
+  - assert:
+      that:
+      - run != 'new'
+
+  - name: Load an Experiment Run (init a new run if it does not exist yet)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: load
+
+  - name: If there are unfinished jobs left, load them
+    include_role:
+      name: lsf-monitor-jobs
+    vars:
+      lsf_monitor_check_wait_time: 0 # Override wait time
+      force_refresh: "{{ force | default(false) }}"
+    when: lsf_job_ids_unfinished | length > 0 # there are some unfinished jobs left
+
+  - name: Run tensorboard
+    delegate_to: localhost
+    command:
+      cmd: "tensorboard --logdir={{ experiment_results_dir }}/{{ exp }}_{{ run }}/"
+
+
+# TODO: Integrate tensorboard into monitoring loop

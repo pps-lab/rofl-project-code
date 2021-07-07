@@ -1,0 +1,92 @@
+
+# INPUT: lsf_job_ids_unfinished
+#        force_refresh: (optional, default: false) whether to download all results anyway, despite already being finished.
+
+- assert:
+    that:
+    - lsf_job_ids_unfinished is defined
+    #- lsf_job_ids_unfinished | length > 0
+
+- name: Sleep for X seconds before checking job status
+  wait_for:
+    timeout: "{{ lsf_monitor_check_wait_time }}"
+  delegate_to: localhost
+  when:
+  - lsf_job_ids_unfinished | length > 0
+  - lsf_monitor_check_wait_time > 0
+
+- name: Get bjobs
+  command:
+    cmd: bjobs -w
+  register: bjobs_result
+- set_fact:
+    bjobs_result: "{{ bjobs_result }}"
+- debug:
+    msg: "{{ bjobs_result.stdout_lines[1:] }}"
+
+- debug:
+    msg: "Running: {{ lsf_job_ids_running }}, pending: {{ lsf_job_ids_pending }}, force: {{ force_refresh | default(false) }}"
+
+- name: Get status of jobs lsf_job_ids_unfinished (using bjobs) 
+  vars:
+    lines: "{{ bjobs_result.stdout_lines[1:] }}"
+  set_fact:
+    # jobs that were in lsf_job_ids_unfinished but are finished now
+#    lsf_job_ids_finished: "{{ lsf_job_ids_running }}" # PLACEHOLDER
+
+    # jobs that are currently running (i.e. not pending) of the jobs from lsf_job_ids_unfinished
+    lsf_job_ids_running: "{{ lines | map('regex_search', '^([0-9]*) [a-zA-Z]*[ ]*RUN', '\\1') | flatten | intersect(lsf_job_ids_unfinished) }}" # PLACEHOLDER
+
+    # jobs that are currently pending (i.e. wait in queue) of the jobs from lsf_job_ids_unfinished
+#    lsf_job_ids_pending: [] # PLACEHOLDER
+    lsf_job_ids_pending: "{{ lines | map('regex_search', '^([0-9]*) [a-zA-Z]*[ ]*PEND', '\\1') | flatten | intersect(lsf_job_ids_unfinished) }}"
+  when: (not force_refresh | default(true)) and lsf_job_ids_unfinished | length > 0
+
+- name: Set all jobs pending
+  set_fact:
+    lsf_job_ids_unfinished: "{{ lsf_job_ids }}"
+    lsf_job_ids_pending: "{{ lsf_job_ids }}"
+    lsf_job_ids_running: []
+  when: force_refresh | default(false)
+
+
+- set_fact:
+    lsf_job_ids_finished: "{{ lsf_job_ids_unfinished | difference(lsf_job_ids_running) | difference(lsf_job_ids_pending) }}"
+
+- debug:
+    msg: "Running: {{ lsf_job_ids_running }}, pending: {{ lsf_job_ids_pending }}, finished: {{ lsf_job_ids_finished }}"
+
+- name: Update the unfinished job id list
+  set_fact:
+    lsf_job_ids_unfinished: "{{ lsf_job_ids_running + lsf_job_ids_pending }}"
+    lsf_job_ids_updated: True 
+  when: lsf_job_ids_unfinished | length > 0
+
+- name: Loop over newly finished experiments and process them
+  include_role:
+    name: analysis-finished-exp
+  loop: "{{ lsf_job_ids_finished }}"
+  loop_control:
+    loop_var: job_id
+#  when: lsf_job_ids_unfinished | length > 0
+
+- name: Update the experiment state (lsf_job_ids_unfinished, lsf_job_ids_running, lsf_job_ids_pending)
+  include_role:
+    name: experiment-state
+  vars:
+    expstate: save
+  when: lsf_job_ids_updated is defined and lsf_job_ids_updated
+
+- name: Reset the lst_job_updated flag
+  set_fact: 
+    lsf_job_ids_updated: False
+  when: lsf_job_ids_updated
+
+
+- name: Loop over running experiments and process them (i.e. fetch intermediate results)
+  include_role:
+    name: analysis-running-exp
+  loop: "{{ lsf_job_ids_running }}"
+  loop_control:
+    loop_var: job_id
+  when: lsf_job_ids_unfinished | length > 0

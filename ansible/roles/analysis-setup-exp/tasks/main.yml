@@ -1,0 +1,15 @@
+# INPUT: job_id
+
+- assert:
+    that:
+    - analysis_framework_repository_remote is defined
+    - analysis_framework_dir is defined
+
+
+- debug:
+    msg="analysis-setup-exp"
+
+- name: Update git repo
+  git:
+      repo: "{{ analysis_framework_repository_remote }}"
+      dest: "{{ analysis_remote_base_dir }}/{{ analysis_framework_dir }}"

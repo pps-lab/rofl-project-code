@@ -1,0 +1,19 @@
+
+
+[Unit]
+Description=FL Server Observer:
+
+[Service]
+Type=simple
+Environment="PYTHONPATH=/home/ubuntu/{{ e2e_framework_dir }}/rofl_train_client"
+ExecStart=/bin/bash -c 'exec /usr/bin/python37 /home/ubuntu/{{ e2e_framework_dir }}/rofl_train_client/trainservice/observer.py \
+                                                        --config {{ e2e_config_path }} \
+                                                        --address {{ server_host }} \
+                                                        --port {{ e2e_server.port }} \
+                                                        --framework_path {{ e2e_remote_base_dir }}/{{ analysis_remote_base_dir }}/{{ analysis_framework_dir }}'
+
+StandardOutput=file:{{ logs_dir }}/observer_stdout.log
+StandardError=file:{{ logs_dir }}/observer_stderr.log
+
+[Install]
+WantedBy=multi-user.target

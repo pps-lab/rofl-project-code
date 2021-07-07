@@ -1,0 +1,68 @@
+- assert:
+    that:
+    - exp_config is defined
+    - exp_idx is defined
+    - exp_id is defined
+    - run_id is defined
+    - run == 'new'
+
+- name: create experiment directory on server
+  file:
+    path: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ exp_idx }}"
+    state: directory
+    mode: 0755
+
+- name: set config path variable
+  set_fact:
+    config_path: "{{ analysis_remote_base_dir }}/{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ exp_idx }}/config.yml"
+
+- name: create experiment config file on server
+  copy:
+    dest: "{{ config_path }}"
+    content: "{{ exp_config | to_nice_yaml(width=50, explicit_start=True, explicit_end=True) }}"
+
+# Not working due to $PATH and env variables
+#- name: load correct python version on leonhard
+#  shell:
+#    chdir: "{{ analysis_remote_base_dir }}/{{ analysis_framework_dir }}"
+#    cmd: "module load gcc/6.3.0 python_gpu/3.7.4 hdf5/1.10.1"
+#
+#- name: install specified python requirements
+#  pip:
+#    requirements: requirements.txt
+#    extra_args: --user
+
+- name: schedule the job on leonhard using bsub
+  vars:
+    experiment_name: "{{ exp_id }}_{{ run_id }}_{{ exp_idx }}"
+    output_file: "lsf.ans.%J.{{ exp_id }}_{{ run_id }}_{{ exp_idx }}.out"
+  register: bsub_output
+  shell: |
+    module load gcc/6.3.0 python_gpu/3.7.4 hdf5/1.10.1
+    pip install --user -r requirements.txt
+    bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R "rusage[mem={{ exp_config.job.cpu_mem_per_core}},ngpus_excl_p={{ exp_config.job.use_gpu }}]" -R "select[gpu_mtotal0>={{ exp_config.job.gpu_memory_min }}]" -N "python -m src.main -c {{ config_path }}"
+  args:
+    chdir: "{{ analysis_framework_dir }}"
+#  command:
+#    chdir: "{{ analysis_framework_dir }}"
+#    cmd: "bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R \"rusage[mem={{ exp_config.job.cpu_mem_per_core}},ngpus_excl_p={{ exp_config.job.use_gpu }}]\" -R \"select[gpu_mtotal0>={{ exp_config.job.gpu_memory_min }}]\" -N \"python -m src.main -c {{ config_path }}\""
+    # Dummy job, sleep for 5 min
+#    cmd: "bsub -W {{ 10 }} -n {{ 1 }} -J {{ experiment_name }} -oo {{ output_file }} -N \"sleep 300 && echo 'Done'\""
+
+- name: parse command output using regex
+  set_fact:
+    _job_id: "{{ bsub_output.stdout | regex_search('<([0-9]*)>', '\\1') | first }}"
+- debug:
+    var: _job_id
+
+- name: Add the newly created job to the list of job ids
+  set_fact:
+    lsf_job_ids: "{{ lsf_job_ids + [_job_id] }} "
+    lsf_job_ids_pending: "{{ lsf_job_ids_pending + [_job_id] }} "
+    lsf_job_ids_unfinished: "{{ lsf_job_ids_unfinished + [_job_id] }} "
+
+- name: Sleep for X seconds before submitting next job (when opening large datasets)
+  wait_for:
+    timeout: 60
+  delegate_to: localhost
+  when: exp_config.job.lsf_submit_delay is defined

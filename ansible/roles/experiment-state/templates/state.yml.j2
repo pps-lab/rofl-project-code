@@ -1,0 +1,15 @@
+---
+
+exp_id: {{ exp_id }}
+run_id: {{ run_id }}
+
+cur_exp_idx: {{ cur_exp_idx }}
+
+lsf_job_ids: {{ lsf_job_ids | default([]) }}
+lsf_job_ids_unfinished: {{ lsf_job_ids_unfinished | default([]) }} # pending + running
+lsf_job_ids_pending: {{ lsf_job_ids_pending | default([]) }} 
+lsf_job_ids_running: {{ lsf_job_ids_running | default([]) }} 
+
+
+experiments_ext: 
+{{ experiments_ext | to_nice_yaml }}

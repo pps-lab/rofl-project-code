@@ -1,0 +1,76 @@
+
+- name: Insert experiment into MongoDB
+  hosts: localhost
+  vars_prompt:
+  - name: exp_purpose
+    prompt: What is the purpose of this experiment?
+    private: no
+
+  tasks:
+  - name: Assert that we are not initializing a new run, but an existing run
+    assert:
+      that:
+      - run != 'new'
+  - name: Load an Experiment Run (init a new run if it does not exist yet)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: load
+
+  - name: Ensure MongoDB database exists, otherwise create
+    mongodb_user:
+      login_port: "27017"
+      database: "admin"
+      name: "{{ mongodb.username }}"
+      password: "{{ mongodb.password }}"
+      roles: "root"
+
+  - name: Load experiments
+    include_role:
+      name: mongodb-collect-exp
+    loop: "{{ experiments_ext }}"
+    loop_control:
+      loop_var: expdata
+      index_var: exp_idx
+
+  - debug:
+      var: experiments_with_ids[0]
+
+#  - name: Group exp data
+#    set_fact:
+#      experiments_grouped: "{{ experiments_ext | map('combine', {'meta': metadata }) | list }}"
+#    vars:
+#      metadata: "{{ {'run_id': run_id, 'description': exp_purpose } }}"
+#
+#  - name: Set unique object ids
+#    set_fact:
+#      experiments_with_ids: "{{ experiments_with_ids | default([]) + [item[0] | combine({'_id': item[1] })] }}"
+#    vars:
+#      ids: "{{ [exp + '_' + run_id + '_'] | product(range(experiments_ext | length) | map('string')) | map('join') | list }}"
+#    loop: "{{ experiments_grouped | zip(ids) }}"
+
+#  - name: Output debug
+#    debug:
+#      var: experiments_with_ids
+
+#  - debug:
+#      msg: "{{ [exp + '_' + run_id + '_'] | product(range(experiments_ext | length) | map('string')) | map('join') }}"
+#
+#  - debug:
+#      msg: "{{ experiments_with_ids | length }} {{ experiments_grouped | length }} {{ experiments_ext | length }}"
+
+  - name: Insert experiment into database
+    community.mongodb.mongodb_shell:
+      login_user: "{{ mongodb.username }}"
+      login_password: "{{ mongodb.password }}"
+      db: analysis
+      # We do some strange quotes removal here for this to work...
+      # TODO: Add support to update instead of insert
+      eval: "db.experiments.insertOne({{ item | tojson | string | replace('\"', \"'\") }})"
+      stringify: true
+    register: output
+    loop: "{{ experiments_with_ids }}"
+
+
+#db.experiments.insertOne({'client': {'benign_training': {'batch_size': 64, 'learning_rate': 0.1, 'num_epochs': 5, 'optimizer': 'SGD'}, 'clip': null, 'malicious': {'attack_start': 1, 'attack_stop': 1, 'backdoor': {'augment_data': true, 'augment_times': 200, 'remove_from_benign_dataset': true, 'target_label': 2, 'test': [330, 30696, 40713], 'train': [568, 3934, 12336, 30560, 33105, 33615, 33907, 36848, 41706], 'type': 'semantic'}, 'evasion': {'args': {'norm_type': 'l2', 'pgd_factor': null, 'scale_factor': 85}, 'name': 'NormBoundPGDEvasion'}, 'objective': {'args': {'learning_rate': 0.0075, 'noise_level': null, 'num_batch': 10, 'num_epochs': 16, 'optimizer': 'SGD', 'poison_samples': 16, 'step_decay': true}, 'name': 'TargetedAttack'}}, 'model_name': 'resnet18'}, 'dataset': {'augment_data': true, 'data_distribution': 'dirichlet', 'dataset': 'cifar10'}, 'environment': {'attack_frequency': 1.0, 'experiment_name': 'cifar_bounds', 'load_model': './models/resnet18.h5', 'num_clients': 100, 'num_malicious_clients': 1, 'num_selected_clients': 10, 'use_config_dir': true}, 'hyperparameters': {'args': {'client': {'malicious': {'objective': {'args': {'learning_rate': 0.0075, 'num_epochs': 16, 'poison_samples': 16, 'step_decay': true}}}}}}, 'job': {'cpu_cores': 20, 'cpu_mem_per_core': 4096, 'gpu_memory_min': 10240, 'minutes': 10, 'use_gpu': 1}, 'server': {'aggregator': {'name': 'FedAvg'}, 'global_learning_rate': 1, 'num_rounds': 1, 'num_test_batches': 50}})",
+

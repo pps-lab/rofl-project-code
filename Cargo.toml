@@ -1,0 +1,12 @@
+[workspace]
+
+members = [
+    "rofl_crypto",
+    "rofl_service"
+]
+
+[patch.crates-io]
+tinytemplate = { git = "https://github.com/botika/TinyTemplate", branch = "master" }
+
+[profile.release]
+opt-level = 3

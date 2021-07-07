@@ -1,0 +1,243 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 1
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+    attack_frequency: 1.0
+    load_model: ./models/resnet18_080.h5
+  server:
+    num_rounds: 10
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip: ~
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.1
+    malicious:
+      attack_start: 1
+      attack_stop: 1
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: $VARIES$
+          num_batch: 10
+          poison_samples: 16
+          optimizer: SGD
+          learning_rate: 0.1
+          step_decay: true
+      backdoor:
+        type: semantic
+#        train: [ 568,3934,12336,30560,33105,33615,33907,36848,41706 ] # bgwall
+#        test: [ 330, 30696, 40713 ]
+        train: [2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392]
+        test: [42119,42663,49392]
+        target_label: 2
+        remove_from_benign_dataset: true
+        augment_times: 200
+        augment_data: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: ~
+          scale_factor: 100
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 20 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 5
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.3
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 5
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.1
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 5
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.05
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 5
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.01
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 10
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.3
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 10
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.1
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 10
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.05
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 10
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.01
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 15
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.3
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 15
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.1
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 15
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.05
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 15
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.01
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 20
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.3
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 20
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.1
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 20
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.05
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 20
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.01
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 25
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.3
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 25
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.1
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 25
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.05
+
+- client:
+    malicious:
+      objective:
+        args:
+          num_epochs: 25
+          step_decay: true
+          poison_samples: 16
+          learning_rate: 0.01

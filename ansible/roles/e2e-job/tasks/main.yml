@@ -1,0 +1,162 @@
+# - if running is empty: setup new experiment
+#
+- assert:
+    that:
+    - lsf_job_ids_running is defined
+    - experiments_ext is defined
+    - run_id is defined
+    - e2e_check_wait_time is defined
+
+- debug:
+    var: lsf_job_ids_running
+#- debug:
+#    var: experiments_ext
+- debug:
+    var: run_id
+- debug:
+    var: e2e_check_wait_time
+
+
+- name: 
+  set_fact:
+    new_running_job_id: null
+
+- name: 
+  set_fact:
+    new_running_job_id: "{{ lsf_job_ids_pending | list | map('int')| min }}"
+  when: lsf_job_ids_running | length == 0 and lsf_job_ids_unfinished | length > 0
+
+- debug:
+    msg="new_running_job_id={{ new_running_job_id }}"
+
+- name:
+  set_fact:
+    lsf_job_ids_pending: "{{ lsf_job_ids_pending | reject('equalto', new_running_job_id | int) | list }}"
+    lsf_job_ids_running: "{{ new_running_job_id | map('int') | list }}"
+  when: new_running_job_id is not none 
+
+- name: Set the experiment config
+  set_fact:
+    exp_config: "{{ experiments_ext[lsf_job_ids_running | list | first | int] }}"
+    running_job_id: "{{ lsf_job_ids_running[0] }}"
+  when: lsf_job_ids_unfinished | length > 0
+
+- name: Set logs path
+  set_fact:
+    logs_dir: "{{ e2e.log_dir }}/{{ run_id }}/{{ running_job_id }}"
+
+- name: Start new experiment (if there is no running atm)
+  include_role:
+    name: e2e-experiment-start
+  when: new_running_job_id is not none
+
+- name: Save the updated state of the experiment run (save job ids)
+  include_role:
+    name: experiment-state
+  vars:
+    expstate: save
+  when: lsf_job_ids_unfinished | length > 0
+
+
+- debug:
+    msg="new_running_job_id={{ new_running_job_id| default('-')}}    pending={{ lsf_job_ids_pending }} running={{ lsf_job_ids_running }}"
+
+- name: Sleep for X seconds before checking job status
+  wait_for:
+    timeout: "{{ e2e_check_wait_time }}"
+  when:
+  - lsf_job_ids_unfinished | length > 0
+  - e2e_check_wait_time > 0
+
+
+- name: Check if Experiment is Still Running 
+  delegate_to: "{{ groups[e2e_server.host_group][0] }}"
+  service_facts:
+  register: services_state
+  when: lsf_job_ids_unfinished | length > 0
+
+- name:
+  set_fact: 
+    is_cur_exp_finished: false
+
+
+- name: Check if current running experiment finished
+  set_fact:
+    is_cur_exp_finished:  "{{ services_state.ansible_facts.services['flserver.service'].state == 'stopped' }}"
+  when: lsf_job_ids_unfinished | length > 0
+
+#- debug:
+#    msg="is_cur_exp_finished={{ is_cur_exp_finished }}      my service={{ services_state.ansible_facts.services['flserver.service'] }}"
+#
+- name: Set results dir
+  set_fact:
+    current_results_dir: "{{ e2e.results_dir }}/{{ exp }}_{{ run_id }}/{{ running_job_id }}"
+
+- name: Create result directory
+  delegate_to: localhost
+  file:
+    path: "{{ current_results_dir }}"
+    state: directory
+- name: Create result directory
+  delegate_to: localhost
+  file:
+    path: "{{ current_results_dir }}/logs"
+    state: directory
+- name: Create result directory
+  delegate_to: localhost
+  file:
+    path: "{{ current_results_dir }}/benchlog"
+    state: directory
+#  when: is_cur_exp_finished
+
+
+# We unfortunately have to do it like this because the synchronize command is not playing nice with hosts: localhost
+- name: Fetch Results (if experiment done)
+  delegate_to: localhost
+  local_action: command rsync -az "{{ groups[e2e_server.host_group][0] }}:{{ logs_dir }}/*" "{{ current_results_dir }}/logs/server"
+#  delegate_to: "{{ groups[e2e_server.host_group][0] }}"
+#  synchronize:
+#    mode: pull
+#    src: "{{ e2e.log_dir }}"
+#    dest: "{{ current_results_dir }}"
+#    recursive: yes
+#  when: is_cur_exp_finished
+
+- name: Fetch Benchlog Results (if experiment done)
+  delegate_to: localhost
+  local_action: command rsync -az "{{ groups[e2e_server.host_group][0] }}:/benchlog" "{{ current_results_dir }}/benchlog/server"
+#  delegate_to: "{{ groups[e2e_server.host_group][0] }}"
+#  synchronize:
+#    mode: pull
+#    src: "/benchlog"
+#    dest: "{{ current_results_dir }}"
+#    recursive: yes
+#  when: is_cur_exp_finished
+
+- name: Fetch Client Results (if experiment done)
+  delegate_to: localhost
+  local_action: command rsync -az "{{ item }}:{{ logs_dir }}/*" "{{ current_results_dir }}/logs/client_{{ client_idx }}"
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    index_var: client_idx
+
+- name: Fetch Benchlog Client Results (if experiment done)
+  delegate_to: localhost
+  local_action: command rsync -az "{{ item }}:/benchlog/*" "{{ current_results_dir }}/benchlog/client_{{ client_idx }}"
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    index_var: client_idx
+
+
+- name: Update the job ids list (remove experiment from running)
+  set_fact: 
+    lsf_job_ids_running: []
+    lsf_job_ids_unfinished: "{{ lsf_job_ids_pending }}"
+  when: is_cur_exp_finished
+
+- name: Save the updated state of the experiment run (save job ids)
+  include_role:
+    name: experiment-state
+  vars:
+    expstate: save
+  when: is_cur_exp_finished

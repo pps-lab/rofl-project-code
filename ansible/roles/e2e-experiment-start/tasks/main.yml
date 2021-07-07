@@ -1,0 +1,265 @@
+---
+- assert:
+    that:
+    - exp_config is defined
+    - run_id is defined
+    - running_job_id is defined
+    - e2e_config_path is defined
+    - logs_dir is defined
+    - "{{ exp_config.environment.num_clients }} % {{ exp_config.e2e.client_machines }} == 0"
+
+- name: Remove logs folder (if exists, it shouldnt)
+  file:
+    path: "{{ logs_dir }}"
+    state: absent
+  delegate_to: "{{ host }}"
+  loop: "{{ groups[e2e_client.host_group] | union(groups[e2e_server.host_group]) }}"
+  loop_control:
+    loop_var: host
+
+- name: Setup logs folder
+  file:
+    path: "{{ logs_dir }}"
+    state: directory
+    mode: 0755
+    recurse: true
+  delegate_to: "{{ host }}"
+  loop: "{{ groups[e2e_client.host_group] | union(groups[e2e_server.host_group]) }}"
+  loop_control:
+    loop_var: host
+
+- name: Build Cargo service on clients
+  environment:
+    RUSTFLAGS: "-C target_cpu={{ avx_target_cpu }}"
+  shell: |
+    . $HOME/.cargo/env
+    cargo build --release --features "avx2_backend fp{{ exp_config.crypto.fp_bits }} frac{{ exp_config.crypto.fp_frac }}"
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}"
+  delegate_to: "{{ host }}"
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    loop_var: host
+#  hosts: "{{ hostvars['localhost'].e2e_client.host_group }}" # cant do this because not playbook?
+  vars:
+    avx_target_cpu: "{{ hostvars['localhost'].e2e_client.avx_target_cpu }}"
+  async: 1200
+  poll: 0
+  register: _async_cargo_build
+
+- debug:
+    var: _async_cargo_build
+
+- name: Wait for builds to finish
+  delegate_to: "{{ item[1] }}"
+  async_status:
+    jid: "{{ item[0].ansible_job_id }}"
+  register: _jobs_async_cargo_build
+  retries: 120
+  delay: 10
+  until: _jobs_async_cargo_build.finished
+  loop: "{{ _async_cargo_build.results | zip(groups[e2e_client.host_group]) }}"
+
+- name: Build Cargo service on server
+  delegate_to: "{{ host }}"
+  environment:
+    RUSTFLAGS: "-C target_cpu={{ avx_target_cpu }}"
+  shell: |
+    . $HOME/.cargo/env
+    cargo build --release --features "avx2_backend fp{{ exp_config.crypto.fp_bits }} frac{{ exp_config.crypto.fp_frac }}"
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}"
+  loop: "{{ groups[e2e_server.host_group] }}"
+  loop_control:
+    loop_var: host
+  vars:
+    avx_target_cpu: "{{ hostvars['localhost'].e2e_server.avx_target_cpu }}"
+
+- name: create experiment config file on server and clients
+  delegate_to: "{{ host }}"
+  copy:
+    dest: "{{ e2e_config_path }}"
+    content: "{{ exp_config | to_nice_yaml(width=50, explicit_start=True, explicit_end=True) }}"
+  loop: "{{ groups[e2e_client.host_group] | union(groups[e2e_server.host_group]) }}"
+  loop_control:
+    loop_var: host
+
+
+- name: Determine which clients run where
+  set_fact:
+    client_host_map: "{{ range(0, num_clients|int) | map('host_map', groups[e2e_client.host_group], num_clients_per_host) | items2dict }}"
+  vars:
+    num_clients: "{{ exp_config.environment.num_clients }}"
+    num_hosts: "{{ exp_config.e2e.client_machines }}"
+    num_clients_per_host: "{{ exp_config.environment.num_clients|int // exp_config.e2e.client_machines|int }}"
+
+- set_fact:
+    num_clients_per_host: "{{ exp_config.environment.num_clients|int // exp_config.e2e.client_machines|int }}"
+
+- name: Verify
+  debug:
+    msg="mapping -> {{ client_host_map }}"
+
+
+- name: create data directory on server
+  delegate_to: "{{ host }}"
+  file:
+    path: "{{ e2e_remote_data_dir }}"
+    state: directory
+    mode: 0755
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    loop_var: host
+
+- name: Upload training data to clients
+  copy:
+    src: "{{ e2e_local_data_dir }}/dataset_{{ entry.key }}.npy"
+    dest: "{{ e2e_remote_data_dir }}/dataset_{{ entry.key }}"
+    owner: ubuntu
+    mode: '0755'
+  delegate_to: "{{ entry.value }}"
+  loop: "{{ client_host_map | dict2items }}"
+  loop_control:
+    loop_var: entry
+    index_var: client_idx
+# Async does not work here
+
+- name: Create Unit File for Server
+  become: yes
+  delegate_to: "{{ host }}"
+  template:
+    src=flserver.service.j2
+    dest=/lib/systemd/system/flserver.service
+    mode=644
+  notify:
+  - reload systemctl
+  loop: "{{ groups[e2e_server.host_group] }}"
+  vars:
+    server_host: "{{ hostvars[groups[e2e_server.host_group][0]].private_ip_address }}"
+    server_speculative_execution_flag: "{{ '-l' if not exp_config.e2e.speculative_execution|default(true) else '' }}"
+  loop_control:
+    loop_var: host
+    #index_var: server_idx
+
+- name: Create Unit File for Observer at server
+  become: yes
+  delegate_to: "{{ host }}"
+  template:
+    src=flobserver.service.j2
+    dest=/lib/systemd/system/flobserver.service
+    mode=644
+  notify:
+  - reload systemctl
+  loop: "{{ groups[e2e_server.host_group] }}"
+  vars:
+    server_host: "{{ hostvars[groups[e2e_server.host_group][0]].private_ip_address }}"
+  loop_control:
+    loop_var: host
+
+- name: Create Unit File for Clients
+  become: yes
+  delegate_to: "{{ host }}"
+  template:
+    src=flclient.service.j2
+    dest=/lib/systemd/system/flclient.service
+    mode=644
+  notify:
+  - reload systemctl
+  vars:
+    start_id: "{{ client_idx|int * num_clients_per_host|int }}"
+    server_host: "{{ hostvars[groups[e2e_server.host_group][0]].private_dns_name }}"
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    loop_var: host
+    index_var: client_idx
+
+- name: Create Unit File for Client trainers
+  become: yes
+  delegate_to: "{{ entry.value }}"
+  template:
+    src=flclient_trainer.service.j2
+    dest="/lib/systemd/system/flclient_trainer_{{ entry.key }}.service"
+    mode=644
+  notify:
+  - reload systemctl
+  loop: "{{ client_host_map | dict2items }}"
+  vars:
+    trainer_port: "{{ e2e_client.trainer_port + (entry.key|int % num_clients_per_host|int) }}"
+  loop_control:
+    loop_var: entry
+    index_var: client_idx
+
+- name: Reload client and server services
+  become: yes
+  delegate_to: "{{ host }}"
+  command:
+    cmd: systemctl daemon-reload
+  loop: "{{ groups[e2e_client.host_group] | union(groups[e2e_server.host_group]) }}"
+  loop_control:
+    loop_var: host
+
+ # Stop running Experiments (if there are any)
+
+#- name: Stop all running e2e server
+#  delegate_to: "{{ host }}"
+#  service:
+#    name: flserver
+#    state: stopped
+#    enabled: no
+#  loop: "{{ groups[e2e_server.host_group] }}"
+#  loop_control:
+#    loop_var: host
+#  ignore_errors: yes
+#
+#- name: Stop all running e2e clients
+#  delegate_to: "{{ host }}"
+#  service:
+#    name: flclient
+#    state: stopped
+#    enabled: no
+#  loop: "{{ groups[e2e_client.host_group] }}"
+#  loop_control:
+#    loop_var: host
+#  ignore_errors: yes
+
+
+# Starting the Experiment
+
+- name: Start E2E Server
+  become: yes
+  delegate_to: "{{ host }}"
+  service: name=flserver.service state=restarted enabled=yes
+  loop: "{{ groups[e2e_server.host_group] }}"
+  loop_control:
+    loop_var: host
+    #index_var: server_idx
+
+- name: Start E2E Trainer
+  become: yes
+  delegate_to: "{{ entry.value }}"
+  service: "name=flclient_trainer_{{ entry.key }}.service state=restarted enabled=yes"
+  loop: "{{ client_host_map | dict2items }}"
+  loop_control:
+    loop_var: entry
+
+- name: Start E2E Observer
+  become: yes
+  delegate_to: "{{ host }}"
+  service: name=flobserver.service state=restarted enabled=yes
+  loop: "{{ groups[e2e_server.host_group] }}"
+  loop_control:
+    loop_var: host
+
+- name: Sleep for 5 seconds for server and trainers to launch
+  wait_for:
+    timeout: 30
+  delegate_to: localhost
+
+- name: Start E2E Client
+  become: yes
+  delegate_to: "{{ host }}"
+  service: name=flclient.service state=restarted enabled=yes
+  loop: "{{ groups[e2e_client.host_group] }}"
+  loop_control:
+    loop_var: host
+

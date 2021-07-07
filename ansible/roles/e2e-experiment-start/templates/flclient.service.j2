@@ -1,0 +1,17 @@
+[Unit]
+Description=FL Client Service: TODO [hidde] define the service unit file for the client. You can use: {{ client_idx }} to get the index of the number of client instances
+
+[Service]
+Type=simple
+ExecStart=/home/ubuntu/{{ e2e_framework_dir }}/target/release/flclients \
+                                                        -a {{ server_host }} \
+                                                        -p {{ e2e_server.port }} \
+                                                        -n {{ num_clients_per_host }} \
+                                                        -t {{ num_clients_per_host }} \
+                                                        -c {{ start_id }} \
+                                                        -r {{ e2e_client.trainer_port }}
+StandardOutput=file:{{ logs_dir }}/client_stdout.log
+StandardError=file:{{ logs_dir }}/client_stderr.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+---
+plugin: aws_ec2
+regions:
+  - eu-central-1
+filters:
+  instance-state-name: ["running"]
+
+# keyed_groups may be used to create custom groups
+strict: False
+keyed_groups:
+# Add hosts to tag_Name_Value groups for each Name/Value tag pair
+  - prefix: tag
+    key: tags
+    # Create a group per region e.g. aws_region_us_east_2
+  #- key: placement.region
+  #  prefix: aws_region

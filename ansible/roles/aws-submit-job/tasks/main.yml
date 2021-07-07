@@ -1,0 +1,64 @@
+- assert:
+    that:
+    - exp_config is defined
+    - exp_idx is defined
+    - exp_id is defined
+    - run_id is defined
+    - run == 'new'
+
+- name: create experiment directory on server
+  file:
+    path: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ exp_idx }}"
+    state: directory
+    mode: 0755
+
+- name: set config path variable
+  set_fact:
+    config_path: "{{ analysis_remote_base_dir }}/{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ exp_idx }}/config.yml"
+
+- name: create experiment config file on server
+  copy:
+    dest: "{{ config_path }}"
+    content: "{{ exp_config | to_nice_yaml(width=50, explicit_start=True, explicit_end=True) }}"
+
+- name: install pip requirements
+  shell: |
+    source activate tensorflow2_p36
+    pip install --quiet --user -r requirements.txt &>/dev/null
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ analysis_framework_dir }}"
+
+- name: schedule the job on AWS using nohup
+  register: bsub_output
+  vars:
+    experiment_name: "{{ exp_id }}_{{ run_id }}_{{ exp_idx }}"
+    output_file: "output.{{ exp_id }}_{{ run_id }}_{{ exp_idx }}.out"
+  shell: |
+    source activate tensorflow2_p36
+    nohup python -m src.main -c {{ config_path }} > {{ output_file }} 2>&1 &
+    echo $!
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ analysis_framework_dir }}"
+
+- debug:
+    var: bsub_output
+
+- name: parse command output using regex
+  set_fact:
+    _job_id: "{{ bsub_output.stdout | regex_search('([0-9]*)', '\\1') | first }}"
+- debug:
+    var: _job_id
+
+- name: Add the newly created job to the list of job ids
+  set_fact:
+    lsf_job_ids: "{{ lsf_job_ids + [_job_id] }} "
+    lsf_job_ids_pending: "{{ lsf_job_ids_pending + [_job_id] }} "
+    lsf_job_ids_unfinished: "{{ lsf_job_ids_unfinished + [_job_id] }} "
+
+- name: Sleep for X seconds before submitting next job (when opening large datasets)
+  wait_for:
+    timeout: 60
+  delegate_to: localhost
+  when: exp_config.job.lsf_submit_delay is defined

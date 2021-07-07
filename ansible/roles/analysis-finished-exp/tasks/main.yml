@@ -1,0 +1,31 @@
+# INPUT: job_id
+
+- assert:
+    that:
+    - job_id is defined
+    - lsf_job_ids is defined
+    - exp_id is defined
+    - run_id is defined
+
+
+- debug:
+    msg="analysis-finished-exp -> job_id={{ job_id }}"
+
+
+- name: Create directory if not exists
+  delegate_to: localhost
+  file:
+    path: "{{ experiment_results_dir }}"
+    state: directory
+
+- name: Download final results
+  synchronize:
+    mode: pull
+    src: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ lsf_job_ids.index(job_id) }}"
+    dest: "{{ experiment_results_dir }}/{{ exp_id }}_{{ run_id }}"
+    recursive: yes
+
+#- name: Cleanup leo
+#  file:
+#    path: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}"
+#    state: absent

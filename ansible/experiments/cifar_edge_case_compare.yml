@@ -1,0 +1,258 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 5
+    experiment_name: "cifar_edgecase"
+    use_config_dir: true
+    attack_frequency: 1.0
+    attacker_full_knowledge: true
+    load_model: ./models/resnet18.h5
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1.0
+  client:
+    model_name: resnet18
+    clip:
+      type: median_l2
+      value: 1.5
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.02
+    malicious:
+      multi_attacker_scale_divide: true
+      attack_start: 5
+      attack_stop: 1005
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 2
+          num_batch: 9
+          poison_samples: 20
+          optimizer: SGD
+          learning_rate: 0.02
+          step_decay: ~
+      backdoor:
+        type: semantic
+        train: [ 2180,2771,3233,4932,6241,6813,6869,9476,11395,11744,14209,14238,18716,19793,20781,21529,31311,40518,40633,42119,42663,49392 ]
+        test: [ 42119,42663,49392 ]
+        target_label: 2
+        remove_from_benign_dataset: false
+        augment_times: 50
+        augment_data: true
+      evasion: ~
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client: # baseline, no attack
+    malicious:
+      attack_stop: 0
+
+# BLACKBOX #
+#- client: # racingstripe
+#    malicious:
+#      evasion: ~
+#
+- client: # greencar
+    malicious:
+      backdoor:
+        type: semantic
+        train: [389,561,874,41861,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
+        test: [41336,1605,47001]
+#
+##- client: # bgwall
+##    malicious:
+##      evasion: ~
+##    backdoor:
+##      type: semantic
+##      train: [ 568,3934,12336,30560,33105,33615,33907,36848,41706 ] # bgwall
+##      test: [ 330, 30696, 40713 ]
+#
+- client: # bgwall, under clipping bound
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: NorthWesternEdgeCase
+        augment_data: true
+        augment_times: 50
+#
+- client: # bgwall, under clipping bound
+    malicious:
+      backdoor:
+        type: pixel_pattern
+        target_label: 9
+#
+- client: # bgwall, under clipping bound
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: CifarRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50
+
+# PGD #
+#- client: # bgwall, baseline attack
+#    malicious:
+#      objective:
+#        args:
+#          num_epochs: 25
+#          num_batch: 10
+#          learning_rate: 0.1 # WAIT FOR LR
+#          step_decay: ~
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          pgd_factor: 1.
+#          scale_factor: 100
+
+- client: # greencar, baseline attack
+    malicious:
+      objective:
+        args:
+          num_epochs: 6
+          num_batch: 10
+          learning_rate: 0.1 # WAIT FOR LR
+          step_decay: true
+      backdoor:
+        type: semantic
+        train: [389,561,874,41861,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
+        test: [41336,1605,47001]
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
+          scale_factor: 20
+
+#- client: # bgwall
+#    malicious:
+#      objective:
+#        args:
+#          num_epochs: 25
+#          num_batch: 10
+#          learning_rate: 0.1 # WAIT FOR LR
+#          step_decay: ~
+#      backdoor:
+#        type: semantic
+#        train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # bgwall
+#        test: [330, 30696, 40713]
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          pgd_factor: 1.
+#          scale_factor: 100
+
+- client: # bgwall, under clipping bound
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: NorthWesternEdgeCase
+        augment_data: true
+        augment_times: 50
+      objective:
+        args:
+          num_epochs: 6
+          num_batch: 10
+          learning_rate: 0.1 # WAIT FOR LR
+          step_decay: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
+          scale_factor: 20
+
+- client:
+    malicious:
+      backdoor:
+        type: pixel_pattern
+        target_label: 9
+      objective:
+        args:
+          num_epochs: 6
+          num_batch: 10
+          learning_rate: 0.1 # WAIT FOR LR
+          step_decay: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
+          scale_factor: 20
+
+- client: # random noise
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: CifarRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50
+      objective:
+        args:
+          num_epochs: 6
+          num_batch: 10
+          learning_rate: 0.1 # WAIT FOR LR
+          step_decay: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
+          scale_factor: 20
+
+
+
+
+#- client: # bgwall, median
+#    malicious:
+#      objective:
+#        args:
+#          num_epochs: 40
+#          step_decay: ~
+#          poison_samples: 63
+#          learning_rate: 0.01
+#      backdoor:
+#        train: [568,3934,12336,30560,33105,33615,33907,36848,41706] # bgwall
+#        test: [330, 30696, 40713]
+#      evasion:
+#        args:
+#          scale_factor: 85
+#    clip:
+#      type: median_l2
+#      value: 1.2
+
+#- client: # pixelpoison, under clipping bound
+#    malicious:
+#      objective:
+#        args:
+#          num_epochs: 40
+#          step_decay: ~
+#          poison_samples: 63
+#          learning_rate: 0.05
+#      backdoor:
+#        type: pixel_pattern
+#        train: []
+#        test: []
+#      evasion:
+#        args:
+#          scale_factor: 85
+#    clip:
+#      type: l2
+#      value: 6

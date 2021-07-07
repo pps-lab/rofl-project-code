@@ -1,0 +1,17 @@
+[Unit]
+Description=FL Client Trainer Service: TODO [hidde] define the service unit file for the client. You can use: {{ client_idx }} to get the index of the number of client instances
+
+[Service]
+Type=simple
+Environment="PYTHONPATH=/home/ubuntu/{{ e2e_framework_dir }}/rofl_train_client"
+ExecStart=/bin/bash -c 'exec /usr/bin/python37 /home/ubuntu/{{ e2e_framework_dir }}/rofl_train_client/trainservice/service.py \
+                                                        --config {{ e2e_config_path }} \
+                                                        --port {{ trainer_port }} \
+                                                        --dataset_path {{ e2e_remote_base_dir }}/{{ e2e_local_data_dir }}/dataset_{{ entry.key }} \
+                                                        --framework_path {{ e2e_remote_base_dir}}/{{ analysis_framework_dir }}'
+
+StandardOutput=file:{{ logs_dir }}/trainer_{{ entry.key }}_stdout.log
+StandardError=file:{{ logs_dir }}/trainer_{{ entry.key }}_stderr.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,92 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 48
+    num_selected_clients: 48
+    num_malicious_clients: 0
+    experiment_name: "cifar_clients"
+    use_config_dir: true
+  server:
+    num_rounds: 40
+    num_test_batches: 5
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1.0
+  client:
+    model_name: lenet5_cifar
+    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_initialized.txt"
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.075 # almost the same
+    num_params: 62006
+    quantization:
+      type: probabilistic
+      bits: 8
+      frac: 7
+  dataset:
+    dataset: cifar10
+    data_distribution: IID
+    augment_data: true
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+  crypto:
+    enc_type: $VARIES #l2, Range, Plain
+    fp_bits: 16
+    fp_frac: 7
+    value_range: 8
+    n_partition: 64
+    l2_value_range: 32
+    check_percentage: 1.0
+  e2e:
+    client_machines: 4 # is this correct?
+    speculative_execution: $VARIES$
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client: # l2, optimized
+    model_name: lenet5_intrinsic
+    num_params: 12000
+    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_intrinsic_12k.txt"
+    quantization:
+      type: probabilistic
+      bits: 8
+      frac: 7
+    benign_training:
+      learning_rate: 0.070
+  server:
+    intrinsic_dimension: 12000
+  crypto:
+    enc_type: l2
+    fp_bits: 32
+    fp_frac: 7
+  e2e:
+    speculative_execution: true
+- crypto:
+    enc_type: l2
+    fp_bits: 32
+  e2e:
+    speculative_execution: false
+
+- crypto:
+    enc_type: Range
+    check_percentage: 0.0576 # 0-100 for Range, # 3569
+  e2e:
+    speculative_execution: true
+- crypto:
+    enc_type: Range
+    check_percentage: 1.0
+  e2e:
+    speculative_execution: false
+
+- client: # plain
+    quantization: ~
+    learning_rate: 0.025
+  crypto:
+    enc_type: Plain
+  e2e:
+    speculative_execution: false

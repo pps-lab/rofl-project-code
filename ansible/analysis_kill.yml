@@ -1,0 +1,28 @@
+
+- name: Kill jobs of an experiment
+  hosts: leonhard
+  tasks:
+  - name: Assert that we are not initializing a new run, but an existing run
+    assert:
+      that:
+      - run != 'new'
+  - name: Load an Experiment Run (init a new run if it does not exist yet)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: load
+
+  - name: Ensure there are unfinished jobs left
+    assert:
+      that:
+        - lsf_job_ids_unfinished | length > 0
+
+  - name: Kill all unfinished jobs
+    command:
+      cmd: "bkill {{ item }}"
+    loop: "{{ lsf_job_ids_unfinished }}"
+
+  - debug:
+      msg: "Done, killed {{ lsf_job_ids_unfinished | length }} jobs"
+
+      # TODO: Update state ?

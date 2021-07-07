@@ -1,0 +1,61 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 3383
+    num_selected_clients: 30
+    num_malicious_clients: 0
+    experiment_name: "backdoor_tasks_noattack"
+    use_config_dir: true
+  server:
+    num_rounds: 10
+    num_test_batches: 5
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: dev
+    benign_training:
+      num_epochs: $VARIES$
+      batch_size: 24
+      optimizer: Adam
+      learning_rate: 0.001
+  dataset:
+    dataset: femnist
+    data_distribution: nonIID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+  crypto:
+    enc_type: Range #l2, Range, Plain
+    value_range: 8
+    n_partition: 1
+    l2_value_range: 32
+    check_percentage: 10 # 0-100 for Range
+    fp_bits: 32
+    fp_frac: 7
+  e2e:
+    client_machines: 4
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client:
+    benign_training:
+      num_epochs: 1
+#- client:
+#    benign_training:
+#      num_epochs: 2
+#- client:
+#    benign_training:
+#      num_epochs: 3
+
+#- backdoor:
+#    train: [330, 30696, 40713, 568, 3934, 12336,33907,36848,41706]
+#    test: [30560,33105,33615]
+#- backdoor:
+#    train: [330, 30696,40713,30560,33105,33615,33907,36848,41706]
+#    test: [568,3934,12336]
+#- backdoor:
+#    train: [568,3934,12336,30560,33105,33615,330, 30696,40713]
+#    test: [33907,36848,41706]

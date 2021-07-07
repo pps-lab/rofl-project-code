@@ -1,0 +1,88 @@
+---
+
+- assert:
+    that:
+    - e2e_base is defined
+
+
+- name: Create VPC
+  ec2_vpc_net:
+    name: "{{ e2e_base.vpc_name }}"
+    cidr_block: "{{ e2e_base.vpc_cidr_block }}"
+    region: "{{ e2e_base.aws_region }}"
+    state: present
+  register: my_vpc
+
+- name: Set VPC ID in variable
+  set_fact:
+    e2e_base: "{{ e2e_base | combine({'vpc_id': my_vpc.vpc.id}) }}"
+
+- name: Create Public Subnet [AZ-1]
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ e2e_base.vpc_id }}"
+    cidr: "{{ e2e_base.vpc_subnet_cidr }}"
+    az: "{{ e2e_base.aws_region }}a"
+    region: "{{ e2e_base.aws_region }}"
+    resource_tags:
+      Name: "{{ e2e_base.vpc_subnet_name }}"
+  register: public_subnet_client
+
+
+- name: Set Public Subnet ID in variables
+  set_fact:
+    e2e_base: "{{ e2e_base | combine({'vpc_subnet_id': public_subnet_client.subnet.id}) }}"
+
+- name: Create Internet Gateway for VPC
+  ec2_vpc_igw:
+    vpc_id: "{{ e2e_base.vpc_id }}"
+    region: "{{ e2e_base.aws_region }}"
+    state: present
+  register: vpc_igw
+
+- name: Set Internet Gateway ID in variable
+  set_fact:
+    e2e_base: "{{ e2e_base | combine({'igw_id': vpc_igw.gateway_id}) }}"
+
+- name: Set up public route table
+  community.aws.ec2_vpc_route_table:
+    vpc_id: "{{ e2e_base.vpc_id }}"
+    region: "{{ e2e_base.aws_region }}"
+    #purge_routes: True
+    #purge_subnets: True
+    #purge_tags: True
+    #lookup: id
+    #route_table_id: '{{ e2e_base.route_table_id }}'
+    tags:
+      Name: "Public"
+    subnets:
+      - "{{ e2e_base.vpc_subnet_id }}"
+    routes:
+      - dest: "0.0.0.0/0"
+        gateway_id: "{{ e2e_base.igw_id }}"
+
+- name: Create Security Group
+  ec2_group:
+    name: "{{ e2e_base.sg_name }}"
+    description: "{{ e2e_base.sg_desc }}"
+    vpc_id: "{{ e2e_base.vpc_id }}"
+    region: "{{ e2e_base.aws_region }}"
+  register: sg
+
+- name: Set client group id + route table id
+  set_fact:
+    e2e_base: "{{ e2e_base | combine({'sg_id': sg.group_id, 'sg_ownerid': sg.owner_id }) }}"
+
+- name: Add rules to Security Group
+  ec2_group:
+    name: "{{ e2e_base.sg_name }}"
+    description: "{{ e2e_base.sg_desc }}"
+    vpc_id: "{{ e2e_base.vpc_id }}"
+    region: "{{ e2e_base.aws_region }}"
+    rules:
+      - proto: all
+        group_id: "{{ e2e_base.sg_ownerid }}/{{ e2e_base.sg_id }}/{{ e2e_base.sg_name }}"
+      - proto: tcp
+        ports: 22
+        cidr_ip: 0.0.0.0/0
+- debug: msg="e2e base config= {{ e2e_base }}"

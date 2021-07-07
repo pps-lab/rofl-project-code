@@ -1,0 +1,44 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 1
+    num_selected_clients: 1
+    num_malicious_clients: 0
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+#    attack_frequency: 1.0
+    save_model_at: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 160] # 0.80, 0.82, 0.88
+  server:
+    num_rounds: 5000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet56
+    clip: ~
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.01
+      decay:
+        type: boundaries
+        decay_boundaries: [ 18750, 46875, 140625 ] # 10, 25, 75
+        decay_values: [ 1.0, 0.1, 0.01, 0.001 ]
+    malicious: ~
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client: # bgwall
+    benign_training:
+      learning_rate: 0.1

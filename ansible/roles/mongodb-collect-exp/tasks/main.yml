@@ -1,0 +1,42 @@
+  - assert:
+      that:
+        - expdata is defined
+        - exp is defined
+        - run_id is defined
+        - exp_idx is defined
+        - exp_purpose is defined
+
+
+    # Here we collect the experiment information, add some metadata and process
+
+
+  - name: Add metadata
+    set_fact:
+      expdata_meta: "{{ expdata | combine({'meta': metadata }) }}"
+    vars:
+      metadata: "{{ {'run_id': run_id, 'description': exp_purpose } }}"
+
+  - name: Set unique object id
+    set_fact:
+      expdata_id: "{{ expdata_meta | combine({'_id': mongo_id }) }}"
+    vars:
+      mongo_id: "{{ exp + '_' + run_id + '_' + exp_idx|string }}"
+
+#  - debug:
+#      var: expdata_id
+
+  - name: Load results
+    command:
+      cmd: "python roles/mongodb-collect-exp/scripts/analysis_results.py {{ experiment_results_dir }}/{{ exp }}_{{ run_id}}/run_{{ exp_idx }}"
+#      chdir: "roles/mongodb-collect-exp/scripts"
+    register: analysis_result
+
+  - debug:
+      msg: "{{ analysis_result.stdout }}"
+
+  - name: Save experiment to results
+    set_fact:
+      experiments_with_ids: "{{ experiments_with_ids | default([]) + [expdata_id | combine({ 'metrics': analysis_result.stdout|from_json })] }}"
+#
+#  - debug:
+#      var: experiments_with_ids

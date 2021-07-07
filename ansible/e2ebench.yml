@@ -1,0 +1,102 @@
+- name: Setup AWS for E2E Benchmark
+  hosts: localhost
+
+  tasks:
+  - name: Load an Experiment Run (init a new run if it does not exist yet)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: load
+  
+  - name: Schedule the experiments (job ids are 0 to number of experiments-1)
+    set_fact:
+      lsf_job_ids: "{{range(0, experiments_ext | length, 1) | list }}"
+    when: run == 'new' # only schedule if it is a new experiment
+
+  - name: Set all jobs to unfinished and pending
+    set_fact:
+      lsf_job_ids_unfinished: "{{ lsf_job_ids }}" 
+      lsf_job_ids_pending: "{{ lsf_job_ids }}" 
+    when: run == 'new' # only schedule if it is a new experiment
+
+
+  - name: Save the updated state of the experiment run (save job ids)
+    include_role:
+      name: experiment-state
+    vars:
+      expstate: save
+    when: run == 'new' # only persist the state if it is a new experiment
+
+  - name: Setup AWS including VPC and the required EC2 instances
+    include_role:
+      name: aws-all-setup
+    vars:
+      # start one server and one client instance
+      server_ec2_instances_num: 1 
+      server_ec2_instances_max_num: 1
+      client_ec2_instances_num: "{{ experiments_ext[cur_exp_idx].e2e.client_machines | int }}"
+      client_ec2_instances_max_num: "{{ experiments_ext[cur_exp_idx].e2e.client_machines | int }}"
+    when: run == 'new' # only change AWS if it is a new experiment
+
+  - debug:
+      var: groups
+
+
+
+# TODO[nicolas] Can we simplify the below two tasks, by including the avx_target_cpu in the host-specific variables somehow?
+- name: Setup server machines with common packages
+  hosts: "{{ hostvars['localhost'].e2e_server.host_group }}"
+  tasks:
+  - debug:
+      var: groups
+  - name: 
+    include_role:
+      name: e2e-common
+    when: run == 'new' # only setup if it is a new experiment
+  vars:
+    avx_target_cpu: "{{ hostvars['localhost'].e2e_server.avx_target_cpu }}"
+
+- name: Setup client machines with common packages
+  hosts: "{{ hostvars['localhost'].e2e_client.host_group }}"
+  tasks:
+  - name:
+    include_role:
+      name: e2e-common
+    when: run == 'new' # only setup if it is a new experiment
+  vars:
+    avx_target_cpu: "{{ hostvars['localhost'].e2e_client.avx_target_cpu }}"
+
+#- name: Include jobs
+#  hosts: localhost
+#  tasks:
+#    - debug:
+#        var: lsf_job_ids_unfinished
+
+- name: Monitor jobs
+  hosts: localhost
+
+  tasks:
+  - name: Try to sequentially run an experiment and wait until it's finished
+    include_role:
+      name: e2e-job
+#    when: lsf_job_ids_unfinished | length > 0 # there are some unfinished jobs left
+#    loop: "{{ range(0, n_e2e_tries, 1)|list }}"
+  vars:
+    n_e2e_tries: 10
+    e2e_check_wait_time: 5
+
+
+#  - name: Terminate all ec2 instances after
+#    include_role:
+#      name: aws-all-setup
+#    vars:
+#      server_ec2_instances_num: 0
+#      server_ec2_instances_max_num: 0
+#      client_ec2_instances_num: 0
+#      client_ec2_instances_max_num: 0
+#    when: lsf_job_ids_unfinished | length == 0
+#
+#  - name: Output the run id of this experiment for convenience
+#    debug:
+#      var: run_id
+#    when: run == 'new'

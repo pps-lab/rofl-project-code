@@ -1,0 +1,88 @@
+---
+
+- assert:
+    that:
+    - exp is defined
+    - run is defined
+    - expstate == 'load' or expstate == 'save'
+    - run == 'new' or run|int > 0
+
+- name:
+  set_fact:
+    exp_id: "{{ exp }}"
+    is_init: False
+
+- name: Set run id from command argument
+  set_fact:
+    run_id: "{{ run }}"
+  when: run != 'new' and run_id is not defined  # continue an experiment run
+
+- name: Create new run id + Mark as init
+  set_fact:
+    is_init: True
+    run_id: "{{ ansible_date_time.epoch }}"
+  when: run == 'new' and run_id is not defined  # init experiment
+
+- debug:
+    msg="exp_id={{ exp_id }} run_id={{ run_id }}"
+
+- name: Include the experiment variables
+  include_vars: experiments/{{ exp_id }}.yml
+  when: is_init
+
+- name: Expand the experiments config with the hyperparameter keys that are being tuned
+  set_fact:
+    experiments_hyper: "{{ experiments_hyper | default([]) | union([exp_item | combine({ 'hyperparameters': { 'args': exp_item } })]) }}"
+  loop: "{{ experiments }}"
+  when: is_init
+  loop_control:
+    loop_var: exp_item
+
+- name: Init the experiment state by expanding the base_experiment with the varying params in the experiments
+  set_fact:
+    cur_exp_idx: 0
+    experiments_ext: "{{ experiments_ext | default([]) | union([base_experiment | combine( exp_item, recursive=True )])}}"
+    lsf_job_ids: []
+    lsf_job_ids_unfinished: []
+    lsf_job_ids_pending: []
+    lsf_job_ids_running: []
+  loop: "{{ experiments_hyper }}"
+  when: is_init
+  loop_control:
+    loop_var: exp_item
+
+
+# TODO: Add check for $VARIES$ in the resulting combined experiments
+
+- name: Create run directory if it does not exist
+  delegate_to: localhost
+  file:
+    path: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}"
+    state: directory
+    mode:  0755
+  when: is_init
+
+- name: Save the Experiment State in the Run Directory
+  delegate_to: localhost
+  template:
+    src: state.yml.j2
+    dest: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/state.yml"
+    mode:  0755
+  when: expstate == 'save' or is_init
+
+- name: Load Experiment State
+  include_vars: # Be careful: any variables you set with set_fact will not be overwritten with include_vars due to the variable precedence of different sources in Ansible.
+    file: "{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/state.yml"
+    name: state
+  when: expstate == 'load' and not is_init
+  
+- name: Set variables (facts) based on loaded state
+  set_fact:
+    cur_exp_idx: "{{ state.cur_exp_idx }}"
+    experiments_ext: "{{ state.experiments_ext }}"
+    lsf_job_ids: "{{ state.lsf_job_ids }}"
+    lsf_job_ids_unfinished: "{{ state.lsf_job_ids_unfinished }}"
+    lsf_job_ids_pending: "{{ state.lsf_job_ids_pending }}"
+    lsf_job_ids_running: "{{ state.lsf_job_ids_running }}"
+  when: expstate == 'load' and not is_init
+  

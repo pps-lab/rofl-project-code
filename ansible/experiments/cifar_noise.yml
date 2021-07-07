@@ -1,0 +1,90 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 1
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+    attack_frequency: 1.0
+    attacker_full_knowledge: true
+    load_model: ./models/resnet18_080.h5
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip:
+      type: l2
+      value: 5
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.1
+    malicious:
+      attack_start: 5
+      attack_stop: 1005
+      estimate_other_updates: false
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 25
+          num_batch: 10
+          poison_samples: 16
+          optimizer: SGD
+          learning_rate: 0.35
+          step_decay: true
+      backdoor:
+        type: edge
+        edge_case_type: NorthWesternEdgeCase
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: 0.0625
+          scale_factor: 100
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+- server:
+    gaussian_noise: 0.000
+#- server:
+#    gaussian_noise: 0.002
+- server:
+    gaussian_noise: 0.004
+#- server:
+#    gaussian_noise: 0.006
+#- server:
+#    gaussian_noise: 0.008
+- server:
+    gaussian_noise: 0.010
+#- server:
+#    gaussian_noise: 0.012
+#- server:
+#    gaussian_noise: 0.014
+- server:
+    gaussian_noise: 0.016
+#- server:
+#    gaussian_noise: 0.018
+- server:
+    gaussian_noise: 0.020
+- server:
+    gaussian_noise: 0.030
+#- server:
+#    gaussian_noise: 0.040
+- server:
+    gaussian_noise: 0.050

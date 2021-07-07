@@ -1,0 +1,47 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 48
+    num_selected_clients: 48
+    num_malicious_clients: 0
+    experiment_name: "mnist_clients"
+    use_config_dir: true
+  server:
+    num_rounds: 40
+    num_test_batches: 5
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: dev
+    benign_training:
+      num_epochs: 2
+      batch_size: 24
+      optimizer: Adam
+      learning_rate: 0.001
+    num_params: 19166
+  dataset:
+    dataset: mnist
+    data_distribution: IID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+  crypto:
+    enc_type: Plain #l2, Range, Plain
+    value_range: 16
+    n_partition: 64
+    l2_value_range: 32
+    check_percentage: 100 # 0-100 for Range
+    fp_bits: 16
+    fp_frac: 8
+  e2e:
+    client_machines: 4 # is this correct?
+    speculative_execution: false
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client:
+    benign_training:
+      num_epochs: 2
