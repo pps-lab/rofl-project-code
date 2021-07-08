@@ -37,7 +37,7 @@
 
 ## About the Project
 This framework is an end-to-end implementation of the protocol proposed in 
-of [RoFL: Attestable Robustness for Secure Federated Learning (are we changing the title for now?)](todo).
+of [RoFL: Attestable Robustness for Secure Federated Learning](https://arxiv.org/abs/2107.03311).
 The protocol relies on combining secure aggregation with commitments together with
 zero-knowledge proofs to proof constraints on client updates.
 
