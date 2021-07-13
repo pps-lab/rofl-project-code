@@ -41,7 +41,7 @@ of [RoFL: Attestable Robustness for Secure Federated Learning](https://arxiv.org
 The protocol relies on combining secure aggregation with commitments together with
 zero-knowledge proofs to proof constraints on client updates.
 One constraint that we show to be effective against some types of backdoor attack is the bounding of update norms.
-We evaluated this constraint using the [federated learning analysis framework](https://github.com/pps-lab/fl-analysis), 
+We evaluate this constraint using the [federated learning analysis framework](https://github.com/pps-lab/fl-analysis), 
 which can be used to perform experiments to analyse the effectiveness of various federated learning backdoor attacks and defenses.
 
 The current implementation of RoFL is an academic proof-of-concept prototype. 
@@ -50,18 +50,18 @@ The current prototype is not meant to be directly used for applications in produ
 
 ### RoFL components
 This repository is structured as follows.
-* [RoFL_Service](): This directory contains the code for the federated learning server and client, written in Rust.
-* [RoFL_Crypto](): This directory contains the cryptographic library to generate and verify the zero-knowledge proof constraints
+* [RoFL_Service](rofl_service): This directory contains the code for the federated learning server and client, written in Rust.
+* [RoFL_Crypto](rofl_crypto): This directory contains the cryptographic library to generate and verify the zero-knowledge proof constraints
 used in RoFL.
-* [RoFL_Train_Client](): This directory contains a python service to handle the training and inference operations for the machine learning model.
+* [RoFL_Train_Client](rofl_train_client): This directory contains a python service to handle the training and inference operations for the machine learning model.
 The RoFL_Service interfaces with the RoFL_Train_Client using gRPC.
 This component acts as a wrapper around the [FL Analysis framework](https://github.com/pps-lab/fl-analysis) that is used for machine learning training.
 
 ### Utilities
-* [ansible](): The Ansible setup used for the evaluation of the framework. 
+* [ansible](ansible): The Ansible setup used for the evaluation of the framework. 
   For more information on how to use this, See [ansible/README.md](https://github.com/pps-lab/rofl-project-code/blob/master/ansible/README.md).
 
-* [plots](): This directory contains code used to generate plots for the paper.
+* [plots](plots): This directory contains code used to generate plots for the paper.
 
 
 ### End-to-end implementation
