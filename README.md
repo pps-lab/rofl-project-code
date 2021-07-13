@@ -37,16 +37,19 @@
 
 ## About the Project
 This framework is an end-to-end implementation of the protocol proposed in 
-of [RoFL: Attestable Robustness for Secure Federated Learning (are we changing the title for now?)](todo).
+of [RoFL: Attestable Robustness for Secure Federated Learning](https://arxiv.org/abs/2107.03311).
 The protocol relies on combining secure aggregation with commitments together with
 zero-knowledge proofs to proof constraints on client updates.
+One constraint that we show to be effective against some types of backdoor attack is the bounding of update norms.
+We evaluated this constraint using the [federated learning analysis framework](https://github.com/pps-lab/fl-analysis), 
+which can be used to perform experiments to analyse the effectiveness of various federated learning backdoor attacks and defenses.
 
 The current implementation of RoFL is an academic proof-of-concept prototype. 
-The prototype is designed to focus on evaluating the overheads of zero-knowledge proofs on client updates on top of secure aggregation. 
+This prototype is designed to focus on evaluating the overheads of zero-knowledge proofs on client updates on top of secure aggregation. 
 The current prototype is not meant to be directly used for applications in productions. 
 
-This repository is structured as follows.
 ### RoFL components
+This repository is structured as follows.
 * [RoFL_Service](): This directory contains the code for the federated learning server and client, written in Rust.
 * [RoFL_Crypto](): This directory contains the cryptographic library to generate and verify the zero-knowledge proof constraints
 used in RoFL.
