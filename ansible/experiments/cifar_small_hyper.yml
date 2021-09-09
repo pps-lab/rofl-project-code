@@ -1,0 +1,67 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 48
+    num_selected_clients: 48
+    num_malicious_clients: 0
+    experiment_name: "cifar_clients"
+    use_config_dir: true
+  server:
+    num_rounds: 40
+    num_test_batches: 5
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1.0
+  client:
+    model_name: lenet5_cifar
+    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_initialized.txt"
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: $VARIES$ # almost the same
+    num_params: 62006
+    quantization: ~
+  dataset:
+    dataset: cifar10
+    data_distribution: IID
+    augment_data: true
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+  crypto:
+    enc_type: Plain #l2, Range, Plain
+    fp_bits: 16
+    fp_frac: 7
+    value_range: 8
+    n_partition: 64
+    l2_value_range: 32
+    check_percentage: 1.0
+  e2e:
+    client_machines: 4 # is this correct?
+    speculative_execution: $VARIES$
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+# We have
+  # plain, quantized, and rsl
+
+- client: # plain
+    learning_rate: 0.01
+- client: # plain
+    learning_rate: 0.025
+- client: # plain
+    learning_rate: 0.05
+- client: # plain
+    learning_rate: 0.075
+- client: # plain
+    learning_rate: 0.1
+- client: # plain
+    learning_rate: 0.25
+- client: # plain
+    learning_rate: 0.5
+- client: # plain
+    learning_rate: 0.75

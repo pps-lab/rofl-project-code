@@ -12,6 +12,7 @@ crate-type = ["rlib", "dylib"]
 [dependencies]
 curve25519-dalek = { version = "1.1.3", default-features = false, features = ["std", "avx2_backend"], optional = false }
 
+proc-macro2 = { version = "1.0.28" }
 #NOTE mlei: cannot be higher otherwise wont compile
 packed_simd = { version = "0.3.4", package = "packed_simd_2" }
 

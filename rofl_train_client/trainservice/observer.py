@@ -5,7 +5,6 @@ import grpc
 import logging
 import sys, os
 import argparse
-from trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
 
 parser = argparse.ArgumentParser(description='Run the trainer')
 parser.add_argument('--config', type=str, default='../configs/example_config.yml',
@@ -24,6 +23,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 analysis_path = os.path.join(dir_path, args.framework_path)
 print(f"Using analysis framework at {analysis_path}")
 sys.path.insert(0, analysis_path)
+
+from trainservice.analysis_wrapper.analysis_observer import AnalysisObserver
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)

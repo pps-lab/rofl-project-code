@@ -72,9 +72,15 @@
     repo: "{{ analysis_framework_repository_remote }}"
     dest: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
 
-- name: Install pip dependencies in analysis framework
+- name: Install pip dependencies (common.txt) in analysis framework
   become: True
-  shell: python37 -m pip install --user -r requirements.txt
+  shell: python37 -m pip install pipenv
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
+
+- name: Install pip dependencies in analysis framework
+#  become: True
+  shell: python37 -m pipenv install --system
   args:
     chdir: "{{ e2e_remote_base_dir}}/{{ analysis_framework_dir }}"
 
@@ -89,6 +95,13 @@
   shell: python37 -m pip install --user -r requirements.txt
   args:
     chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_train_client"
+
+- name: Select version of old dependency # For compatibility with nightly build
+  shell: |
+    . $HOME/.cargo/env
+    cargo update -p proc-macro2 --precise 1.0.28
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
 
 - name: Build Cargo crypto # for microbenchmarks, e2e will recompile based on the given config
   environment:
