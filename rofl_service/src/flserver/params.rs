@@ -498,14 +498,14 @@ impl EncParamsL2 {
         )
         .unwrap();
         let (sum_range_proofs, _sum_cm) = l2_range_proof_vec::create_rangeproof_l2(
-            plaintext_vec,
+            &range_clipped,
             &rand_scalars,
             l2_range,
             n_partition,
         )
         .unwrap();
         let (rand_proofs, enc_update) = square_rand_proof_vec::create_l2rangeproof_vec_existing(
-            plaintext_vec,
+            &range_clipped,
             enc_com,
             blinding_vec,
             &rand_scalars,
