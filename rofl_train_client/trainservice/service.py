@@ -15,7 +15,7 @@ parser.add_argument('--dataset_path', type=str, default='../configs/example_conf
                     help='Path to local client dataset')
 parser.add_argument('--port', type=int, default=50016,
                     help='Default port to run on')
-parser.add_argument('--framework_path', type=str, default='../../../fl-analysis',
+parser.add_argument('--framework_path', type=str, default='../../../attacks_on_federated_learning',
                     help='Path to framework')
 args = parser.parse_args()
 
