@@ -41,7 +41,7 @@ class AnalysisClientWrapper():
         # self.evaluate()
         self.client.set_model(self.model)
         self.client.train(round)
-        self.evaluate()
+        # self.evaluate()
         logging.info(f"Done training round {round}")
         return util.flatten_update(self.client.weights)
 

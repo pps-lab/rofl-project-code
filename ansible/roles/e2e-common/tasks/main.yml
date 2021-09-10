@@ -78,11 +78,17 @@
   args:
     chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
 
-- name: Install pip dependencies in analysis framework
-#  become: True
-  shell: python37 -m pipenv install --system
+- name: Generate requirements.txt from pipenv
+  become: True
+  shell: python37 -m pipenv lock -r > requirements.txt
   args:
     chdir: "{{ e2e_remote_base_dir}}/{{ analysis_framework_dir }}"
+
+- name: Install pip dependencies (requirements.txt) in analysis framework
+  become: True
+  shell: python37 -m pip install --user -r requirements.txt
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}"
 
 - name: Install pip dependencies (common.txt) in analysis framework
   become: True

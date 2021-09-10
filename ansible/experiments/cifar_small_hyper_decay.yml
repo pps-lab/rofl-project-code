@@ -7,8 +7,8 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 200
-    num_test_batches: 5
+    num_rounds: 1000
+    num_test_batches: 15
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
@@ -27,7 +27,7 @@ base_experiment: # the base config object
     data_distribution: IID
     augment_data: true
   job:
-    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
     cpu_mem_per_core: 4096
     use_gpu: 1
@@ -52,16 +52,44 @@ experiments: # in the experiments object you have a list for the different exper
 - client: # plain
     benign_training:
       learning_rate: 0.025
-      decay:
-        type: boundaries
-        decay_boundaries: [651]
-        decay_values: [1.0, 0.1]
+- client: # plain
+    model_weight_regularization: 0.0001
+    benign_training:
+      learning_rate: 0.025
+
+- client: # plain
+    model_weight_regularization: 0.0001
+    benign_training:
+      learning_rate: 0.1
+
+- client: # plain
+    benign_training:
+      learning_rate: 0.01
+- client: # plain
+    model_weight_regularization: 0.0001
+    benign_training:
+      learning_rate: 0.01
+
+
 - client: # plain
     benign_training:
       learning_rate: 0.05
 - client: # plain
     benign_training:
-      learning_rate: 0.075
+      learning_rate: 0.05
+      decay:
+        type: boundaries
+        decay_boundaries: [2400]
+        decay_values: [1.0, 0.1]
 - client: # plain
+    model_weight_regularization: 0.0001
     benign_training:
-      learning_rate: 0.1
+      learning_rate: 0.05
+- client: # plain
+    model_weight_regularization: 0.0001
+    benign_training:
+      learning_rate: 0.05
+      decay:
+        type: boundaries
+        decay_boundaries: [ 2400 ]
+        decay_values: [ 1.0, 0.1 ]

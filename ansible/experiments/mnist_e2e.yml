@@ -48,6 +48,14 @@ base_experiment: # the base config object
     speculative_execution: $VARIES$
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+- client: # plain
+    quantization: ~
+  crypto:
+    enc_type: Plain
+  e2e:
+    speculative_execution: false
+
 - client: # l2, optimized
     model_name: dev_intrinsic
     num_params: 5000
@@ -80,12 +88,5 @@ experiments: # in the experiments object you have a list for the different exper
 - crypto: # linf, unoptimized
     enc_type: Range
     check_percentage: 1.0
-  e2e:
-    speculative_execution: false
-
-- client: # plain
-    quantization: ~
-  crypto:
-    enc_type: Plain
   e2e:
     speculative_execution: false
