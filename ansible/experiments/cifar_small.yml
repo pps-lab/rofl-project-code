@@ -7,7 +7,7 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 40
+    num_rounds: 100
     num_test_batches: 5
     aggregator:
       name: FedAvg
@@ -19,7 +19,7 @@ base_experiment: # the base config object
       num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.075 # almost the same
+      learning_rate: 0.01
     num_params: 62006
     quantization:
       type: probabilistic
@@ -57,7 +57,7 @@ experiments: # in the experiments object you have a list for the different exper
       bits: 8
       frac: 7
     benign_training:
-      learning_rate: 0.070
+      learning_rate: 0.1
   server:
     intrinsic_dimension: 12000
   crypto:
@@ -66,6 +66,22 @@ experiments: # in the experiments object you have a list for the different exper
     fp_frac: 7
   e2e:
     speculative_execution: true
+
+- crypto:
+    enc_type: Range
+    check_percentage: 0.0576 # 0-100 for Range, # 3569
+  e2e:
+    speculative_execution: true
+
+
+- client: # plain
+    quantization: ~
+  crypto:
+    enc_type: Plain
+  e2e:
+    speculative_execution: false
+
+
 - crypto:
     enc_type: l2
     fp_bits: 32
@@ -74,19 +90,6 @@ experiments: # in the experiments object you have a list for the different exper
 
 - crypto:
     enc_type: Range
-    check_percentage: 0.0576 # 0-100 for Range, # 3569
-  e2e:
-    speculative_execution: true
-- crypto:
-    enc_type: Range
     check_percentage: 1.0
-  e2e:
-    speculative_execution: false
-
-- client: # plain
-    quantization: ~
-    learning_rate: 0.025
-  crypto:
-    enc_type: Plain
   e2e:
     speculative_execution: false

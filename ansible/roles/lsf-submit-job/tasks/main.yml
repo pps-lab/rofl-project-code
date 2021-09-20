@@ -38,16 +38,25 @@
     output_file: "lsf.ans.%J.{{ exp_id }}_{{ run_id }}_{{ exp_idx }}.out"
   register: bsub_output
   shell: |
-    module load gcc/6.3.0 python_gpu/3.7.4 hdf5/1.10.1
+    source /etc/profile
+    source ~/.bash_profile
+    . /cluster/apps/local/env2lmod.sh
+    module load gcc/6.3.0 python/3.7.4 hdf5/1.10.1
+    pip install --user pipenv
+    python -m pipenv lock -r > requirements.txt
     pip install --user -r requirements.txt
-    bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R "rusage[mem={{ exp_config.job.cpu_mem_per_core}},ngpus_excl_p={{ exp_config.job.use_gpu }}]" -R "select[gpu_mtotal0>={{ exp_config.job.gpu_memory_min }}]" -N "python -m src.main -c {{ config_path }}"
+    bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R "rusage[mem={{ exp_config.job.cpu_mem_per_core}}]" -N "python -m src.main -c {{ config_path }}"
   args:
     chdir: "{{ analysis_framework_dir }}"
-#  command:
+    executable: /bin/bash
+    #  command:
 #    chdir: "{{ analysis_framework_dir }}"
 #    cmd: "bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R \"rusage[mem={{ exp_config.job.cpu_mem_per_core}},ngpus_excl_p={{ exp_config.job.use_gpu }}]\" -R \"select[gpu_mtotal0>={{ exp_config.job.gpu_memory_min }}]\" -N \"python -m src.main -c {{ config_path }}\""
     # Dummy job, sleep for 5 min
 #    cmd: "bsub -W {{ 10 }} -n {{ 1 }} -J {{ experiment_name }} -oo {{ output_file }} -N \"sleep 300 && echo 'Done'\""
+
+# gpu version
+#  bsub -W {{ exp_config.job.minutes }} -n {{ exp_config.job.cpu_cores }} -J {{ experiment_name }} -oo {{ output_file }} -R "rusage[mem={{ exp_config.job.cpu_mem_per_core}},ngpus_excl_p={{ exp_config.job.use_gpu }}]" -R "select[gpu_mtotal0>={{ exp_config.job.gpu_memory_min }}]" -N "python -m src.main -c {{ config_path }}"
 
 - name: parse command output using regex
   set_fact:

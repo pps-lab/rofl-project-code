@@ -7,8 +7,8 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 160
-    num_test_batches: 5
+    num_rounds: 1000
+    num_test_batches: 25
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
@@ -19,13 +19,9 @@ base_experiment: # the base config object
       num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.05
-      decay:
-        type: boundaries
-        decay_boundaries: [ 4000 ]
-        decay_values: [ 1.0, 0.1 ]
+      learning_rate: 0.01
     num_params: 274442
-    quantization: $VARIES$
+    quantization: ~
   dataset:
     dataset: cifar10
     data_distribution: IID
@@ -37,7 +33,7 @@ base_experiment: # the base config object
     use_gpu: 1
     gpu_memory_min: 10240
   crypto:
-    enc_type: $VARIES #l2, Range, Plain
+    enc_type: Plain #l2, Range, Plain
     value_range: 8
     n_partition: 64
     l2_value_range: 32
@@ -46,34 +42,30 @@ base_experiment: # the base config object
     fp_frac: 7
   e2e:
     client_machines: 4 # is this correct?
-    speculative_execution: $VARIES$
-
-experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
-
-#- client: # extrapolate
-#    quantization:
-#      type: probabilistic
-#      bits: 8
-#      frac: 7
-#  crypto:
-#    enc_type: Range
-#    check_percentage: 1.0
-#  e2e:
-#    speculative_execution: false
-
-- client:
-    quantization: ~
-  crypto:
-    enc_type: Plain
-  e2e:
     speculative_execution: false
 
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+#- client:
+#    benign_training:
+#      learning_rate: 0.5
 - client:
-    quantization:
-      type: probabilistic
-      bits: 8
-      frac: 7
-  crypto:
-    enc_type: Range
-  e2e:
-    speculative_execution: true
+    benign_training:
+      learning_rate: 0.1
+- client:
+    benign_training:
+      learning_rate: 0.05
+
+- client:
+    benign_training:
+      learning_rate: 0.1
+      decay:
+        type: boundaries
+        decay_boundaries: [ 4000 ]
+        decay_values: [ 1.0, 0.1 ]
+- client:
+    benign_training:
+      learning_rate: 0.05
+      decay:
+        type: boundaries
+        decay_boundaries: [ 4000 ]
+        decay_values: [1.0, 0.1]

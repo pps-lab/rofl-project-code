@@ -7,81 +7,89 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 1000
-    num_test_batches: 15
+    num_rounds: 400
+    num_test_batches: 25
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
   client:
-    model_weight_regularization: 0.0001
-    model_name: lenet5_cifar
-    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_initialized.txt"
+    model_name: mobilenet
+    model_init_path: "/home/ubuntu/rofl-project-code/models/mobilenet.txt"
     benign_training:
       num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: $VARIES$ # almost the same
-    num_params: 62006
+      learning_rate: 0.01
+    num_params: 700458
     quantization: ~
   dataset:
     dataset: cifar10
     data_distribution: IID
     augment_data: true
   job:
-    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
     cpu_mem_per_core: 4096
     use_gpu: 1
     gpu_memory_min: 10240
   crypto:
-    enc_type: Plain #l2, Range, Plain
-    fp_bits: 16
-    fp_frac: 7
+    enc_type: $VARIES #l2, Range, Plain
     value_range: 8
     n_partition: 64
     l2_value_range: 32
-    check_percentage: 1.0
+    check_percentage: 0.013 # 0-100 for Range, # 3652 , 1.331 %
+    fp_bits: 16
+    fp_frac: 7
   e2e:
     client_machines: 4 # is this correct?
     speculative_execution: $VARIES$
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+- client: # plain
+    benign_training:
+      learning_rate: 0.01
+- client: # plain
+    benign_training:
+      learning_rate: 0.05
 
-# We have
-  # plain, quantized, and rsl
 - client: # plain
     benign_training:
-      learning_rate: 0.05
+      learning_rate: 0.1
 - client: # plain
     benign_training:
-      learning_rate: 0.01
-- client: # plain
-    benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.75
+      learning_rate: 0.5
+
+
 - client: # plain
     benign_training:
       learning_rate: 0.01
-  server:
-    global_learning_rate: 0.75
+      batch_size: 96
 - client: # plain
     benign_training:
       learning_rate: 0.05
-  server:
-    global_learning_rate: 0.5
+      batch_size: 96
+- client: # plain
+    benign_training:
+      learning_rate: 0.1
+      batch_size: 96
+- client: # plain
+    benign_training:
+      learning_rate: 0.5
+      batch_size: 96
+
 - client: # plain
     benign_training:
       learning_rate: 0.01
-  server:
-    global_learning_rate: 0.5
+      num_epochs: 4
 - client: # plain
     benign_training:
       learning_rate: 0.05
-  server:
-    global_learning_rate: 0.25
+      num_epochs: 4
 - client: # plain
     benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.25
+      learning_rate: 0.1
+      num_epochs: 4
+- client: # plain
+    benign_training:
+      learning_rate: 0.5
+      num_epochs: 4

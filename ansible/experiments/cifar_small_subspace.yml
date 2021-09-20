@@ -8,27 +8,30 @@ base_experiment: # the base config object
     use_config_dir: true
   server:
     num_rounds: 1000
-    num_test_batches: 15
+    num_test_batches: 25
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
+    intrinsic_dimension: 12000
   client:
-    model_weight_regularization: 0.0001
-    model_name: lenet5_cifar
-    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_initialized.txt"
+    model_name: lenet5_intrinsic
+    num_params: 12000
+    model_init_path: "/home/ubuntu/rofl-project-code/models/cifar_lenet5_intrinsic_12k.txt"
+    quantization:
+      type: probabilistic
+      bits: 8
+      frac: 7
     benign_training:
       num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: $VARIES$ # almost the same
-    num_params: 62006
-    quantization: ~
+      learning_rate: $VARIES$
   dataset:
     dataset: cifar10
     data_distribution: IID
     augment_data: true
   job:
-    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
     cpu_mem_per_core: 4096
     use_gpu: 1
@@ -49,39 +52,34 @@ experiments: # in the experiments object you have a list for the different exper
 
 # We have
   # plain, quantized, and rsl
+
+
 - client: # plain
     benign_training:
-      learning_rate: 0.05
+      learning_rate: 0.5
 - client: # plain
     benign_training:
-      learning_rate: 0.01
+      learning_rate: 0.4
 - client: # plain
     benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.75
+      learning_rate: 0.28
+
 - client: # plain
     benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.75
+      learning_rate: 0.24
 - client: # plain
     benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.5
+      learning_rate: 0.2
+
 - client: # plain
     benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.5
+      learning_rate: 0.18
 - client: # plain
     benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.25
+      learning_rate: 0.14
 - client: # plain
     benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.25
+      learning_rate: 0.1
+- client: # plain
+    benign_training:
+      learning_rate: 0.08

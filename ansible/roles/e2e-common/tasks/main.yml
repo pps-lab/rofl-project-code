@@ -106,6 +106,7 @@
   shell: |
     . $HOME/.cargo/env
     cargo update -p proc-macro2 --precise 1.0.28
+    cargo update -p packed_simd_2 --precise 0.3.4
   args:
     chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
 

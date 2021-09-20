@@ -822,3 +822,49 @@ impl Flservice for DefaultFlService {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use rand_distr::{Distribution, Normal};
+
+    #[test]
+    pub fn test_aggregate_many_numbers() {
+        let num_clients = 100;
+        let size = 100;
+        let mut vector = PlainParams::unity(size);
+        let normal = Normal::new(0.0, 215.5).unwrap();
+
+        let mut control = PlainParams::unity(size);
+
+
+        for i in 0..num_clients {
+            let update_vec: Vec<f32> = (0..size).map(|_| normal.sample(&mut rand::thread_rng()) as f32).collect();
+            let control_vec = update_vec.clone().iter().map(|x| x / num_clients as f32).collect();
+            let update = PlainParams {
+                content: update_vec
+            };
+
+            vector.ml_update_in_place(&update, 1.0);
+
+            let control_update = PlainParams {
+                content: control_vec
+            };
+            control.ml_update_in_place(&control_update, 1.0);
+        }
+        vector.multiply_inplace(1.0 / num_clients as f32);
+
+        let sum: f32 = vector.into_vec().iter().map(|x:&f32|x.clone()).sum();
+        let sum_control: f32 = control.into_vec().iter().map(|x:&f32|x.clone()).sum();
+
+        println!("{:?} {:?}", sum, sum_control);
+
+        /*let normal = Normal::new(0.0, 0.05);
+
+        return PlainParams {
+            content: (0..size).map(|_| normal.sample(&mut rand::thread_rng()) as f32).collect(),
+        };*/
+    }
+
+}

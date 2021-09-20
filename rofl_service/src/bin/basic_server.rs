@@ -35,7 +35,7 @@ fn dummy_training_state(
         n_partition: 1,
         l2_value_range: 32,
         check_percentage: 0.1,
-        enc_type: params::ENC_L2_TYPE as i32,
+        enc_type: params::PLAIN_TYPE as i32,
     };
     TrainingState::new(
         model_confing.model_id,
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .format_for_stdout(opt_format)
         .start()?;
 
-    service.register_new_trainig_state(dummy_training_state(4, 19166, 5, 10));
+    service.register_new_trainig_state(dummy_training_state(1, 19166, 5, 10));
     Server::builder()
         .tcp_nodelay(true)
         .add_service(FlserviceServer::new(service))

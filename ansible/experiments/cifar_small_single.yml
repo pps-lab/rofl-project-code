@@ -1,8 +1,8 @@
 
 base_experiment: # the base config object  
   environment:
-    num_clients: 48
-    num_selected_clients: 48
+    num_clients: 1
+    num_selected_clients: 1
     num_malicious_clients: 0
     experiment_name: "cifar_clients"
     use_config_dir: true
@@ -28,7 +28,7 @@ base_experiment: # the base config object
     data_distribution: IID
     augment_data: true
   job:
-    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
     cpu_mem_per_core: 4096
     use_gpu: 1
@@ -51,37 +51,16 @@ experiments: # in the experiments object you have a list for the different exper
   # plain, quantized, and rsl
 - client: # plain
     benign_training:
+      learning_rate: 0.5
+- client: # plain
+    benign_training:
+      learning_rate: 0.1
+- client: # plain
+    benign_training:
       learning_rate: 0.05
 - client: # plain
     benign_training:
       learning_rate: 0.01
 - client: # plain
     benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.75
-- client: # plain
-    benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.75
-- client: # plain
-    benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.5
-- client: # plain
-    benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.5
-- client: # plain
-    benign_training:
-      learning_rate: 0.05
-  server:
-    global_learning_rate: 0.25
-- client: # plain
-    benign_training:
-      learning_rate: 0.01
-  server:
-    global_learning_rate: 0.25
+      learning_rate: 0.005

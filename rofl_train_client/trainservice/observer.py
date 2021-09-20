@@ -15,7 +15,7 @@ parser.add_argument('--address', type=str, default='localhost',
                     help='Default address to connect to')
 parser.add_argument('--port', type=int, default=50051,
                     help='Default port to connect to')
-parser.add_argument('--framework_path', type=str, default='../../fl-analysis',
+parser.add_argument('--framework_path', type=str, default='../../../attacks_on_federated_learning',
                     help='Path to framework')
 args = parser.parse_args()
 

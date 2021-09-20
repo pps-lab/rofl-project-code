@@ -7,14 +7,15 @@ base_experiment: # the base config object
     experiment_name: "mnist_clients"
     use_config_dir: true
   server:
-    num_rounds: 40
-    num_test_batches: 5
+    num_rounds: 160
+    num_test_batches: 25
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
   client:
     model_name: dev
     model_init_path: "/home/ubuntu/rofl-project-code/models/mnist_dev_initialized.txt"
+    model_weight_regularization: 0.0001
     benign_training:
       num_epochs: 5
       batch_size: 32
@@ -64,8 +65,13 @@ experiments: # in the experiments object you have a list for the different exper
       type: probabilistic
       bits: 8
       frac: 7
+    model_weight_regularization: 0.01
     benign_training:
       learning_rate: 0.1
+      decay:
+        type: boundaries
+        decay_boundaries: [ 13000 ]
+        decay_values: [ 1.0, 0.1 ]
   server:
     intrinsic_dimension: 5000
   crypto:
@@ -74,6 +80,7 @@ experiments: # in the experiments object you have a list for the different exper
     fp_frac: 7
   e2e:
     speculative_execution: true
+
 - crypto: # l2, unoptimized
     enc_type: l2
     fp_bits: 32

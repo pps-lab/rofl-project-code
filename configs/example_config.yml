@@ -6,7 +6,7 @@ environment:
   use_config_dir: true
 server:
   num_rounds: 10
-  num_test_batches: 5
+  num_test_batches: 25
   aggregator:
     name: FedAvg
   global_learning_rate: 1.0
@@ -16,12 +16,12 @@ client:
   num_params: 19166
   # model_init_path = "./init_model.txt"  -> Loads the initial global model from a file, num_params is then ignored
   benign_training:
-    num_epochs: 2
-    batch_size: 64
+    num_epochs: 5
+    batch_size: 32
     optimizer: SGD
     learning_rate: 0.01
 crypto:
-  enc_type: Range #l2, Range, Plain
+  enc_type: Plain #l2, Range, Plain
   value_range: 32
   n_partition: 1
   l2_value_range: 32

@@ -558,4 +558,23 @@ mod tests {
         // println!("Values: {:?} {:?}", x_clipped_dlog[0], x_clipped_dlog[1]);
         assert_eq!(sum, commit);
     }
+
+    #[test]
+    fn test_clip_max_bounds() {
+        let n_partition: usize = 2;
+        let prove_range: usize = N_BITS / 2;
+        println!("{:?} ", N_BITS);
+        let (min_val, max_val) = get_clip_bounds(prove_range);
+
+        let val = scalar_to_f32(&f32_to_scalar(&2000.0));
+        let _target = vec![min_val, max_val];
+        let x_vec: Vec<f32> = vec![min_val - 2f32, max_val + 3f32];
+        let f0 = 0f32;
+        assert_eq!(Scalar::zero(), f32_to_scalar(&f0));
+        let blindings: Vec<Scalar> = (0..x_vec.len()).map(|_| Scalar::zero()).collect();
+        let x_vec_clipped: Vec<f32> = clip_f32_to_range_vec(&x_vec, prove_range);
+        // let x_vec_clipped_small: Vec<f32> = x_vec_clipped.iter().collect();
+        println!("{:?} {:?} {:?} {:?}", val, prove_range, min_val, max_val);
+
+    }
 }

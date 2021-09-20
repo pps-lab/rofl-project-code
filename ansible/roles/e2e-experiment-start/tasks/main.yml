@@ -122,6 +122,7 @@
   loop_control:
     loop_var: entry
     index_var: client_idx
+  when: skip_setup|default(false)|bool == false # to speed up testing
 # Async does not work here
 
 - name: Create Unit File for Server

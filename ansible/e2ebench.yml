@@ -27,6 +27,9 @@
       expstate: save
     when: run == 'new' # only persist the state if it is a new experiment
 
+  - debug:
+      var: skip_setup|bool
+
   - name: Setup AWS including VPC and the required EC2 instances
     include_role:
       name: aws-all-setup
@@ -36,7 +39,7 @@
       server_ec2_instances_max_num: 1
       client_ec2_instances_num: "{{ experiments_ext[cur_exp_idx].e2e.client_machines | int }}"
       client_ec2_instances_max_num: "{{ experiments_ext[cur_exp_idx].e2e.client_machines | int }}"
-    when: run == 'new' # only change AWS if it is a new experiment
+    when: run == 'new' and skip_setup|default(false)|bool == false # only change AWS if it is a new experiment
 
   - debug:
       var: groups
@@ -52,7 +55,7 @@
   - name: 
     include_role:
       name: e2e-common
-    when: run == 'new' # only setup if it is a new experiment
+    when: run == 'new' and skip_setup|default(false)|bool== false # only setup if it is a new experiment
   vars:
     avx_target_cpu: "{{ hostvars['localhost'].e2e_server.avx_target_cpu }}"
 
@@ -62,7 +65,7 @@
   - name:
     include_role:
       name: e2e-common
-    when: run == 'new' # only setup if it is a new experiment
+    when: run == 'new' and skip_setup|default(false)|bool == false # only setup if it is a new experiment
   vars:
     avx_target_cpu: "{{ hostvars['localhost'].e2e_client.avx_target_cpu }}"
 

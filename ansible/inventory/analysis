@@ -1,2 +1,2 @@
 [leonhard]
-login.leonhard.ethz.ch ansible_user=lhidde
+login.euler.ethz.ch ansible_user=lhidde
