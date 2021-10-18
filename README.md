@@ -94,11 +94,17 @@ git clone git@github.com:pps-lab/rofl-project-code.git
 ```
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 ```
-3. Switch to nightly
-
+3. Switch to nightly.
 _Note:_ As of now, only a specific nightly version is supported due to a deprecated feature that a dependency is using.   
-`rustup override set nightly-2021-05-11`
-4. `cargo build`
+```
+rustup override set nightly-2021-05-11
+```
+4. Select specific versions for some dependencies (due to these dependencies breaking some nightly features)
+```
+cargo update -p proc-macro2 --precise 1.0.28
+cargo update -p packed_simd_2 --precise 0.3.4
+```
+6. `cargo build`
    
 #### Python training service
 1. Install the requirements for the trainservice wrapper (in `rofl_project_code`)
