@@ -47,10 +47,10 @@ base_experiment: # the base config object
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 - client: # plain
     benign_training:
+      learning_rate: 0.01
+- client: # plain
+    benign_training:
+      learning_rate: 0.05
+- client: # plain
+    benign_training:
       learning_rate: 0.1
-- client: # plain
-    benign_training:
-      learning_rate: 0.5
-- client: # plain
-    benign_training:
-      learning_rate: 1.0

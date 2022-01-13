@@ -25,7 +25,7 @@ def load_federated_mnist_dummy():
     return Dataset(x_train, y_train, batch_size=32, x_test=x_test, y_test=y_test)
 
 def load_mnist_dummy():
-    frac_take = 0.5
+    frac_take = 1.0
     (x_train, y_train), (x_test, y_test) = Dataset.get_mnist_dataset(-1)
     indices_train = np.random.choice(x_train.shape[0], int(x_train.shape[0] * frac_take), replace=False)
     indices_test = np.random.choice(x_test.shape[0], int(x_test.shape[0] * frac_take), replace=False)

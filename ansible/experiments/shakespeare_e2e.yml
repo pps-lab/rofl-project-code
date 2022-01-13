@@ -7,7 +7,7 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 40
+    num_rounds: 10
     num_test_batches: 25
     aggregator:
       name: FedAvg
