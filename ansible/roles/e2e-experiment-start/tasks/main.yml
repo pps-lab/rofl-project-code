@@ -8,6 +8,10 @@
     - logs_dir is defined
     - "{{ exp_config.environment.num_clients }} % {{ exp_config.e2e.client_machines }} == 0"
 
+- name: Debug hosts
+  debug:
+    var: groups
+
 - name: Remove logs folder (if exists, it shouldnt)
   file:
     path: "{{ logs_dir }}"
@@ -84,6 +88,18 @@
   loop_control:
     loop_var: host
 
+- name: Upload shakespeare dataset to server (for observer)
+  delegate_to: "{{ host }}"
+  shell: |
+    . $HOME/.cargo/env
+    ./preprocess.sh -s niid --sf 0.2 -k 0 -t sample -tf 0.8
+  args:
+    chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}/src/data/leaf/shakespeare"
+  loop: "{{ groups[e2e_server.host_group] }}"
+  loop_control:
+    loop_var: host
+  when: exp_config.dataset.dataset == "shakespeare"
+
 
 - name: Determine which clients run where
   set_fact:
@@ -110,6 +126,12 @@
   loop: "{{ groups[e2e_client.host_group] }}"
   loop_control:
     loop_var: host
+
+- name: Prepare training data locally
+  delegate_to: "localhost"
+  command: "python process.py --num_clients {{ exp_config.environment.num_clients }}"
+  args:
+    chdir: "{{ e2e_local_data_dir }}/{{ exp_config.dataset.dataset }}"
 
 - name: Upload training data to clients
   copy:

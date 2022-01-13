@@ -41,3 +41,4 @@ If this is not the case, the client -> machine division algorithm does not work 
 #### Running
 - First run: `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=new"`
 - Continue a run (with run id): `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=1611332286"`
+  `ansible-playbook e2ebench.yml -i inventory -e "exp=shakespeare_e2e run=new" --ssh-common-args='-o StrictHostKeyChecking=no'`

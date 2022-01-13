@@ -105,6 +105,8 @@
 - name: Select version of old dependency # For compatibility with nightly build
   shell: |
     . $HOME/.cargo/env
+    cargo update -p quote --precise 1.0.9
+    cargo update -p syn --precise 1.0.72
     cargo update -p proc-macro2 --precise 1.0.28
     cargo update -p packed_simd_2 --precise 0.3.4
   args:

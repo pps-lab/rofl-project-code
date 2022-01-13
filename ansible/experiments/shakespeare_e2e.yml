@@ -1,0 +1,62 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 48
+    num_selected_clients: 48
+    num_malicious_clients: 0
+    experiment_name: "cifar_clients"
+    use_config_dir: true
+  server:
+    num_rounds: 40
+    num_test_batches: 25
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1.0
+  client:
+    model_name: stacked_lstm
+    model_init_path: "/home/ubuntu/rofl-project-code/models/stacked_lstm.txt"
+    benign_training:
+      num_epochs: 1
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.5
+    num_params: 817872
+    quantization: ~
+  dataset:
+    dataset: shakespeare
+    data_distribution: IID
+    augment_data: false
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+  crypto:
+    enc_type: $VARIES #l2, Range, Plain
+    value_range: 8
+    n_partition: 64
+    l2_value_range: 32
+    check_percentage: 0.00448 # 0-100 for Range, # 3667
+    fp_bits: 16
+    fp_frac: 7
+  e2e:
+    client_machines: 4 # is this correct?
+    speculative_execution: $VARIES$
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+  - client:
+      quantization: ~
+    crypto:
+      enc_type: Plain
+    e2e:
+      speculative_execution: false
+  - client:
+      quantization:
+        type: probabilistic
+        bits: 8
+        frac: 7
+    crypto:
+      enc_type: Range
+    e2e:
+      speculative_execution: true
