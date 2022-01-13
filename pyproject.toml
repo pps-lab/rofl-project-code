@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "RoFL"
+version = "0.1.0"
+description = ""
+authors = ["Hidde Lycklama", "Lukas Burkhalter"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+numpy = "^1.22.0"
+matplotlib = "^3.5.1"
+scipy = "^1.7.3"
+pandas = "^1.3.5"
+tqdm = "^4.62.3"
+ipywidgets = "^7.6.5"
+seaborn = "^0.11.2"
+tensorflow = "^2.7.0"
+PyYAML = "^6.0"
+pymongo = "^4.0.1"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

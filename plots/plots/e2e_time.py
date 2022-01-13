@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
-output_dir = "plots_output"
+from common import get_colorful_styles, output_dir
+
 
 def setup_plt():
 
@@ -31,12 +32,14 @@ def setup_plt():
 
 def build_fig_e2e_mnist_time(df, name="e2e_mnist_time"):
 
+    colors, _ = get_colorful_styles()
+
     configs = {
-        "u": {"label": "plain",                 "color": "0.1", "linestyle": "--", "marker": "x"},
-        "l8": {"label": "$L_{\infty}$",         "color": "0.3", "linestyle": "-", "marker": "x"},
-        "l8p": {"label": "$L_{\infty}^{(p)}$",  "color": "0.5", "linestyle": "-", "marker": "x"},
-        "l2": {"label": "$L_2$",                "color": "0.6", "linestyle": "--", "marker": "x"},
-        "l2rst": {"label": "$L_2^{(rsl)}$",      "color": "0.7", "linestyle": "--", "marker": "x"}
+        "u": {"label": "plain",                 "color": (0.44, 0.44, 0.44, 1), "linestyle": "--", "marker": "x"},
+        "l8": {"label": "$L_{\infty}$",         "color": colors[1], "linestyle": "-", "marker": "x"},
+        "l8p": {"label": "$L_{\infty}^{(p)}$",  "color": colors[1], "linestyle": "--", "marker": "x"},
+        "l2": {"label": "$L_2$",                "color": colors[2], "linestyle": "-", "marker": "x"},
+        "l2rst": {"label": "$L_2^{(rsl)}$",      "color": colors[2], "linestyle": "--", "marker": "x"}
     }
     setup_plt()
 
@@ -91,9 +94,11 @@ def build_fig_e2e_mnist_time(df, name="e2e_mnist_time"):
 
 def build_fig_e2e_cifar_time(df, name="e2e_cifar_time"):
 
+    colors, _ = get_colorful_styles()
+
     configs = {
-        "u": {"label": "plain",                 "color": "0.1", "linestyle": "--", "marker": "x"},
-        "l8p": {"label": "$L_{\infty}^{(p)}$",  "color": "0.5", "linestyle": "-", "marker": "x"}
+        "u": {"label": "plain",                 "color": (0.44, 0.44, 0.44, 1), "linestyle": "--", "marker": "x"},
+        "l8p": {"label": "$L_{\infty}^{(p)}$",  "color": colors[1], "linestyle": "--", "marker": "x"}
     }
     setup_plt()
 
