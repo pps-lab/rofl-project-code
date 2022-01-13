@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import os
+from common import get_colorful_styles, output_dir
 
-output_dir = "./plots_output"
 
 #pd.set_option('display.max_columns', 500)
 #pd.set_option('display.max_rows', 500)
@@ -35,20 +35,21 @@ def setup_plt():
     plt.rcParams.update(plt_params)
     plt.rc('pdf', fonttype=42)  # IMPORTANT to get rid of Type 3
 
+colors, _ = get_colorful_styles()
 
 cagg_config = {
     "server_label": "aggregate commitment",
-    "color": "0.1"
+    "color": (0.44, 0.44, 0.44, 1)
 }
 wellformed_config = {
     "client_label": "create well-formedness proof",
     "server_label": "verify well-formedness proof",
-    "color": "0.3"
+    "color": colors[1]
 }
 range_config = {
     "client_label": "create range proof",
     "server_label": "verify range proof",
-    "color": "0.5"
+    "color": colors[2]
 }
 
 
