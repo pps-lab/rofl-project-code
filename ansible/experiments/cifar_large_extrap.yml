@@ -1,4 +1,4 @@
-
+# used to extrapolate cifar L rsl!
 base_experiment: # the base config object  
   environment:
     num_clients: 48
@@ -7,25 +7,33 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 400
-    num_test_batches: 25
+    num_rounds: 160
+    num_test_batches: 5
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
   client:
-    model_name: stacked_lstm
+    model_name: lenet5_intrinsic
+    model_init_path: "/home/ubuntu/rofl-project-code/models/resnet18_intrinsic_55k.txt"
     benign_training:
-      num_epochs: 1
+      num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.1
-      decay: ~
-    num_params: 817872
-    quantization: ~
+      learning_rate: 0.3
+      decay:
+        step_epochs: true
+        type: boundaries
+        decay_boundaries: [ 90, 140 ]
+        decay_values: [ 1.0, 0.5, 0.1 ]
+    num_params: 55000
+    quantization:
+      type: probabilistic
+      bits: 8
+      frac: 7
   dataset:
-    dataset: shakespeare
+    dataset: cifar10
     data_distribution: IID
-    augment_data: false
+    augment_data: true
   job:
     minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
@@ -45,25 +53,12 @@ base_experiment: # the base config object
     speculative_execution: $VARIES$
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
-- client: # plain
-    benign_training:
-      learning_rate: 0.1
-- client: # plain
-    benign_training:
-      learning_rate: 0.3
 
-- client: # plain
-    benign_training:
-      learning_rate: 0.35
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.4
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.45
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.5
+- server:
+    intrinsic_dimension: 55000
+  crypto:
+    enc_type: l2
+    fp_bits: 32
+    fp_frac: 7
+  e2e:
+    speculative_execution: true

@@ -1,5 +1,4 @@
 
-## WE ENABLED DATA AUG FOR THE EDGE CASES BECAUSE IT SEEMS TO WORK BETTER
 
 base_experiment: # the base config object  
   environment:

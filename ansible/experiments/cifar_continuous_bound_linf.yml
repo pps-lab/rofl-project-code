@@ -1,0 +1,168 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 1
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+    attack_frequency: 1.0
+    attacker_full_knowledge: true
+    load_model: ./models/resnet18_080.h5
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip: ~
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.1
+    malicious:
+      attack_start: 5
+      attack_stop: 1005
+      estimate_other_updates: true
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 20
+          num_batch: 10
+          poison_samples: 16
+          optimizer: SGD
+          learning_rate: 0.05
+          step_decay: true
+      backdoor:
+        type: semantic
+        train: [ 389,561,874,41861,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588 ]
+        test: [ 41336,1605,47001 ]
+        target_label: 2
+        remove_from_benign_dataset: true
+        augment_times: 200
+        augment_data: true
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: linf
+          pgd_factor: ~
+          scale_factor: 100
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 480 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+#- client: # bgwall, baseline attack
+#    clip: ~
+#    malicious:
+#      attack_stop: 0
+#
+#- client:
+#    clip: ~
+##- client: # too tight
+##    clip:
+##      type: linf
+##      value: 0.001
+#- client: # correct
+#    clip:
+#      type: linf
+#      value: 0.01
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.0002
+#- client: # correct
+#    clip:
+#      type: linf
+#      value: 0.05
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.001
+#- client: # large
+#    clip:
+#      type: linf
+#      value: 0.1
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.002
+#- client: # large
+#    clip:
+#      type: linf
+#      value: 0.2
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.004
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 0.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.01
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 1.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.02
+#
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 2.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.04
+#
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 3.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.06
+#
+#- client: # correct
+#    clip:
+#      type: linf
+#      value: 0.05
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 1.0
+
+# extra
+- client: # larger
+    clip:
+      type: linf
+      value: 5.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 0.1
+- client: # larger
+    clip:
+      type: linf
+      value: 10.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: 0.2

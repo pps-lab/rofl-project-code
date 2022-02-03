@@ -35,11 +35,11 @@ root.addHandler(handler)
 
 import grpc
 
-from analysis_wrapper import AnalysisClientWrapper
+# from analysis_wrapper import AnalysisClientWrapper
 
 NUM_FLOATS_PER_BLOCK = 10000
 
-client = AnalysisClientWrapper(args.config, args.dataset_path)
+# client = AnalysisClientWrapper(args.config, args.dataset_path)
 
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
@@ -86,6 +86,15 @@ class DummyFLClientTrainService(FLClientTrainService):
         return [0.001] * len(global_model_weights_list)
 
 
+import time
+class MockCIFARLFLClientTrainService(FLClientTrainService):
+    def train_model(self, round_id, config, global_model_weights_list):
+        TRAIN_TIME = 43.3  # 43.3 seconds
+        print(f"Train model for round {round_id} (sleep {TRAIN_TIME} seconds)")
+        time.sleep(TRAIN_TIME)
+        return [0.001] * len(global_model_weights_list)
+
+
 def serve(service, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     flservice_pb2_grpc.add_FLClientTrainServiceServicer_to_server(
@@ -97,5 +106,5 @@ def serve(service, port):
 
 if __name__ == '__main__':
     logging.basicConfig()
-    serve(FLClientTrainService(), args.port)
-    # serve(DummyFLClientTrainService(), 50016)
+    # serve(FLClientTrainService(), args.port)
+    serve(MockCIFARLFLClientTrainService(), args.port)

@@ -2,6 +2,7 @@
 
 import numpy as np
 import argparse
+import tensorflow as tf
 
 parser = argparse.ArgumentParser(description='Process dataset.')
 parser.add_argument('--num_clients', type=int, default=48,
@@ -14,7 +15,7 @@ args = parser.parse_args()
 # Step 1: Configure parameters here
 
 num_clients = args.num_clients
-dataset = "shakespeare"
+dataset = "mnist"
 
 import glob, os
 from pathlib import Path
@@ -35,35 +36,11 @@ else:
 
 # Download shakespeare dataset
 
-import subprocess
-list_files = subprocess.run(["ls", "-l", "leaf/shakespeare/data"])
-subprocess.run(["rm", "-r", "leaf/shakespeare/data/"])
-subprocess.run(["./preprocess.sh", "-s", "iid", "--iu", "0.0425" "--sf", "1.0", "-k", "0", "-t", "sample", "-tf", "0.8"], cwd="leaf/shakespeare")
-
-# !rm -r leaf/shakespeare/data/*
-# !cd leaf/shakespeare && ./preprocess.sh -s niid --sf 0.2 -k 0 -t sample -tf 0.8
-
-#%% sh
-subprocess.run(["./stats.sh"], cwd="leaf/shakespeare")
-
-#%% md
-# Step 2:
-
-#%%
-from leaf_loader import load_leaf_dataset, process_text_input_indices, process_char_output_indices
-
-print("Loading files into python")
-
-users, train_data, test_data = load_leaf_dataset("shakespeare")
-
-x_train = [process_text_input_indices(train_data[user]['x']) for user in users]
-y_train = [process_char_output_indices(train_data[user]['y']) for user in users]
-
-x_train = np.concatenate(x_train)
-y_train = np.concatenate(y_train)
-
-x_test = np.concatenate([process_text_input_indices(test_data[user]['x']) for user in users])
-y_test = np.concatenate([process_char_output_indices(test_data[user]['y']) for user in users])
+mnist = tf.keras.datasets.mnist
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train, x_test = x_train / 255.0, x_test / 255.0
+x_train, x_test = x_train.astype(np.float32), x_test.astype(np.float32)
+x_train, x_test = x_train[..., np.newaxis], x_test[..., np.newaxis]
 
 # Step 3: Save the results.
 

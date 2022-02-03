@@ -7,7 +7,7 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 10
+    num_rounds: 20
     num_test_batches: 25
     aggregator:
       name: FedAvg
@@ -19,7 +19,7 @@ base_experiment: # the base config object
       num_epochs: 1
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.5
+      learning_rate: 0.3
     num_params: 817872
     quantization: ~
   dataset:
@@ -45,6 +45,26 @@ base_experiment: # the base config object
     speculative_execution: $VARIES$
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+  - client: # extrapolate
+      quantization:
+        type: probabilistic
+        bits: 8
+        frac: 7
+    crypto:
+      enc_type: l2
+      fp_bits: 32
+    e2e:
+      speculative_execution: false
+  - client: # extrapolate
+      quantization:
+        type: probabilistic
+        bits: 8
+        frac: 7
+    crypto:
+      enc_type: Range
+      check_percentage: 1.0
+    e2e:
+      speculative_execution: false
   - client:
       quantization: ~
     crypto:

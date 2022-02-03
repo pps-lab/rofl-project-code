@@ -150,10 +150,17 @@ def build_continuous_static_plot(name, df):
     return fig, df
 
 
-def load_weight_distribution_single_round_data():
-    dir = "./data/weight_distribution/updates"
-    mal = np.load(os.path.join(dir, "2245_m_1.npy"), allow_pickle=True)
-    ben = np.load(os.path.join(dir, "32_b_1.npy"), allow_pickle=True)
+def load_weight_distribution_single_round_data(type):
+    if type == "fmn":
+        dir = "./data/weight_distribution/fmn"
+        mal = np.load(os.path.join(dir, "2245_m_1.npy"), allow_pickle=True)
+        ben = np.load(os.path.join(dir, "32_b_1.npy"), allow_pickle=True)
+    elif type == "c10":
+        dir = "./data/weight_distribution/c10"
+        mal = np.load(os.path.join(dir, "26_m_1.npy"), allow_pickle=True)
+        ben = np.load(os.path.join(dir, "22_b_1.npy"), allow_pickle=True)
+    else:
+        raise ValueError(f"Type {type} not supported!")
 
     df = pd.DataFrame()
 

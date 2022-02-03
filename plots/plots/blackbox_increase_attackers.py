@@ -168,7 +168,7 @@ def build_plot(name, df, model, leftmost):
         if not leftmost:
             custom_lines_styles = [Line2D([0], [0], linestyle="-", lw=2, color=COLOR_GRAY),
                                    Line2D([0], [0], linestyle=":", lw=2, color=COLOR_GRAY)]
-            leg_task = plt.legend(custom_lines_styles, ["PGD", "Blackbox"],
+            leg_task = plt.legend(custom_lines_styles, ["Model poisoning", "Data poisoning"],
                                   bbox_to_anchor=(1., 0.6), loc=4, ncol=1,
                                   columnspacing=0.75)
             ax.add_artist(leg_task)

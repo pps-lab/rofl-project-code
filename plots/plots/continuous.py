@@ -37,6 +37,10 @@ def load_continuous_bound_data(model, type):
         query = {
             "meta.description": desc
         }
+    elif model == 'CIFAR10_linf':
+        query = {
+            "meta.description": "CIFAR10 comparison of static bounds for linfty norm",
+        }
 
     docs_list = query_data(query)
 
@@ -104,6 +108,15 @@ def build_continuous_static_plot(name, df, model, leftmost=True):
             'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
         }
         bound_type = '$L_2$-B:'
+    elif model == 'CIFAR10_linf':
+        configs = {
+            'linf_0.01_0.0002_pgd': {'label': '1e-2', 'marker': get_markers()[0], 'color': colors[1]},
+            'linf_0.05_0.001_pgd': {'label': '5e-2', 'marker': get_markers()[1], 'color': colors[2]},
+            'linf_10.0_0.2_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
+            'None_None_None_pgd_noattack': {'label': 'No att.', 'marker': get_markers()[4], 'color': colors[0]},
+            # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+        }
+        bound_type = '$L_\infty$-B:'
 
     markevery = 100
     window_size = 20

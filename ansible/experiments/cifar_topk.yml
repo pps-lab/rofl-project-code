@@ -1,0 +1,150 @@
+
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 1
+    experiment_name: "cifar_bounds"
+    use_config_dir: true
+    attack_frequency: 1.0
+    load_model: ./models/resnet18.h5
+    attacker_full_knowledge: true
+    attacker_full_dataset: true
+  server:
+    num_rounds: 10
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip: ~
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.02
+    malicious:
+      attack_start: 5
+      attack_stop: 5
+      objective:
+        name: TargetedAttack
+        args:
+          num_epochs: 6
+          num_batch: 10
+          poison_samples: 20
+          optimizer: SGD
+          learning_rate: 0.1
+          step_decay: true
+#      backdoor:
+#        type: semantic
+#        train: [ 389,561,874,41861,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588 ]
+#        test: [ 41336,1605,47001 ]
+#        target_label: 2
+#        remove_from_benign_dataset: true
+#        augment_times: 200
+#        augment_data: true
+      backdoor:
+        target_label: 2
+        remove_from_benign_dataset: false
+        type: edge
+        edge_case_type: NorthWesternEdgeCase
+        augment_data: true
+        augment_times: 50
+      evasion:
+        name: NormBoundProbabilisticCheckingEvasion
+        args:
+          norm_type: linf
+          pgd_factor: null
+          scale_factor: 100
+          clipping_bound: 1.0
+          keep_number_of_weights: $VARIES$
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 30 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 273066
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 136533
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 54613
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 27307
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 24576
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 21845
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 19117
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 16384
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 13653
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 10924
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 8193
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 5461
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 2731
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 1365
+- client:
+    malicious:
+      evasion:
+        args:
+          keep_number_of_weights: 683

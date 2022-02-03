@@ -92,7 +92,7 @@
   delegate_to: "{{ host }}"
   shell: |
     . $HOME/.cargo/env
-    ./preprocess.sh -s niid --sf 0.2 -k 0 -t sample -tf 0.8
+    ./preprocess.sh -s iid --iu 0.0425 --sf 1.0 -k 0 -t sample -tf 0.8
   args:
     chdir: "{{ e2e_remote_base_dir }}/{{ analysis_framework_dir }}/src/data/leaf/shakespeare"
   loop: "{{ groups[e2e_server.host_group] }}"
@@ -273,9 +273,9 @@
   loop_control:
     loop_var: host
 
-- name: Sleep for 5 seconds for server and trainers to launch
+- name: Sleep for X seconds for server and trainers to launch
   wait_for:
-    timeout: 30
+    timeout: 30 # 30
   delegate_to: localhost
 
 - name: Start E2E Client

@@ -7,27 +7,37 @@ base_experiment: # the base config object
     experiment_name: "cifar_clients"
     use_config_dir: true
   server:
-    num_rounds: 400
+    num_rounds: 300
     num_test_batches: 25
     aggregator:
       name: FedAvg
     global_learning_rate: 1.0
+    intrinsic_dimension: 40000
   client:
-    model_name: stacked_lstm
+    model_name: resnet18_intrinsic
+    model_init_path: "/home/ubuntu/rofl-project-code/models/resnet18_initialized.txt"
     benign_training:
-      num_epochs: 1
+      num_epochs: 2
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.1
-      decay: ~
-    num_params: 817872
-    quantization: ~
+      learning_rate: 0.3
+      decay:
+        step_epochs: true
+        type: boundaries
+        decay_boundaries: [ 90, 140 ]
+        decay_values: [ 1.0, 0.5, 0.1 ]
+    num_params: 274442
+    quantization:
+      bits: 8
+      frac: 7
+      type: probabilistic
+#    debug_client_training: true
   dataset:
-    dataset: shakespeare
+    dataset: cifar10
     data_distribution: IID
-    augment_data: false
+    augment_data: true
   job:
-    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
     cpu_cores: 20
     cpu_mem_per_core: 4096
     use_gpu: 1
@@ -45,25 +55,18 @@ base_experiment: # the base config object
     speculative_execution: $VARIES$
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
-- client: # plain
-    benign_training:
-      learning_rate: 0.1
-- client: # plain
-    benign_training:
-      learning_rate: 0.3
 
-- client: # plain
-    benign_training:
-      learning_rate: 0.35
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.4
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.45
-
-- client: # plain
-    benign_training:
-      learning_rate: 0.5
+- server:
+    intrinsic_dimension: 25000
+#- server:
+#    intrinsic_dimension: 30000
+#- server:
+#    intrinsic_dimension: 35000
+- server:
+    intrinsic_dimension: 40000
+- server:
+    intrinsic_dimension: 45000
+- server:
+    intrinsic_dimension: 50000
+- server:
+    intrinsic_dimension: 55000
