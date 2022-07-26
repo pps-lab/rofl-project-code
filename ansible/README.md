@@ -1,12 +1,13 @@
-# fl-ansible
-
+# Instructions for Ansible
+RoFL supports the orchestration of servers on AWS out of the box to improve the ability to reproduce experiments.
+This document describes how to run experiments using Ansible.
 
 ## Getting Started
 
+- `cd` into `ansible` folder
 - install pipenv `pip install pipenv`
 - pipenv set up `pipenv install` in root folder
 - run `pipenv shell` in root folder
-
 
 ### Analysis Playbook
 
@@ -25,10 +26,11 @@
 
 ### E2E Playbook
 
-#### Generating data
-Open `data/preprocess.ipynb` and follow the steps to generate the data per client.
-_Note: In the future, we may upload pre-processed versions to an S3 bucket for easier upload_
-
+#### Basic run
+- Starting a new experiment: `ansible-playbook e2ebench.yml -i inventory --ssh-common-args='-o StrictHostKeyChecking=no' -e "exp=mnist_basic run=new"`
+- Continuing an experiment (with run id): `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=1611332286"`
+  `ansible-playbook e2ebench.yml -i inventory -e "exp=shakespeare_e2e run=new" --ssh-common-args='-o StrictHostKeyChecking=no'`
+  
 #### Configuration
  - Most job configuration parameters are in the .yml config files (e.g. `experiments/mnist_basic.yml`) under the `job` key.
 
@@ -37,8 +39,3 @@ If this is not the case, the client -> machine division algorithm does not work 
    In the future, this should be easy to fix to allow for an unbalanced division.
    
  - Other configuration parameters such as the machine type and optimization (e.g., skylake) can be found in `group_vars/all/main.yml`.
-
-#### Running
-- First run: `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=new"`
-- Continue a run (with run id): `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=1611332286"`
-  `ansible-playbook e2ebench.yml -i inventory -e "exp=shakespeare_e2e run=new" --ssh-common-args='-o StrictHostKeyChecking=no'`
