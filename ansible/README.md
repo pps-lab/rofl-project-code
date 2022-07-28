@@ -26,10 +26,20 @@ This document describes how to run experiments using Ansible.
 
 ### E2E Playbook
 
-#### Basic run
-- Starting a new experiment: `ansible-playbook e2ebench.yml -i inventory --ssh-common-args='-o StrictHostKeyChecking=no' -e "exp=mnist_basic run=new"`
-- Continuing an experiment (with run id): `ansible-playbook e2ebench.yml -i inventory -e "exp=mnist_basic run=1611332286"`
-  `ansible-playbook e2ebench.yml -i inventory -e "exp=shakespeare_e2e run=new" --ssh-common-args='-o StrictHostKeyChecking=no'`
+Each experiment can consist of different configurations which are run after each other, defined in the `experiments` key in the config file after the `base_experiment`.
+To start a new experiment, pass `run=new`: 
+```
+ansible-playbook e2ebench.yml -i inventory --ssh-common-args='-o StrictHostKeyChecking=no' -e "exp=mnist_e2e run=new"
+```
+This will set up the required machines and the configurations for the experiments.
+After the first configuration has finished, invoke the same command but this time with the run id of the current experiment:
+```
+ansible-playbook e2ebench.yml -i inventory --ssh-common-args='-o StrictHostKeyChecking=no' -e "exp=mnist_e2e run=<RUN_ID>"
+```
+This will retrieve the results of the first configuration of the experiment.
+To launch the next configuration of the experiment, invoke the same command again with the `<RUN_ID>`.
+
+_Note: The run id can be found in the `experiment_results` directory and is currently the timestamp of when the experiment was started._
   
 #### Configuration
  - Most job configuration parameters are in the .yml config files (e.g. `experiments/mnist_basic.yml`) under the `job` key.
