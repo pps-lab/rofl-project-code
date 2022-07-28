@@ -35,11 +35,11 @@ root.addHandler(handler)
 
 import grpc
 
-# from analysis_wrapper import AnalysisClientWrapper
+from analysis_wrapper import AnalysisClientWrapper
 
 NUM_FLOATS_PER_BLOCK = 10000
 
-# client = AnalysisClientWrapper(args.config, args.dataset_path)
+client = AnalysisClientWrapper(args.config, args.dataset_path)
 
 
 class FLClientTrainService(flservice_pb2_grpc.FLClientTrainServiceServicer):
