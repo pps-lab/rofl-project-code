@@ -106,5 +106,5 @@ def serve(service, port):
 
 if __name__ == '__main__':
     logging.basicConfig()
-    # serve(FLClientTrainService(), args.port)
-    serve(MockCIFARLFLClientTrainService(), args.port)
+    serve(FLClientTrainService(), args.port)
+    # serve(MockCIFARLFLClientTrainService(), args.port)
