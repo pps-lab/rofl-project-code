@@ -120,7 +120,7 @@
 #    src: "{{ e2e.log_dir }}"
 #    dest: "{{ current_results_dir }}"
 #    recursive: yes
-#  when: is_cur_exp_finished
+  when: is_cur_exp_finished
 
 - name: Fetch Benchlog Results (if experiment done)
   delegate_to: localhost
@@ -131,7 +131,7 @@
 #    src: "/benchlog"
 #    dest: "{{ current_results_dir }}"
 #    recursive: yes
-#  when: is_cur_exp_finished
+  when: is_cur_exp_finished
 
 - name: Fetch Client Results (if experiment done)
   delegate_to: localhost

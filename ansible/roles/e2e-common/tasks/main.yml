@@ -44,7 +44,7 @@
   shell: |
     . /etc/profile
     . $HOME/.cargo/env
-    rustup override set nightly-2021-05-11
+    rustup override set nightly-2022-07-24
 
 - name: Switch to nightly rust for main server code
   args:
@@ -52,7 +52,7 @@
   shell: |
     . /etc/profile
     . $HOME/.cargo/env
-    rustup override set nightly-2021-05-11
+    rustup override set nightly-2022-07-24
 
 # Rust nightly is breaking our build of Subtle (sub-package of dalek-cryptography), thats why we set a specific nightly above.
 
@@ -102,15 +102,15 @@
   args:
     chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_train_client"
 
-- name: Select version of old dependency # For compatibility with nightly build
-  shell: |
-    . $HOME/.cargo/env
-    cargo update -p quote --precise 1.0.9
-    cargo update -p syn --precise 1.0.72
-    cargo update -p proc-macro2 --precise 1.0.28
-    cargo update -p packed_simd_2 --precise 0.3.4
-  args:
-    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
+#- name: Select version of old dependency # For compatibility with nightly build
+#  shell: |
+#    . $HOME/.cargo/env
+#    cargo update -p quote --precise 1.0.9
+#    cargo update -p syn --precise 1.0.72
+#    cargo update -p proc-macro2 --precise 1.0.28
+#    cargo update -p packed_simd_2 --precise 0.3.4
+#  args:
+#    chdir: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/rofl_crypto"
 
 - name: Build Cargo crypto # for microbenchmarks, e2e will recompile based on the given config
   environment:
