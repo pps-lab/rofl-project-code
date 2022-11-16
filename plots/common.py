@@ -5,13 +5,37 @@ import numpy as np
 from matplotlib import cm
 import pymongo
 import matplotlib
+import matplotlib.patheffects as pe
 
 output_dir = "plots_output"
-COLOR_GRAY = "#999999"
+COLOR_GRAY = "#AEAEAE"
+
+# COLOR_NO_BOUND = "#7A7978"
+COLOR_NO_BOUND = "#E1CEB5"
+MARKER_NO_BOUND = ""
 
 client = None
 data_source = "mongodb"  # allowed values: mongodb, json
 
+# LINESTYLE_AT = "dashdot"
+# LINESTYLE_AT = (0, (3, 5, 1, 5, 1, 5))
+# LINESTYLE_PGD = "dashed"
+# LINESTYLE_NT = "dotted"
+# LINESTYLE_DP = "solid"
+LINESTYLE_AT = (0, (3, 1, 1, 1, 1, 1))
+LINESTYLE_PGD = "dashed"
+LINESTYLE_NT = "dotted"
+LINESTYLE_DP = "solid"
+
+LINESTYLE_MP = "dotted"
+
+LABEL_AT = "MP-AT"
+LABEL_PGD = "MP-PD"
+LABEL_NT = "MP-NT"
+LABEL_DP = "DP"
+
+# DP_PATHEFFECT = pe.Stroke(linewidth=1, foreground='black')
+DP_PATHEFFECT = None
 
 def _query_mongo(query):
     global client
@@ -59,8 +83,44 @@ def get_colorful_styles():
     return colors, linestyles
 
 
+def get_colors_bounds():
+    cmap_1 = matplotlib.cm.get_cmap('Set1')
+    cmap_2 = matplotlib.cm.get_cmap('Set2')
+    # colors = [cmap_1(i) for i in range(8)]
+    colors = []
+    colors.extend([cmap_1(i) for i in range(30)])
+    # colors = ['#CD4631', '#8B1E3F', '#3C153B', '#89BD9E', '#F9C80E', '#F9C80E', '#F9C80E', '#F9C80E']
+    colors = [colors[3], colors[1], colors[2], colors[0]] + colors[4:]
+
+    return colors
+
+def get_colors_attackers():
+    # colors = ['#104547', '#A9714B', '#FCECC9', '#7EB2DD', '#7A306C']
+    cmap_2 = matplotlib.cm.get_cmap('Set1')
+    # colors = [cmap_1(i) for i in range(8)]
+    colors = []
+    colors.extend([cmap_2(i) for i in range(30)])
+    # colors = ['#CD4631', '#8B1E3F', '#3C153B', '#89BD9E', '#F9C80E', '#F9C80E', '#F9C80E', '#F9C80E']
+    colors = [colors[4], colors[5], colors[7], colors[6], '#448929']
+    return colors
+
+def get_colors_attack_objective():
+    # colors = ['#0EAD69', '#0DFA93', '#9CFFD4']
+    # colors = ['#47B5FF', '#1363DF', '#06283D']
+    # colors = ['#8AD0FF', '#337BE7', '#06283D']
+    # colors = ['#B6E2FF', '#5892E9', '#06283D']
+    # colors = ['#f0f7ed', '#a6cd95', '#469b2d']
+    # colors = ['#d7e5cf', '#98bc85', '#448929']
+    # colors = ['#f2dacf', '#c57e5e', '#933300']
+    colors = ['#e9c3b2', '#cd8c6e', '#933300']
+    return colors
+
+
 def get_markers():
-    return ['*', 'o', 'D', 's', 'p', 'h', '']
+    return ['v', '^', 'o', 'P', 's', 'D', 'X']
+    # return ['P', 'o', '^', 's', 'D', 'X', '']
+
+# return ['s', 'o', '^', 'D', 'P', 'X', '']
 
 
 def setup_plt(square=False):
@@ -82,7 +142,8 @@ def setup_plt(square=False):
             'ytick.labelsize': 16,
             'font.size': 16,
             'figure.figsize': fig_size,
-            'font.family': 'Times New Roman'
+            'font.family': 'Times New Roman',
+            'lines.markersize': 8
         }
     else:
         plt_params = {
@@ -93,7 +154,8 @@ def setup_plt(square=False):
             'ytick.labelsize': 18,
             'font.size': 18,
             'figure.figsize': fig_size,
-            'font.family': 'Times New Roman'
+            'font.family': 'Times New Roman',
+            'lines.markersize': 8
         }
 
     plt.rcParams.update(plt_params)

@@ -15,17 +15,38 @@ from common import _preprocess, setup_plt, query_data, get_colorful_styles, outp
 from operator import itemgetter
 
 
-def load_data(model):
+def load_data(model, bound_type="median"):
 
     if model == 'FEMNIST':
-        query = {
-            "meta.description": "FEMNIST increase attackers, pgd and blackbox",
-            # 'hyperparameters.args.client.malicious.attack_stop': { '$ne': 0 }
-        }
+        if bound_type == "l2":
+            query = {
+                "$or": [
+                    {"meta.description": "FEMNIST increase attackers, pgd and blackbox"},
+                    {"meta.description": "FEMNIST increase attackers, anticipate and neurotoxin"},
+                    # {"meta.description": "FEMNIST increase attackers median"},
+                    # {"meta.description": "FEMNIST increase attackers median anticipate"}
+                    {"meta.description": "FEMNIST increase attackers l2 anticipate"}
+
+                ]
+            }
+        else:
+            query = {
+                "$or": [
+                    # {"meta.description": "FEMNIST increase attackers, pgd and blackbox"},
+                    # {"meta.description": "FEMNIST increase attackers, anticipate and neurotoxin"},
+                    {"meta.description": "FEMNIST increase attackers median"},
+                    {"meta.description": "FEMNIST increase attackers median anticipate"}
+                    # {"meta.description": "FEMNIST increase attackers l2 anticipate"}
+                ]
+            }
     elif model == 'CIFAR10':
+        # query = {
+        #     "meta.description": "CIFAR10 increase attackers and blackbox, but temp",
+        #     "metrics.result": {'$exists': False}
+        # }
+
         query = {
-            "meta.description": "CIFAR10 increase attackers and blackbox, but temp",
-            "metrics.result": {'$exists': False}
+            "meta.description": "CIFAR10 increase attackers median 1.5"
         }
 
     docs_list = query_data(query)
@@ -41,7 +62,7 @@ def load_data(model):
         num_attackers = int(metric['hyperparameters']['args']['environment']['num_selected_malicious_clients']) \
             if 'num_selected_malicious_clients' in metric['hyperparameters']['args']['environment'] else \
             int(metric['hyperparameters']['args']['environment']['num_malicious_clients'])
-        attack_method = "blackbox" if 'objective' in metric['hyperparameters']['args']['client']['malicious'] else "pgd"
+        attack_method = get_attack_method(metric)
         metrics[i] = _preprocess(df, f"{num_attackers}_{attack_method}")
 
     df = reduce(lambda left, right: pd.merge(left, right, on=['round'], how='outer'), metrics)
@@ -53,6 +74,20 @@ def load_data(model):
 
     return df
 
+def get_attack_method(metric):
+    if metric['client']['malicious']['evasion'] == None:
+        return "blackbox"
+    elif metric['client']['malicious']['objective']['name'] == 'TargetedAttack':
+        if metric['client']['malicious']['evasion']['name'] == 'NormBoundPGDEvasion':
+            return "pgd"
+        elif metric['client']['malicious']['evasion']['name'] == 'NeurotoxinEvasion':
+            return "neurotoxin"
+        else:
+            return "ERROR"
+    elif metric['client']['malicious']['objective']['name'] == 'AnticipateTfAttack':
+        return "anticipate"
+    return "ERROR2"
+
 def build_plot(name, df, model, configs=None, leftmost=False):
 
     if configs is None:
@@ -61,7 +96,7 @@ def build_plot(name, df, model, configs=None, leftmost=False):
                 '1_pgd': {'label': '1 (3.3%)', 'marker': get_markers()[0]},
                 '2_pgd': {'label': '2 (6.6%)', 'marker': get_markers()[1]},
                 '5_pgd': {'label': '5 (16.7%)', 'marker': get_markers()[2]},
-                '8_pgd': {'label': '8 (27%)', 'marker': get_markers()[3]}
+                '10_pgd': {'label': '10 (30%)', 'marker': get_markers()[3]}
             }
         elif model == 'CIFAR10':
             # configs = {
@@ -97,12 +132,12 @@ def build_plot(name, df, model, configs=None, leftmost=False):
             config = configs[suffix]
 
             plt.plot(labels, values_acc.rolling(window_size).mean().shift(-window_size),
-                     linestyle='dotted', label=config['label'], color=colors[index],
+                     linestyle='dotted', label=config['label'], color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
             plt.plot(labels, values_adv.rolling(window_size).mean().shift(-window_size),
-                     color=colors[index],
+                     color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
-            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=colors[index]))
+            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=config['color']))
             custom_lines_colors_names.append(config['label'])
 
         ##########################
@@ -118,7 +153,7 @@ def build_plot(name, df, model, configs=None, leftmost=False):
             matplotlib.ticker.FuncFormatter(yaxis_formatter))
 
         if leftmost:
-            plt.ylabel('Accuracy')
+            plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         line = Line2D([0], [0])
@@ -127,8 +162,12 @@ def build_plot(name, df, model, configs=None, leftmost=False):
         custom_lines_colors_names = ['# Att. ($\\alpha$):'] + custom_lines_colors_names
 
         if model == 'FEMNIST':
-            ordering = [0, 3, 1, 4, 2]
+            ordering = [0, 3, 1, 4, 2, 5]
+            custom_lines_colors.insert(3, line)
+            custom_lines_colors_names.insert(3, '')
         elif model == 'CIFAR10':
+            custom_lines_colors.insert(3, line)
+            custom_lines_colors_names.insert(3, '')
             ordering = [0, 3, 1, 4, 2, 5]
 
         leg1 = plt.legend(itemgetter(*ordering)(custom_lines_colors), itemgetter(*ordering)(custom_lines_colors_names),
@@ -136,17 +175,15 @@ def build_plot(name, df, model, configs=None, leftmost=False):
         ax.add_artist(leg1)
 
         # if leftmost:
-        # for vpack in leg1._legend_handle_box.get_children()[:1]:
-        #     del vpack.get_children()[0]._children[0]
-        # for vpack in leg1._legend_handle_box.get_children()[:1]:
-        #     for hpack in vpack.get_children():
-        #         del hpack._children[0]
+        for vpack in leg1._legend_handle_box.get_children()[:1]:
+            for hpack in vpack.get_children():
+                del hpack._children[0]
 
         if leftmost:
             custom_lines_styles = [Line2D([0], [0], linestyle="-", lw=2, color=COLOR_GRAY),
                                    Line2D([0], [0], linestyle=":", lw=2, color=COLOR_GRAY)]
             leg_task = plt.legend(custom_lines_styles, ["Backdoor task", "Main task"],
-                                  bbox_to_anchor=(1., 0.15), loc=4, ncol=1,
+                                  bbox_to_anchor=(0., 0.53), loc='lower left', ncol=1,
                                   columnspacing=0.75)
             ax.add_artist(leg_task)
         # plt.legend(title='Bound', mode="expand", loc="lower left", labelspacing=.05, bbox_to_anchor=(1.01, 0, .6, 0))
@@ -211,10 +248,10 @@ def build_continuous_median_plot(name, df, model):
         # Y - Axis Format
         ##########################
         ax.set_ylim(ymin=0, ymax=1.01)
-        ax.set_ylabel("Accuracy")
+        ax.set_ylabel("Accuracy ($\\%$)")
         ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
-        plt.ylabel('Accuracy')
+        plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         # Legend

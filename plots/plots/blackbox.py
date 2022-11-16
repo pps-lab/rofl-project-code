@@ -125,10 +125,10 @@ def build_plot(name, df, model):
         # Y - Axis Format
         ##########################
         ax.set_ylim(ymin=0, ymax=1.01)
-        ax.set_ylabel("Accuracy")
+        ax.set_ylabel("Accuracy ($\\%$)")
         ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
-        plt.ylabel('Accuracy')
+        plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         # Legend
@@ -204,10 +204,10 @@ def build_continuous_median_plot(name, df, model):
         # Y - Axis Format
         ##########################
         ax.set_ylim(ymin=0, ymax=1.01)
-        ax.set_ylabel("Accuracy")
+        ax.set_ylabel("Accuracy ($\\%$)")
         ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
-        plt.ylabel('Accuracy')
+        plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         # Legend

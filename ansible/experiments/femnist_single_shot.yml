@@ -50,7 +50,6 @@ base_experiment: # the base config object
         name: NormBoundPGDEvasion
         args:
           norm_type: l2
-          pgd_factor: ~
           scale_factor: 30
   dataset:
     dataset: femnist
@@ -63,147 +62,147 @@ base_experiment: # the base config object
     gpu_memory_min: 10240
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
-- client: # no attack, no clip
-    clip: ~
-    malicious:
-      attack_stop: 0
+#- client: # no attack, no clip
+#    clip: ~
+#    malicious:
+#      attack_stop: 0
+#- client:
+#    clip: ~
+#
+#- client:
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#- client:
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: FEMNISTRandomNoiseEdgeCase
+#        augment_data: true
+#        augment_times: 50
+#
+## PGD
 - client:
-    clip: ~
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      evasion:
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
 
 - client:
     clip:
-      type: l2
-      value: 4
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.16667
-- client:
-    clip:
       type: median_l2
-      value: 1.
+      value: 1.5
     malicious:
       evasion:
         args:
-          pgd_factor: 1.
           norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 2.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 2.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 5.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 5.
-          norm_type: median_l2
+          pgd_factor: 1.5
+      backdoor:
+        type: edge
+        edge_case_type: EuropeanSevenEdgeCase
 
-# EDGE CASE TEST
 - client:
-    clip: ~
+    clip:
+      type: median_l2
+      value: 1.5
     malicious:
+      evasion:
+        args:
+          norm_type: median_l2
+          pgd_factor: 1.5
+      backdoor:
+        type: edge
+        edge_case_type: FEMNISTRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50
+
+# Anticipate
+
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      objective:
+        name: AnticipateTfAttack
+        args:
+          anticipate_steps: 5
+
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      objective:
+        name: AnticipateTfAttack
+        args:
+          anticipate_steps: 5
       backdoor:
         type: edge
         edge_case_type: EuropeanSevenEdgeCase
 - client:
     clip:
-      type: l2
-      value: 4
+      type: median_l2
+      value: 1.5
+    malicious:
+      objective:
+        name: AnticipateTfAttack
+        args:
+          anticipate_steps: 5
+      backdoor:
+        type: edge
+        edge_case_type: FEMNISTRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50
+# Neurotoxin
+
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
     malicious:
       evasion:
+        name: NeurotoxinEvasion
         args:
-          pgd_factor: 0.16667
+          norm_type: l2
+          scale_factor: 30
+          topk: 5
+
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      evasion:
+        name: NeurotoxinEvasion
+        args:
+          norm_type: l2
+          scale_factor: 30
+          topk: 5
       backdoor:
         type: edge
         edge_case_type: EuropeanSevenEdgeCase
 
-
-
-#- client:
-#    clip:
-#      type: median_l2
-#      value: 5.
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 5.
-#          norm_type: median_l2
-#- client:
-#    clip:
-#      type: median_l2
-#      value: 10.
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 10.
-#          norm_type: median_l2
-#- client:
-#    clip:
-#      type: median_l2
-#      value: 15.
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 15.
-#          norm_type: median_l2
-#
-#- client:
-#    clip:
-#      type: l2
-#      value: 0.5
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.021
-#- client:
-#    clip:
-#      type: l2
-#      value: 1
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.041667
-
-#- client:
-#    clip:
-#      type: l2
-#      value: 4
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.16667
-#
-#- client:
-#    clip:
-#      type: l2
-#      value: 6
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.25
-#
-#- client:
-#    clip:
-#      type: l2
-#      value: 8
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.33333
-#
-#- client:
-#    clip:
-#      type: l2
-#      value: 10
-#    malicious:
-#      evasion:
-#        args:
-#          pgd_factor: 0.416667
+- client:
+    clip:
+      type: median_l2
+      value: 1.5
+    malicious:
+      evasion:
+        name: NeurotoxinEvasion
+        args:
+          norm_type: l2
+          scale_factor: 30
+          topk: 5
+      backdoor:
+        type: edge
+        edge_case_type: FEMNISTRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50

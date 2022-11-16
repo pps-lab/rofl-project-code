@@ -35,7 +35,7 @@
 - name: schedule the job on leonhard using bsub
   vars:
     experiment_name: "{{ exp_id }}_{{ run_id }}_{{ exp_idx }}"
-    output_file: "lsf.ans.%J.{{ exp_id }}_{{ run_id }}_{{ exp_idx }}.out"
+    output_file: "{{ analysis_remote_base_dir }}/{{ runs_dir }}/{{ exp_id }}_{{ run_id }}/run_{{ exp_idx }}/lsf.ans.%J.{{ exp_id }}_{{ run_id }}_{{ exp_idx }}.out"
   register: bsub_output
   shell: |
     source /etc/profile

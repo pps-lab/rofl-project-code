@@ -358,3 +358,154 @@ def build_single_round_broken(name, df):
         plt.close()
 
     return fig, df
+
+
+
+def build_single_round(name, df):
+
+    setup_plt(square=True)
+
+    bound = 0.01
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+
+        fig, ax = plt.subplots()
+        colors, linestyles = get_colorful_styles()
+
+        bins = np.linspace(-0.4, 0.4, 40)
+
+        plt.hist(df["mal_weights"], color=colors[0], bins=bins, density=False)
+        plt.hist(df["ben_weights"], color=colors[1], bins=bins, alpha=0.5, density=False)
+
+        custom_lines_colors = [
+            Rectangle((0,0), 1, 1, facecolor=colors[1]),
+            Rectangle((0,0), 1, 1, facecolor=colors[0])
+        ]
+        custom_lines_colors_names = [
+            "Benign",
+            "Malicious"
+        ]
+
+        plt.axvline(-bound, color=COLOR_GRAY, linestyle='dashed')
+        plt.axvline(bound, color=COLOR_GRAY, linestyle='dashed')
+
+        ##########################
+        # General Format
+        ##########################
+        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+        ##########################
+        # Y - Axis Format
+        ##########################
+        # ax.set_ylim(ymin=-0.05, ymax=1.05)
+        # ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        # ax.set_xlim(xmin=-1, xmax=1)
+
+        # if leftmost:
+        plt.ylabel('Count')
+        plt.xlabel('Weight value')
+
+        indicator_lines = [
+            Line2D([0], [0], linestyle="dashed", lw=2, color=COLOR_GRAY)]
+        indicator_lines_labels = ["$L_\infty$-B$=0.01$"]
+        leg_line = plt.legend(indicator_lines, indicator_lines_labels,
+                              bbox_to_anchor=(1., 1.), loc='upper right', ncol=1,
+                              columnspacing=0.75)
+        ax.add_artist(leg_line)
+
+        # Legend
+        # if leftmost:
+        line = Line2D([0], [0])
+        line.set_visible(False)
+        custom_lines_colors = [line] + custom_lines_colors
+        custom_lines_colors_names = ['Update type:'] + custom_lines_colors_names
+
+        leg1 = plt.legend(custom_lines_colors, custom_lines_colors_names,
+                          bbox_to_anchor=(1.02, 1.), loc=4, ncol=6, columnspacing=0.75)
+        ax.add_artist(leg1)
+
+        # if leftmost:
+        for vpack in leg1._legend_handle_box.get_children()[:1]:
+            for hpack in vpack.get_children():
+                del hpack._children[0]
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.savefig(f"{output_dir}/{name}.png", bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return fig, df
+
+
+def build_single_round_presentation(name, df, animation_step):
+
+    setup_plt(square=True)
+
+    bound = 0.01
+
+    with PdfPages(f"{output_dir}/{name}.pdf") as pdf:
+
+        fig, ax = plt.subplots()
+        colors, linestyles = get_colorful_styles()
+
+        bins = np.linspace(-0.4, 0.4, 40)
+
+        if animation_step == 1:
+            # plt.hist(df["mal_weights"], color=colors[0], bins=bins, density=False)
+            plt.hist(df["ben_weights"], color=colors[1], bins=bins, alpha=0.5, density=False)
+        elif animation_step == 2:
+            plt.hist(df["mal_weights"], color=colors[0], bins=bins, density=False)
+            plt.hist(df["ben_weights"], color=colors[1], bins=bins, alpha=0.5, density=False)
+        else:
+            raise ValueError(f"Animation step {animation_step} not supported!")
+
+        custom_lines_colors = [
+            Rectangle((0,0), 1, 1, facecolor=colors[1]),
+            Rectangle((0,0), 1, 1, facecolor=colors[0])
+        ]
+        custom_lines_colors_names = [
+            "Benign",
+            "Malicious"
+        ]
+
+        plt.axvline(-bound, color=COLOR_GRAY, linestyle='dashed')
+        plt.axvline(bound, color=COLOR_GRAY, linestyle='dashed')
+
+        ##########################
+        # Y - Axis Format
+        ##########################
+        # ax.set_ylim(ymin=-0.05, ymax=1.05)
+        # ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        # ax.set_xlim(xmin=-1, xmax=1)
+
+        # if leftmost:
+        plt.ylabel('Count')
+        plt.xlabel('Weight value')
+
+        indicator_lines = [
+            Line2D([0], [0], linestyle="dashed", lw=2, color=COLOR_GRAY)]
+        indicator_lines_labels = ["$L_\infty$-B$=0.01$"]
+        leg_line = plt.legend(indicator_lines, indicator_lines_labels,
+                              bbox_to_anchor=(1., 1.), loc='upper right', ncol=1,
+                              columnspacing=0.75)
+        ax.add_artist(leg_line)
+
+        # Legend
+        # if leftmost:
+        line = Line2D([0], [0])
+        line.set_visible(False)
+        custom_lines_colors = [line] + custom_lines_colors
+        custom_lines_colors_names = ['Update type:'] + custom_lines_colors_names
+
+        leg1 = plt.legend(custom_lines_colors, custom_lines_colors_names,
+                          bbox_to_anchor=(1.02, 1.), loc=4, ncol=6, columnspacing=0.75)
+        ax.add_artist(leg1)
+
+        # if leftmost:
+        for vpack in leg1._legend_handle_box.get_children()[:1]:
+            for hpack in vpack.get_children():
+                del hpack._children[0]
+
+        pdf.savefig(bbox_inches='tight', pad_inches=0)
+        plt.savefig(f"{output_dir}/{name}.png", bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return fig, df

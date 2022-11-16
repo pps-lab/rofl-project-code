@@ -11,7 +11,7 @@ base_experiment: # the base config object
     attacker_full_knowledge: true
     load_model: ./models/lenet5_emnist_088.h5
   server:
-    num_rounds: 1000
+    num_rounds: 600
     num_test_batches: 50
     aggregator:
       name: FedAvg
@@ -19,6 +19,8 @@ base_experiment: # the base config object
   client:
     model_name: lenet5_mnist
     clip:
+#      type: median_l2
+#      value: 1.5
       type: l2
       value: 2
     benign_training:
@@ -31,7 +33,7 @@ base_experiment: # the base config object
       objective:
         name: TargetedAttack
         args:
-          num_epochs: 10
+          num_epochs: 2
           num_batch: 25
           poison_samples: 12
           optimizer: SGD
@@ -50,7 +52,6 @@ base_experiment: # the base config object
         name: NormBoundPGDEvasion
         args:
           norm_type: l2
-          pgd_factor: ~
           scale_factor: 30
   dataset:
     dataset: femnist
@@ -64,144 +65,422 @@ base_experiment: # the base config object
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 30.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 1
+#
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 15.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 2
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 10
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 3
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 7.5
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 4
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 6.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 5
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 5.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 6
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 4.28
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 7
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 3.75
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 8
+
+#- client: # baseline
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 3.
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 10
+
+# BLACKBOX
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 1
+#
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 2
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 3
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 4
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 5
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 6
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 7
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 8
+
+#- client: # baseline
+#    malicious:
+#      objective:
+#        num_epochs: 5
+#        num_batch: 3
+#        step_decay: ~
+#      evasion: ~
+#  environment:
+#    num_selected_malicious_clients: 10
+
+# Anticipate
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 30.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 1
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 15.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 2
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 6.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 5
+##
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 5.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 6
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 4.29
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 7
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 3.75
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 8
+
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateAttack
+#        args:
+#          anticipate_steps: 7
+#      evasion:
+#        args:
+#          scale_factor: 3.
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 10
+
+# Neurotoxin
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 30
+#  environment:
+#    num_selected_malicious_clients: 1
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 15
+#  environment:
+#    num_selected_malicious_clients: 2
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 6.
+#  environment:
+#    num_selected_malicious_clients: 5
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 5.0
+#  environment:
+#    num_selected_malicious_clients: 6
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 4.29
+#  environment:
+#    num_selected_malicious_clients: 7
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 3.75
+#  environment:
+#    num_selected_malicious_clients: 8
+
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: l2
+#          topk: 5
+#          scale_factor: 3.
+#  environment:
+#    num_selected_malicious_clients: 10
+
+# Anticipcate Tf
+
 - client: # baseline
     malicious:
+      objective:
+        name: AnticipateTfAttack
+        args:
+          anticipate_steps: 5
       evasion:
         args:
           scale_factor: 30.0
-          pgd_factor: 0.083333
+          pgd_factor: ~
   environment:
     num_selected_malicious_clients: 1
-
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 15.0
-          pgd_factor: 0.16667
-  environment:
-    num_selected_malicious_clients: 2
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 10
-          pgd_factor: 0.25
-  environment:
-    num_selected_malicious_clients: 3
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 7.5
-          pgd_factor: 0.33333
-  environment:
-    num_selected_malicious_clients: 4
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 6.0
-          pgd_factor: 0.41666667
-  environment:
-    num_selected_malicious_clients: 5
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 5.0
-          pgd_factor: 0.5
-  environment:
-    num_selected_malicious_clients: 6
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 4.28
-          pgd_factor: 0.58411
-  environment:
-    num_selected_malicious_clients: 7
-- client: # baseline
-    malicious:
-      evasion:
-        args:
-          scale_factor: 3.75
-          pgd_factor: 0.666667
-  environment:
-    num_selected_malicious_clients: 8
-
-
-# BLACKBOX
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 1
-
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 2
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 3
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 4
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 5
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 6
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 7
-- client: # baseline
-    malicious:
-      objective:
-        num_epochs: 5
-        num_batch: 3
-        step_decay: ~
-      evasion: ~
-  environment:
-    num_selected_malicious_clients: 8
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 15.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 2
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 6.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 5
+#  #
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 5.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 6
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 4.29
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 7
+#
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 3.75
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 8
+#
+#- client: # baseline
+#    malicious:
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          anticipate_steps: 5
+#      evasion:
+#        args:
+#          scale_factor: 3.0
+#          pgd_factor: ~
+#  environment:
+#    num_selected_malicious_clients: 10

@@ -1,0 +1,275 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 100
+    num_selected_clients: 40
+    num_malicious_clients: 1
+    experiment_name: "cifar_bounds_greencar"
+    use_config_dir: true
+    attack_frequency: 1.0
+    attacker_full_knowledge: true
+    load_model: ./models/resnet18_080.h5
+  server:
+    num_rounds: 600
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: 1
+  client:
+    model_name: resnet18
+    clip: $VARIES$
+    benign_training:
+      num_epochs: 2
+      batch_size: 64
+      optimizer: SGD
+      learning_rate: 0.02
+    malicious:
+      attack_start: 1
+      attack_stop: 1005
+      estimate_other_updates: false
+      objective:
+        name: UntargetedAttack
+        args:
+          num_epochs: 12
+          optimizer: SGD
+          learning_rate: 0.1
+          step_decay: ~
+      backdoor: ~
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: ~
+          scale_factor: 100
+  dataset:
+    dataset: cifar10
+    data_distribution: dirichlet
+    augment_data: true # for training
+  job:
+    minutes: 1440 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+#- client: #
+#    clip: ~
+#    malicious:
+#      attack_start: 10000
+#
+#- client: #
+#    clip: ~
+#
+## MEDIAN
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 2.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 5.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 10.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 15.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 30.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 40.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 50.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 60.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 75.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 100.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: median_l2
+#### L2
+
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 1.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 2.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 5.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 10.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 20.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 30.
+
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 50.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 75.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 125.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 100.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 150.
+#- client: # bgwall, under clipping bound
+#    clip:
+#      type: l2
+#      value: 200.
+
+### linf
+
+#- client: # too tight
+#    clip:
+#      type: linf
+#      value: 0.01
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client: # correct
+#    clip:
+#      type: linf
+#      value: 0.05
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#
+- client: # larger
+    clip:
+      type: linf
+      value: 2.5
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+          norm_type: linf
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 5.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 7.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client: # larger
+#    clip:
+#      type: linf
+#      value: 10.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+

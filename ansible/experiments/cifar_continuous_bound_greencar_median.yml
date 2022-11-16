@@ -67,56 +67,65 @@ base_experiment: # the base config object
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 
-- client: # bgwall, baseline attack
-    clip: ~
-    malicious:
-      attack_start: 10000
-- client: # bgwall, baseline attack
-    clip: ~
-
-# MEDIAN
+#- client: # bgwall, baseline attack
+#    clip: ~
+#    malicious:
+#      attack_start: 10000
+#- client: # bgwall, baseline attack
+#    clip: ~
+#
+## MEDIAN
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 1.
+#          norm_type: median_l2
 - client:
     clip:
       type: median_l2
-      value: 1.
+      value: 1.5
     malicious:
       evasion:
         args:
-          pgd_factor: 1.
+          pgd_factor: 1.5
           norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 2
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 2
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 5
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 5
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 10.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 10.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 15.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 15.
-          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 2
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 2
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 5
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 10.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 10.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 15.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 15.
+#          norm_type: median_l2

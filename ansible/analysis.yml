@@ -20,7 +20,7 @@
 
   - name: Submit the Experiments into the Job-System 
     include_role:
-      name: lsf-submit-job
+      name: "{{ queue | default('lsf') }}-submit-job"
     when: run == 'new' # only submit if it is a new experiment
     loop: "{{ experiments_ext }}"
     loop_control:
@@ -36,8 +36,8 @@
 
   - name: Monitor the unfinished jobs. (loop up to n_lsf_monitor_tries times (the role has a delay in between), then stop)
     include_role:
-      name: lsf-monitor-jobs
-    when: lsf_job_ids_unfinished | length > 0 # there are some unfinished jobs left
+      name: "{{ queue | default('lsf') }}-monitor-jobs"
+    when: (lsf_job_ids_unfinished | length > 0) or (force_refresh | default(false)) # there are some unfinished jobs left
     loop: "{{ range(0, n_lsf_monitor_tries, 1)|list }}"
 
   - name: Output the run id of this experiment for convenience

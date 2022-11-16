@@ -11,7 +11,7 @@ base_experiment: # the base config object
     attacker_full_knowledge: true
     load_model: ./models/lenet5_emnist_088.h5
   server:
-    num_rounds: 1000
+    num_rounds: 600
     num_test_batches: 50
     aggregator:
       name: FedAvg
@@ -20,14 +20,13 @@ base_experiment: # the base config object
     model_name: lenet5_mnist
     clip:
       type: median_l2
-      value: 1.
+      value: 1.5
     benign_training:
       num_epochs: 5
       batch_size: 32
       optimizer: SGD
       learning_rate: 0.01
     malicious:
-      multi_attacker_scale_divide: true
       objective:
         name: TargetedAttack
         args:
@@ -59,161 +58,14 @@ base_experiment: # the base config object
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 
-- client: # baseline, no attack
-    malicious:
-      attack_stop: 0
-- client: # baseline
-    malicious:
-      backdoor:
-        type: tasks
-- client: # baseline
-    malicious:
-      backdoor:
-        type: edge
-        edge_case_type: EuropeanSevenEdgeCase
-        edge_case_p: 0.9
-#- client: # baseline
-#    malicious:
-#      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.5
-#- client: # baseline
-#    malicious:
-#      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.1
+# PGD
 
-- client: # baseline
-    malicious:
-      backdoor:
-        type: tasks
-      objective:
-        args:
-          num_epochs: 10
-          num_batch: 25
-          step_decay: true
-          learning_rate: 0.1
-      evasion:
-        name: NormBoundPGDEvasion
-        args:
-          norm_type: median_l2
-          pgd_factor: 1.
-          scale_factor: 30
-
-- client: # baseline
-    malicious:
-      backdoor:
-        type: edge
-        edge_case_type: EuropeanSevenEdgeCase
-        edge_case_p: 0.9
-      objective:
-        args:
-          num_epochs: 10
-          num_batch: 25
-          step_decay: true
-          learning_rate: 0.1
-      evasion:
-        name: NormBoundPGDEvasion
-        args:
-          norm_type: median_l2
-          pgd_factor: 1.
-          scale_factor: 30
 #- client: # baseline
 #    malicious:
 #      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.5
+#        type: tasks
 #      objective:
-#        args:
-#          num_epochs: 10
-#          num_batch: 25
-#          step_decay: true
-#          learning_rate: 0.1
-#      evasion:
-#        name: NormBoundPGDEvasion
-#        args:
-#          norm_type: l2
-#          pgd_factor: 0.041667
-#          scale_factor: 30
-#- client: # baseline
-#    malicious:
-#      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.1
-#      objective:
-#        args:
-#          num_epochs: 10
-#          num_batch: 25
-#          step_decay: true
-#          learning_rate: 0.1
-#      evasion:
-#        name: NormBoundPGDEvasion
-#        args:
-#          norm_type: l2
-#          pgd_factor: 0.041667
-#          scale_factor: 30
-
-- client: # baseline
-    clip: ~
-    malicious:
-      backdoor:
-        type: tasks
-      objective:
-        args:
-          num_epochs: 10
-          num_batch: 25
-          step_decay: true
-          learning_rate: 0.1
-      evasion:
-        name: NormBoundPGDEvasion
-        args:
-          norm_type: l2
-          pgd_factor: ~
-          scale_factor: 30
-- client: # baseline
-    clip: ~
-    malicious:
-      backdoor:
-        type: edge
-        edge_case_type: EuropeanSevenEdgeCase
-        edge_case_p: 0.9
-      objective:
-        args:
-          num_epochs: 10
-          num_batch: 25
-          step_decay: true
-          learning_rate: 0.1
-      evasion:
-        name: NormBoundPGDEvasion
-        args:
-          norm_type: l2
-          pgd_factor: ~
-          scale_factor: 30
-
-# MEDIAN
-#- client: # baseline
-#    clip:
-#      type: median_l2
-#      value: 1.
-#    malicious:
-#      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.9
-#- client: # baseline
-#    clip:
-#      type: median_l2
-#      value: 1.
-#    malicious:
-#      backdoor:
-#        type: edge
-#        edge_case_type: EuropeanSevenEdgeCase
-#        edge_case_p: 0.9
-#      objective:
+#        name: TargetedAttack
 #        args:
 #          num_epochs: 10
 #          num_batch: 25
@@ -224,4 +76,372 @@ experiments: # in the experiments object you have a list for the different exper
 #        args:
 #          norm_type: median_l2
 #          pgd_factor: 1.
+#          scale_factor: 30
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#        edge_case_p: 0.9
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          pgd_factor: 1.
+#          scale_factor: 30
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: FEMNISTRandomNoiseEdgeCase
+#        augment_data: true
+#        augment_times: 50
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          pgd_factor: 1.
+#          scale_factor: 30
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: pixel_pattern
+#        target_label: 9
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          pgd_factor: 1.
+#          scale_factor: 30
+#
+## Anticipate
+#
+- client:
+    malicious:
+      backdoor:
+        type: tasks
+      objective:
+        name: AnticipateTfAttack
+        args:
+          num_epochs: 2
+          num_batch: 25
+          step_decay: true
+          learning_rate: 0.1
+          anticipate_steps: 5
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          scale_factor: 30
+
+- client:
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: EuropeanSevenEdgeCase
+        edge_case_p: 0.9
+      objective:
+        name: AnticipateTfAttack
+        args:
+          num_epochs: 2
+          num_batch: 25
+          step_decay: true
+          learning_rate: 0.1
+          anticipate_steps: 5
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          scale_factor: 30
+
+- client: # baseline
+    malicious:
+      backdoor:
+        type: edge
+        edge_case_type: FEMNISTRandomNoiseEdgeCase
+        augment_data: true
+        augment_times: 50
+      objective:
+        name: AnticipateTfAttack
+        args:
+          num_epochs: 2
+          num_batch: 25
+          step_decay: true
+          learning_rate: 0.1
+          anticipate_steps: 5
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          scale_factor: 30
+
+- client: # baseline
+    malicious:
+      backdoor:
+        type: pixel_pattern
+        target_label: 9
+      objective:
+        name: AnticipateTfAttack
+        args:
+          num_epochs: 2
+          num_batch: 25
+          step_decay: true
+          learning_rate: 0.1
+          anticipate_steps: 5
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: median_l2
+          scale_factor: 30
+#
+## Neurotoxin
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      backdoor:
+#        type: tasks
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: median_l2
+#          scale_factor: 30
+#          topk: 5
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#        edge_case_p: 0.9
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: median_l2
+#          scale_factor: 30
+#          topk: 5
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      backdoor:
+#        type: edge
+#        edge_case_type: FEMNISTRandomNoiseEdgeCase
+#        augment_data: true
+#        augment_times: 50
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: median_l2
+#          scale_factor: 30
+#          topk: 5
+#
+#- client: # baseline
+#    malicious:
+#      attack_start: 2
+#      backdoor:
+#        type: pixel_pattern
+#        target_label: 9
+#      objective:
+#        name: TargetedAttack
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NeurotoxinEvasion
+#        args:
+#          norm_type: median_l2
+#          scale_factor: 30
+#          topk: 5
+#
+## Undefended
+#
+#- client: # baseline
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: tasks
+#      objective:
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: l2
+#          pgd_factor: ~
+#          scale_factor: 30
+#- client: # baseline
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#        edge_case_p: 0.9
+#      objective:
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: l2
+#          pgd_factor: ~
+#          scale_factor: 30
+#
+#- client: # baseline
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: FEMNISTRandomNoiseEdgeCase
+#        augment_data: true
+#        augment_times: 50
+#      objective:
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: l2
+#          pgd_factor: ~
+#          scale_factor: 30
+#- client: # baseline
+#    clip: ~
+#    malicious:
+#      backdoor:
+#        type: pixel_pattern
+#        target_label: 9
+#      objective:
+#        args:
+#          num_epochs: 10
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: l2
+#          pgd_factor: ~
+#          scale_factor: 30
+#
+## Blackbox
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: tasks
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#        edge_case_p: 0.9
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: FEMNISTRandomNoiseEdgeCase
+#        augment_data: true
+#        augment_times: 50
+#
+#- client: # baseline
+#    malicious:
+#      backdoor:
+#        type: pixel_pattern
+#        target_label: 9
+
+
+
+#- client:
+#    malicious:
+#      backdoor:
+#        type: tasks
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          num_epochs: 2
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
+#          scale_factor: 30
+#
+#- client:
+#    malicious:
+#      backdoor:
+#        type: edge
+#        edge_case_type: EuropeanSevenEdgeCase
+#        edge_case_p: 0.9
+#      objective:
+#        name: AnticipateTfAttack
+#        args:
+#          num_epochs: 2
+#          num_batch: 25
+#          step_decay: true
+#          learning_rate: 0.1
+#      evasion:
+#        name: NormBoundPGDEvasion
+#        args:
+#          norm_type: median_l2
 #          scale_factor: 30

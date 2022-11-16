@@ -18,7 +18,13 @@ def load_continuous_bound_data(model, type):
 
     if model == 'FEMNIST':
         query = {
-            "meta.description": "FEMNIST continuous under different bounds",
+            # "meta.description": "FEMNIST continuous under different bounds",
+            "$or": [
+                {"meta.description": "FEMNIST continuous under different bounds"},
+                {"meta.description": "Test adding neurotoxin"},
+                # {"meta.description": "FEMNIST continuous anticipate"},
+                {"meta.description": "FEMNIST continuous anticipate both"}
+            ]
             # 'hyperparameters.args.client.malicious.attack_stop': { '$ne': 0 }
         }
     elif model == 'FEMNIST_linf':
@@ -33,10 +39,23 @@ def load_continuous_bound_data(model, type):
         #     "_id": rgx
         # }
         # desc = "CIFAR10 static bounds for green cars"
-        desc = "CIFAR10 green car median" if type == "median" else "CIFAR10 static bounds for green cars"
-        query = {
-            "meta.description": desc
-        }
+        if type == "median":
+            query = {
+                "$or": [
+                    { "meta.description": "CIFAR10 green car median" },
+                    { "meta.description": "CIFAR10 continuous anticipate" },
+                    { "meta.description": "CIFAR10 continuous neurotoxin" }
+                ]
+            }
+        else:
+            query = {
+                "$or": [
+                    { "meta.description": "CIFAR10 static bounds for green cars"},
+                    { "meta.description": "CIFAR10 continuous anticipate" },
+                    { "meta.description": "CIFAR10 continuous neurotoxin" }
+                ]
+            }
+
     elif model == 'CIFAR10_linf':
         query = {
             "meta.description": "CIFAR10 comparison of static bounds for linfty norm",
@@ -67,7 +86,8 @@ def load_continuous_bound_data(model, type):
                                'evasion' in metric['hyperparameters']['args']['client']['malicious'] and \
                                metric['hyperparameters']['args']['client']['malicious']['evasion'] is not None and \
                                'pgd_factor' in metric['hyperparameters']['args']['client']['malicious']['evasion']['args'] else None
-        attack_method = 'blackbox' if metric['client']['malicious']['objective']['args']['num_epochs'] == 2 else 'pgd'
+        attack_method = get_attack_method(metric)
+        print("Combination: ", f"{clip_type}_{bound}_{pgd}_{attack_method}{'_noattack' if not_attacking else ''}", metric['_id']['round'])
         metrics_df.append(_preprocess(df, f"{clip_type}_{bound}_{pgd}_{attack_method}{'_noattack' if not_attacking else ''}"))
 
     df = reduce(lambda left, right: pd.merge(left, right, on=['round'], how='outer'), metrics_df)
@@ -75,48 +95,86 @@ def load_continuous_bound_data(model, type):
     df = df[df["round"] <= 520]
     return df
 
-def build_continuous_static_plot(name, df, model, leftmost=True):
+def get_attack_method(metric):
+    if metric['client']['malicious']['objective']['name'] == 'AnticipateTfAttack':
+        return "anticipate"
+    elif metric['client']['malicious']['objective']['args']['num_epochs'] == 2:
+        return "blackbox"
+    elif metric['client']['malicious']['evasion']['name'] == 'NeurotoxinEvasion':
+        return "neurotoxin"
+    else:
+        return "pgd"
+
+def build_continuous_static_plot(name, df, model, configs=None, bound_type=None, leftmost=True, grid=True, full_legend=False):
     colors, linestyles = get_colorful_styles()
 
-    if model == 'FEMNIST':
-        configs = {
-            # 'None_None_None_pgd_noattack': {'label': 'No attack', 'marker': None},
-            'l2_2.0_0.08333_pgd': {'label': '2.0', 'marker': get_markers()[0], 'color': colors[1]},
-            'l2_4.0_0.16667_pgd': {'label': '4.0', 'marker': get_markers()[1], 'color': colors[2]},
-            'l2_10.0_0.416667_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
-            'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
-        }
-        bound_type = '$L_2$-B:'
-    elif model == 'FEMNIST_linf':
-        configs = {
-            'linf_0.001_None_pgd': {'label': '1e-3', 'marker': get_markers()[0], 'color': colors[1]},
-            'linf_0.01_None_pgd': {'label': '1e-2', 'marker': get_markers()[1], 'color': colors[2]},
-            'linf_0.5_None_pgd': {'label': '5e-1', 'marker': get_markers()[2], 'color': colors[4]},
-            'None_None_None_pgd_noattack': {'label': 'No att.', 'marker': get_markers()[4], 'color': colors[0]},
-            # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
-        }
-        bound_type = '$L_\infty$-B:'
-    elif model == 'CIFAR10':
-        configs = {
-            'l2_2.0_0.025_pgd': {'label': '2.0', 'marker': get_markers()[0], 'color': colors[1]},
-            'l2_5.0_0.0625_pgd': {'label': '5.0', 'marker': get_markers()[1], 'color': colors[3]},
+    if configs is None:
+        if model == 'FEMNIST':
+            configs = {
+                # 'None_None_None_pgd_noattack': {'label': 'No attack', 'marker': None},
+                # 'l2_2.0_0.08333_pgd': {'label': '2.0', 'marker': get_markers()[0], 'color': colors[1]},
+                # 'l2_4.0_0.16667_pgd': {'label': '4.0', 'marker': get_markers()[1], 'color': colors[2]},
+                # 'l2_10.0_0.416667_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
+                # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+                #
+                # # 'l2_2.0_None_neurotoxin': {'label': '2.0 (NT)', 'marker': get_markers()[0], 'color': colors[1]},
+                # # 'l2_4.0_None_neurotoxin': {'label': '4.0 (NT)', 'marker': get_markers()[1], 'color': colors[2]},
+                # # 'l2_10.0_None_neurotoxin': {'label': '10.0 (NT)', 'marker': get_markers()[2], 'color': colors[4]},
+                #
+                # 'l2_2.0_None_anticipate': {'label': '2.0 (AT)', 'marker': get_markers()[0], 'color': colors[1]},
+                # 'l2_4.0_None_anticipate': {'label': '4.0 (AT)', 'marker': get_markers()[1], 'color': colors[2]},
+                # 'l2_10.0_None_anticipate': {'label': '10.0 (AT)', 'marker': get_markers()[2], 'color': colors[4]},
 
-            # 'l2_10.0_0.125_pgd': {'label': '10.0', 'marker': 's'},
-            # 'l2_10.0_0.125_pgd': {'label': '10.0', 'marker': 'v'}
-            # 'l2_20.0_0.25_pgd': {'label': '20.0', 'marker': 'o'},
-            'l2_30.0_0.375_pgd': {'label': '30.0', 'marker': get_markers()[2], 'color': colors[5]},
-            'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
-        }
-        bound_type = '$L_2$-B:'
-    elif model == 'CIFAR10_linf':
-        configs = {
-            'linf_0.01_0.0002_pgd': {'label': '1e-2', 'marker': get_markers()[0], 'color': colors[1]},
-            'linf_0.05_0.001_pgd': {'label': '5e-2', 'marker': get_markers()[1], 'color': colors[2]},
-            'linf_10.0_0.2_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
-            'None_None_None_pgd_noattack': {'label': 'No att.', 'marker': get_markers()[4], 'color': colors[0]},
-            # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
-        }
-        bound_type = '$L_\infty$-B:'
+                'l2_0.5_0.021_pgd': {'label': '0.5', 'marker': get_markers()[0], 'color': colors[1]},
+                'l2_1.0_0.041667_pgd': {'label': '1.0', 'marker': get_markers()[0], 'color': colors[2]},
+                # 'l2_2.0_0.08333_pgd': {'label': '2.0', 'marker': get_markers()[1], 'color': colors[2]},
+                # 'l2_4.0_0.16667_pgd': {'label': '4.0', 'marker': get_markers()[1], 'color': colors[4]},
+                # 'l2_6.0_0.25_pgd': {'label': '6.0', 'marker': get_markers()[1], 'color': colors[4]},
+                'l2_10.0_0.416667_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
+                'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+
+                # 'l2_2.0_None_neurotoxin': {'label': '2.0 (NT)', 'marker': get_markers()[0], 'color': colors[1]},
+                # 'l2_4.0_None_neurotoxin': {'label': '4.0 (NT)', 'marker': get_markers()[1], 'color': colors[2]},
+                'l2_10.0_None_neurotoxin': {'label': '10.0 (NT)', 'marker': get_markers()[2], 'color': colors[4]},
+
+                'l2_0.5_None_anticipate': {'label': '0.5 (AT)', 'marker': get_markers()[1], 'color': colors[1]},
+                'l2_1.0_None_anticipate': {'label': '1.0 (AT)', 'marker': get_markers()[0], 'color': colors[2]},
+                'l2_10.0_None_anticipate': {'label': '10.0 (AT)', 'marker': get_markers()[2], 'color': colors[4]},
+                # 'l2_4.0_None_anticipate': {'label': '4.0 (AT)', 'marker': get_markers()[2], 'color': colors[4]},
+                # 'l2_2.0_None_anticipate': {'label': '2.0 (AT)', 'marker': get_markers()[2], 'color': colors[4]},
+
+            }
+            bound_type = '$L_2$-B:' if not full_legend else '$L_2$-Bound:'
+        elif model == 'FEMNIST_linf':
+            configs = {
+                'linf_0.001_None_pgd': {'label': '1e-3', 'marker': get_markers()[0], 'color': colors[0]},
+                'linf_0.01_None_pgd': {'label': '1e-2', 'marker': get_markers()[1], 'color': colors[1]},
+                'linf_0.5_None_pgd': {'label': '5e-1', 'marker': get_markers()[2], 'color': colors[2]},
+                'None_None_None_pgd_noattack': {'label': 'No att.', 'marker': get_markers()[4], 'color': colors[0]},
+                # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+            }
+            bound_type = '$L_\infty$-B:' if not full_legend else '$L_\infty$-Bound:'
+        elif model == 'CIFAR10':
+            configs = {
+                'l2_2.0_0.025_pgd': {'label': '2.0', 'marker': get_markers()[0], 'color': colors[1]},
+                'l2_5.0_0.0625_pgd': {'label': '5.0', 'marker': get_markers()[1], 'color': colors[3]},
+
+                # 'l2_10.0_0.125_pgd': {'label': '10.0', 'marker': 's'},
+                # 'l2_10.0_0.125_pgd': {'label': '10.0', 'marker': 'v'}
+                # 'l2_20.0_0.25_pgd': {'label': '20.0', 'marker': 'o'},
+                'l2_30.0_0.375_pgd': {'label': '30.0', 'marker': get_markers()[2], 'color': colors[5]},
+                'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+            }
+            bound_type = '$L_2$-B:' if not full_legend else '$L_2$-Bound:'
+        elif model == 'CIFAR10_linf':
+            configs = {
+                'linf_0.01_0.0002_pgd': {'label': '1e-2', 'marker': get_markers()[0], 'color': colors[1]},
+                'linf_0.05_0.001_pgd': {'label': '5e-2', 'marker': get_markers()[1], 'color': colors[2]},
+                'linf_10.0_0.2_pgd': {'label': '10.0', 'marker': get_markers()[2], 'color': colors[4]},
+                'None_None_None_pgd_noattack': {'label': 'No att.', 'marker': get_markers()[4], 'color': colors[0]},
+                # 'None_None_None_pgd': {'label': 'None', 'marker': get_markers()[3], 'color': colors[0]},
+            }
+            bound_type = '$L_\infty$-B:' if not full_legend else '$L_\infty$-Bound:'
 
     markevery = 100
     window_size = 20
@@ -140,18 +198,19 @@ def build_continuous_static_plot(name, df, model, leftmost=True):
             config = configs[suffix]
 
             plines += plt.plot(labels, values_acc.rolling(window_size).mean().shift(-window_size),
-                     linestyle='dotted', label=config['label'], color=colors[index],
+                     linestyle='dotted', label=config['label'], color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
             plines += plt.plot(labels, values_adv.rolling(window_size).mean().shift(-window_size),
-                     color=colors[index],
+                     color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
-            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=colors[index]))
+            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=config['color']))
             custom_lines_colors_names.append(config['label'])
 
         ##########################
         # General Format
         ##########################
-        ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
+        if grid:
+            ax.grid(True, axis="y", linestyle=':', color='0.6', zorder=0, linewidth=1.2)
         ##########################
         # Y - Axis Format
         ##########################
@@ -161,7 +220,7 @@ def build_continuous_static_plot(name, df, model, leftmost=True):
             matplotlib.ticker.FuncFormatter(yaxis_formatter))
 
         if leftmost:
-            plt.ylabel('Accuracy')
+            plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         # Legend
@@ -176,6 +235,8 @@ def build_continuous_static_plot(name, df, model, leftmost=True):
         ax.add_artist(leg1)
 
         # if leftmost:
+
+        # custom organization
         for vpack in leg1._legend_handle_box.get_children()[:1]:
             for hpack in vpack.get_children():
                 del hpack._children[0]
@@ -197,28 +258,7 @@ def build_continuous_static_plot(name, df, model, leftmost=True):
     return fig, df
 
 
-def build_continuous_median_plot(name, df, model, leftmost=False):
-
-    if model == 'FEMNIST':
-        configs = {
-            'median_l2_1.0_1.0_pgd': {'label': '1.0', 'marker': '*'},
-            'median_l2_5.0_5.0_pgd': {'label': '5.0', 'marker': 'o'},
-            # 'median_l2_10.0_10.0': {'label': '10.0', 'marker': 'v'},
-            'median_l2_15.0_15.0_pgd': {'label': '15.0', 'marker': 'D'},
-            'None_None_None_pgd': {'label': 'None', 'marker': 's'},
-        }
-    elif model == 'CIFAR10':
-        configs = {
-            'median_l2_1.0_1.0_pgd': {'label': '1.0', 'marker': '*'},
-            # 'median_l2_2.0_2.0_pgd': {'label': '2.0', 'marker': '2'},
-            # 'l2_10.0_0.125_pgd': {'label': '10.0', 'marker': 'v'}
-            'median_l2_5.0_5.0_pgd': {'label': '5.0', 'marker': 'o'},
-            # 'median_l2_10.0_10.0_pgd': {'label': '10.0', 'marker': 'o'},
-
-            'median_l2_15.0_15.0_pgd': {'label': '15.0', 'marker': 'D'},
-            'None_None_None_pgd': {'label': 'None', 'marker': 's'},
-        }
-
+def build_continuous_median_plot(name, df, model, configs, leftmost=False):
 
     markevery = 100
     window_size = 20
@@ -233,18 +273,21 @@ def build_continuous_median_plot(name, df, model, leftmost=False):
         custom_lines_colors = []
         custom_lines_colors_names = []
         for index, suffix in enumerate(configs.keys()):
+            if f"accuracy_{suffix}" not in df.columns:
+                print("ERROR: Skipping", f"accuracy_{suffix}")
+                continue
             values_acc = df[f"accuracy_{suffix}"]
             values_adv = df[f"adv_success_{suffix}"]
             labels = df[f"round"]
             config = configs[suffix]
 
             plt.plot(labels, values_acc.rolling(window_size).mean().shift(-window_size),
-                     linestyle='dotted', label=config['label'], color=colors[index],
+                     linestyle='dotted', label=config['label'], color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
             plt.plot(labels, values_adv.rolling(window_size).mean().shift(-window_size),
-                     color=colors[index],
+                     color=config['color'],
                      linewidth=2, marker=config['marker'], markevery=markevery)
-            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=colors[index]))
+            custom_lines_colors.append(Line2D([0], [0], linestyle="-", lw=2, marker=config['marker'], color=config['color']))
             custom_lines_colors_names.append(config['label'])
 
         ##########################
@@ -260,7 +303,7 @@ def build_continuous_median_plot(name, df, model, leftmost=False):
             matplotlib.ticker.FuncFormatter(yaxis_formatter))
 
         # if leftmost:
-        #     plt.ylabel('Accuracy')
+        #     plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
 
         # Legend
@@ -268,7 +311,7 @@ def build_continuous_median_plot(name, df, model, leftmost=False):
         line = Line2D([0], [0])
         line.set_visible(False)
         custom_lines_colors = [line] + custom_lines_colors
-        custom_lines_colors_names = ['$r$-M:'] + custom_lines_colors_names
+        custom_lines_colors_names = ['M-$r$:'] + custom_lines_colors_names
 
         leg1 = plt.legend(custom_lines_colors, custom_lines_colors_names,
                           bbox_to_anchor=(1.02, 1.), loc=4, ncol=6, columnspacing=0.75)
@@ -355,10 +398,10 @@ def build_continuous_static_plot_presentation(name, df, model):
         # Y - Axis Format
         ##########################
         ax.set_ylim(ymin=0, ymax=1.01)
-        ax.set_ylabel("Accuracy")
+        ax.set_ylabel("Accuracy ($\\%$)")
         ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
-        plt.ylabel('Accuracy')
+        plt.ylabel('Accuracy ($\\%$)')
         plt.xlabel('Round')
         plt.title(title)
 

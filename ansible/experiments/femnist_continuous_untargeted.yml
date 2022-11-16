@@ -1,0 +1,316 @@
+
+base_experiment: # the base config object  
+  environment:
+    num_clients: 3383
+    num_selected_clients: 30
+    num_malicious_clients: 113
+    num_selected_malicious_clients: 1
+    experiment_name: "backdoor_tasks_bound_lenet"
+    use_config_dir: true
+    attack_frequency: 1.0
+    attacker_full_knowledge: true
+    load_model: ./models/lenet5_emnist_088.h5
+  server:
+    num_rounds: 1000
+    num_test_batches: 50
+    aggregator:
+      name: FedAvg
+    global_learning_rate: -1
+  client:
+    model_name: lenet5_mnist
+    clip:
+      type: l2
+      value: $VARIES$
+    benign_training:
+      num_epochs: 5
+      batch_size: 32
+      optimizer: SGD
+      learning_rate: 0.01
+    malicious:
+      objective:
+        name: UntargetedAttack
+        args:
+          num_epochs: 10
+          optimizer: SGD
+          learning_rate: 0.1
+          step_decay: ~
+      evasion:
+        name: NormBoundPGDEvasion
+        args:
+          norm_type: l2
+          pgd_factor: ~
+          scale_factor: 30
+  dataset:
+    dataset: femnist
+    data_distribution: nonIID
+  job:
+    minutes: 240 # Max. minutes to run. Leonhard has 240 and 1440 queues
+    cpu_cores: 20
+    cpu_mem_per_core: 4096
+    use_gpu: 1
+    gpu_memory_min: 10240
+
+experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
+
+#- client:
+#    clip: ~
+#    malicious:
+#      attack_stop: 0
+#
+#- client:
+#    clip: ~
+#
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 2.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 4.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 5.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 10.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 15.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 20.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+- client:
+    clip:
+      type: median_l2
+      value: 25.
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 30.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 40.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 50.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+
+# L2
+
+#- client:
+#    clip:
+#      type: l2
+#      value: 1
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 1.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 2
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#- client:
+#    clip:
+#      type: l2
+#      value: 4
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#- client:
+#    clip:
+#      type: l2
+#      value: 10
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#- client:
+#    clip:
+#      type: l2
+#      value: 15
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+
+- client:
+    clip:
+      type: l2
+      value: 20
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+- client:
+    clip:
+      type: l2
+      value: 30
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+- client:
+    clip:
+      type: l2
+      value: 40
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+- client:
+    clip:
+      type: l2
+      value: 50
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+
+
+# Linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 0.001
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 0.01
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 0.1
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 0.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 1.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+#- client:
+#    clip:
+#      type: linf
+#      value: 5.0
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: linf
+- client:
+    clip:
+      type: linf
+      value: 10.0
+    malicious:
+      evasion:
+        args:
+          pgd_factor: ~
+          norm_type: linf

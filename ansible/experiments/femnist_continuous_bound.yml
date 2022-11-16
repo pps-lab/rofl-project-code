@@ -62,117 +62,133 @@ base_experiment: # the base config object
     gpu_memory_min: 10240
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
-- client: # no attack
-    clip: ~
-    malicious:
-      attack_stop: 0
+#- client: # no attack
+#    clip: ~
+#    malicious:
+#      attack_stop: 0
 #- client:
 #    clip: ~
 #    malicious:
 #      objective:
 #        args:
 #          num_epochs: 5
-- client:
-    clip: ~
-- client:
-    clip:
-      type: median_l2
-      value: 1.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 1.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 1.2
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 1.2
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 1.5
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 1.5
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 2.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 2.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 5.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 5.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 10.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 10.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 15.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 15.
-          norm_type: median_l2
-- client:
-    clip:
-      type: median_l2
-      value: 5.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: ~
-          norm_type: l2
-- client:
-    clip:
-      type: median_l2
-      value: 10.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: ~
-          norm_type: l2
-- client:
-    clip:
-      type: median_l2
-      value: 15.
-    malicious:
-      evasion:
-        args:
-          pgd_factor: ~
-          norm_type: l2
-
-- client:
-    clip:
-      type: l2
-      value: 0.5
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.021
+#- client:
+#    clip: ~
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 1.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.2
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 1.2
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 1.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 1.5
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 2.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 2.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 5.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 5.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 10.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 10.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 15.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 15.
+#          norm_type: median_l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 5.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 10.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#- client:
+#    clip:
+#      type: median_l2
+#      value: 15.
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: ~
+#          norm_type: l2
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 0.1
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.021
+#- client:
+#    clip:
+#      type: l2
+#      value: 0.25
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.021
+#- client:
+#    clip:
+#      type: l2
+#      value: 0.5
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.021
 - client:
     clip:
       type: l2
@@ -181,49 +197,49 @@ experiments: # in the experiments object you have a list for the different exper
       evasion:
         args:
           pgd_factor: 0.041667
-- client:
-    clip:
-      type: l2
-      value: 2
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.08333
-- client:
-    clip:
-      type: l2
-      value: 4
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.16667
-
-- client:
-    clip:
-      type: l2
-      value: 6
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.25
-
-- client:
-    clip:
-      type: l2
-      value: 8
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.33333
-
-- client:
-    clip:
-      type: l2
-      value: 10
-    malicious:
-      evasion:
-        args:
-          pgd_factor: 0.416667
+#- client:
+#    clip:
+#      type: l2
+#      value: 2
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.08333
+#- client:
+#    clip:
+#      type: l2
+#      value: 4
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.16667
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 6
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.25
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 8
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.33333
+#
+#- client:
+#    clip:
+#      type: l2
+#      value: 10
+#    malicious:
+#      evasion:
+#        args:
+#          pgd_factor: 0.416667
 
 #- client:
 #    clip: ~

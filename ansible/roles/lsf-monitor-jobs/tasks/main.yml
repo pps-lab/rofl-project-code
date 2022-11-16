@@ -23,9 +23,15 @@
     bjobs_result: "{{ bjobs_result }}"
 - debug:
     msg: "{{ bjobs_result.stdout_lines[1:] }}"
-
 - debug:
-    msg: "Running: {{ lsf_job_ids_running }}, pending: {{ lsf_job_ids_pending }}, force: {{ force_refresh | default(false) }}"
+    msg: "Running: {{ lsf_job_ids_running }}, pending: {{ lsf_job_ids_pending }}, force: {{ force_refresh | default(false) }}, lsf_job_ids_unfinished {{ lsf_job_ids_unfinished }}"
+
+- name: Set all jobs pending (if force_refresh is enabled)
+  set_fact:
+    lsf_job_ids_unfinished: "{{ lsf_job_ids }}"
+    lsf_job_ids_pending: "{{ lsf_job_ids }}"
+    lsf_job_ids_running: []
+  when: force_refresh | default(false)
 
 - name: Get status of jobs lsf_job_ids_unfinished (using bjobs) 
   vars:
@@ -40,15 +46,7 @@
     # jobs that are currently pending (i.e. wait in queue) of the jobs from lsf_job_ids_unfinished
 #    lsf_job_ids_pending: [] # PLACEHOLDER
     lsf_job_ids_pending: "{{ lines | map('regex_search', '^([0-9]*) [a-zA-Z]*[ ]*PEND', '\\1') | flatten | intersect(lsf_job_ids_unfinished) }}"
-  when: (not force_refresh | default(true)) and lsf_job_ids_unfinished | length > 0
-
-- name: Set all jobs pending
-  set_fact:
-    lsf_job_ids_unfinished: "{{ lsf_job_ids }}"
-    lsf_job_ids_pending: "{{ lsf_job_ids }}"
-    lsf_job_ids_running: []
-  when: force_refresh | default(false)
-
+  when: lsf_job_ids_unfinished | length > 0
 
 - set_fact:
     lsf_job_ids_finished: "{{ lsf_job_ids_unfinished | difference(lsf_job_ids_running) | difference(lsf_job_ids_pending) }}"

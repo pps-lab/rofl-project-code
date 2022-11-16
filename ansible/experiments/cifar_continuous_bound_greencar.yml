@@ -67,90 +67,39 @@ base_experiment: # the base config object
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 
-#- client:
-#    malicious:
-#      attack_start: 500
-#
-#- client:
-#    malicious:
-#      objective:
-#        args:
-#          num_epochs: 6
-#          step_decay: true
-#          poison_samples: 20
-#          learning_rate: 0.05
-#          attacker_full_dataset: false
-#
-#- client:
-#    malicious:
-#      objective:
-#        args:
-#          num_epochs: 6
-#          step_decay: true
-#          poison_samples: 20
-#          learning_rate: 0.05
-#          attacker_full_dataset: false
-#      backdoor:
-#        train: [389,41336,874,1605,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
-#        test: [561,41861,47001]
-#
-#- client:
-#    malicious:
-#      objective:
-#        args:
-#          num_epochs: 6
-#          step_decay: true
-#          poison_samples: 20
-#          learning_rate: 0.05
-#          attacker_full_dataset: false
-#      backdoor:
-#        train: [389,561,874,41861,3378,3678,4528,9744,19165,19500,21422,22984,32941,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
-#        test: [41336,1605,47001]
-
-#- client:
-#    malicious:
-#      objective:
-#        args:
-#          num_epochs: 6
-#          step_decay: true
-#          poison_samples: 20
-#          learning_rate: 0.1
-#          attacker_full_dataset: false
-#      backdoor:
-#        train: [389,561,874,1506,3378,3678,4528,9744,19165,19500,41336,41861,47001,34287,34385,36005,37365,37533,38658,38735,39824,40138,47026,48003,48030,49163,49588]
-#        test: [21422,22984,32941]
-
-#- client: # bgwall, baseline attack
-#    clip: ~
-#- client:
-#    malicious:
-#      objective:
-#        args:
-#          learning_rate: 0.2
-#
-#- client: # bgwall, baseline attack
-#    clip: ~
-#    malicious:
-#      objective:
-#        args:
-#          learning_rate: 0.1
 
 #- client: # bgwall, baseline attack
 #    clip: ~
 #    malicious:
-#      objective:
+#      attack_start: 10000
+#- client: # bgwall, baseline attack
+#    clip: ~
+#
+
+- client: # bgwall, under clipping bound
+    malicious:
+      evasion:
+        args:
+          scale_factor: 100
+          pgd_factor: 0.0125
+    clip:
+      type: l2
+      value: 1
+#- client: # bgwall, under clipping bound
+#    malicious:
+#      evasion:
 #        args:
-#          num_epochs: 6
-#          learning_rate: 0.1
-#          poison_samples: 16
-#          step_decay:
-#  environment:
-#    print_backdoor_eval: true
+#          scale_factor: 100
+#          pgd_factor: 0.025
+#    clip:
+#      type: l2
+#      value: 2
 
 #- client: # bgwall, under clipping bound
 #    malicious:
 #      evasion:
 #        args:
+#          scale_factor: 100
 #          pgd_factor: 0.0625
 #    clip:
 #      type: l2
@@ -160,79 +109,41 @@ experiments: # in the experiments object you have a list for the different exper
 #    malicious:
 #      evasion:
 #        args:
-#          norm_type: median_l2
-#          pgd_factor: 1.
+#          scale_factor: 100
+#          pgd_factor: 0.125
 #    clip:
-#      type: median_l2
-#      value: 1.
-
-
-- client: # bgwall, baseline attack
-    clip: ~
-    malicious:
-      attack_start: 10000
-- client: # bgwall, baseline attack
-    clip: ~
+#      type: l2
+#      value: 10
 #
-- client: # bgwall, under clipping bound
-    malicious:
-      evasion:
-        args:
-          scale_factor: 100
-          pgd_factor: 0.025
-    clip:
-      type: l2
-      value: 2
-
-- client: # bgwall, under clipping bound
-    malicious:
-      evasion:
-        args:
-          scale_factor: 100
-          pgd_factor: 0.0625
-    clip:
-      type: l2
-      value: 5
-
-- client: # bgwall, under clipping bound
-    malicious:
-      evasion:
-        args:
-          scale_factor: 100
-          pgd_factor: 0.125
-    clip:
-      type: l2
-      value: 10
-
+##- client: # bgwall, under clipping bound
+##    malicious:
+##      evasion:
+##        args:
+##          scale_factor: 100
+##          pgd_factor: 0.1875
+##    clip:
+##      type: l2
+##      value: 15
+#
 #- client: # bgwall, under clipping bound
 #    malicious:
 #      evasion:
 #        args:
 #          scale_factor: 100
-#          pgd_factor: 0.1875
+#          pgd_factor: 0.25
 #    clip:
 #      type: l2
-#      value: 15
-
-- client: # bgwall, under clipping bound
-    malicious:
-      evasion:
-        args:
-          scale_factor: 100
-          pgd_factor: 0.25
-    clip:
-      type: l2
-      value: 20
-
-- client: # bgwall, under clipping bound
-    malicious:
-      evasion:
-        args:
-          scale_factor: 100
-          pgd_factor: 0.375
-    clip:
-      type: l2
-      value: 30
+#      value: 20
+#
+#- client: # bgwall, under clipping bound
+#    malicious:
+#      evasion:
+#        args:
+#          scale_factor: 100
+#          pgd_factor: 0.375
+#    clip:
+#      type: l2
+#      value: 30
 
 ##
 #- client: # bgwall, under clipping bound
