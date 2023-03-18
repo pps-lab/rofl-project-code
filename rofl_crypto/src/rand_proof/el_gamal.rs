@@ -11,6 +11,7 @@ use bulletproofs::PedersenGens;
 use super::util::read32;
 use core::fmt::Debug;
 use core::ops::{Add, AddAssign, Mul};
+use std::iter::Sum;
 use serde::de::Visitor;
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use sha3::Sha3_512;
@@ -165,6 +166,29 @@ impl<'a, 'b> Mul<&'b ElGamalPair> for &'a Scalar {
         }
     }
 }
+
+// Implement Sum trait for ElGamalPair
+impl<'a, 'b> Sum<&'b ElGamalPair> for ElGamalPair {
+    fn sum<I: Iterator<Item = &'b ElGamalPair>>(iter: I) -> ElGamalPair {
+        iter.fold(ElGamalPair::unity(), |acc, x| acc + *x)
+    }
+}
+impl Sum<ElGamalPair> for ElGamalPair {
+    fn sum<I: Iterator<Item = ElGamalPair>>(iter: I) -> ElGamalPair {
+        iter.fold(ElGamalPair::unity(), |acc, x| acc + x)
+    }
+}
+// impl<T> Sum<T> for ElGamalPair
+//     where
+//         T: Borrow<ElGamalPair>
+// {
+//     fn sum<I>(iter: I) -> Self
+//         where
+//             I: Iterator<Item = T>
+//     {
+//         iter.fold(ElGamalPair::unity(), |acc, item| acc + item.borrow())
+//     }
+// }
 
 impl Debug for ElGamalPair {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {

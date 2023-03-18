@@ -246,6 +246,7 @@ mod tests {
     use crate::range_proof_vec::clip_f32_to_range_vec;
     use rand::Rng;
     use std::cmp;
+    use std::ops::Range;
 
     #[test]
     fn test_next_pow2() {
@@ -294,7 +295,7 @@ mod tests {
 
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(fp_min..fp_max))
                 .collect(),
             prove_range,
         );
@@ -335,7 +336,7 @@ mod tests {
             Fix::from_bits(((1u128 << prove_range) - 1u128) as URawFix).to_float();
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(-float_range, float_range))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(-float_range..float_range))
                 .collect(),
             prove_range,
         );

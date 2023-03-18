@@ -1,7 +1,7 @@
 [package]
 name = "rofl_crypto"
 version = "0.1.0"
-authors = ["hiddelycklama <lhidde@ethz.ch>", "mlei <mathiaschinna@gmail.com>"]
+authors = ["Hidde Lycklama <hidde.lycklama@inf.ethz.ch>", "mlei <mathiaschinna@gmail.com>"]
 edition = "2018"
 
 
@@ -14,7 +14,7 @@ curve25519-dalek = {  package = "curve25519-dalek-ng", version = "4", default-fe
 
 proc-macro2 = { version = "1.0.28" }
 #NOTE mlei: cannot be higher otherwise wont compile
-packed_simd = { version = "0.3.4", package = "packed_simd_2" }
+packed_simd = { version = "0.3.8", package = "packed_simd_2" }
 
 libc = "0.2.48"
 bulletproofs="4.0.0"
