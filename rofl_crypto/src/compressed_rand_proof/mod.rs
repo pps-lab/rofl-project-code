@@ -45,7 +45,7 @@ impl CompressedRandProof {
         r_vec: Vec<Scalar>,
     ) -> Result<(CompressedRandProof, CompressedRandProofCommitments), ProofError> {
         let (party, c_vec, c_prime) = Party::new(&eg_gens, m_vec, r_vec)?;
-        let dealer = Dealer::new(eg_gens, transcript, c_vec);
+        let dealer = Dealer::new(eg_gens, transcript, &c_vec);
 
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r) = party.apply_challenge(challenge);
@@ -62,7 +62,7 @@ impl CompressedRandProof {
         r: Vec<Scalar>,
     ) -> Result<(CompressedRandProof, CompressedRandProofCommitments), ProofError> {
         let (party, c_vec, c_prime) = PartyExisting::new(&eg_gens, m, m_com, r)?;
-        let dealer = Dealer::new(eg_gens, transcript, c_vec);
+        let dealer = Dealer::new(eg_gens, transcript, &c_vec);
 
         let (dealer, challenge) = dealer.receive_commitment(c_prime)?;
         let (z_m, z_r) = party.apply_challenge(challenge);
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_scalar_multiply() {
-        let val: f32 = 2.0;
+        let val: f32 = 8.0;
         let exp: f32 = 2.0;
         let val_scalar = f32_to_scalar(&val);
         let value = val_scalar * f32_to_scalar(&exp);

@@ -16,14 +16,14 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 pub struct Dealer {}
 
 impl Dealer {
-    pub fn new<'a, 'b>(
+    pub fn new<'a, 'b, 'c>(
         eg_gens: &'a ElGamalGens,
         transcript: &'b mut Transcript,
-        c_vec: CompressedRandProofCommitments,
-    ) -> DealerAwaitingCommitment<'a, 'b> {
+        c_vec: &'c CompressedRandProofCommitments,
+    ) -> DealerAwaitingCommitment<'a, 'b, 'c> {
         transcript.rand_proof_domain_sep();
         for (i, c) in c_vec.c_vec.iter().enumerate() {
-            transcript.commit_eg_point(label_commit_real_elgamal(i), &c);
+            transcript.commit_eg_point(label_commit_real_elgamal(i), c);
         }
 
         DealerAwaitingCommitment {
@@ -34,17 +34,17 @@ impl Dealer {
     }
 }
 
-pub struct DealerAwaitingCommitment<'a, 'b> {
+pub struct DealerAwaitingCommitment<'a, 'b, 'c> {
     eg_gens: &'a ElGamalGens,
     transcript: &'b mut Transcript,
-    C_vec: CompressedRandProofCommitments,
+    C_vec: &'c CompressedRandProofCommitments,
 }
 
-impl<'a, 'b> DealerAwaitingCommitment<'a, 'b> {
+impl<'a, 'b, 'c> DealerAwaitingCommitment<'a, 'b, 'c> {
     pub fn receive_commitment(
         self,
         c_prime: ElGamalPair,
-    ) -> Result<(DealerAwaitingChallengeResponse<'a, 'b>, Scalar), ProofError> {
+    ) -> Result<(DealerAwaitingChallengeResponse<'a, 'b, 'c>, Scalar), ProofError> {
         self.transcript
             .commit_eg_point(LABEL_COMMIT_PRIME_ELGAMAL, &c_prime);
 
@@ -63,15 +63,15 @@ impl<'a, 'b> DealerAwaitingCommitment<'a, 'b> {
     }
 }
 
-pub struct DealerAwaitingChallengeResponse<'a, 'b> {
+pub struct DealerAwaitingChallengeResponse<'a, 'b, 'c> {
     eg_gens: &'a ElGamalGens,
     transcript: &'b mut Transcript,
-    C_vec: CompressedRandProofCommitments,
+    C_vec: &'c CompressedRandProofCommitments,
     C_prime: ElGamalPair,
     challenge: Scalar,
 }
 
-impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
+impl<'a, 'b, 'c> DealerAwaitingChallengeResponse<'a, 'b, 'c> {
     pub fn receive_challenge_response(
         self,
         z_m: Scalar,
