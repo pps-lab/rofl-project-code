@@ -72,11 +72,12 @@ impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
         self.transcript.commit_scalar(b"Z_m", &z_m);
         self.transcript.commit_scalar(b"Z_r", &z_r);
 
-        let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r);
-        let src_eg_pair: ElGamalPair = &self.C_prime + &(&self.challenge * &self.C);
-        if dst_eg_pair != src_eg_pair {
-            return Err(ProofError::ProvingError);
-        }
+        // This is redundant, but it's a good sanity check.
+        // let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r);
+        // let src_eg_pair: ElGamalPair = &self.C_prime + &(&self.challenge * &self.C);
+        // if dst_eg_pair != src_eg_pair {
+        //     return Err(ProofError::ProvingError);
+        // }
         Ok(RandProof {
             C_prime: self.C_prime,
             Z_m: z_m,

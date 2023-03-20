@@ -81,24 +81,15 @@ impl<'a, 'b, 'c> DealerAwaitingChallengeResponse<'a, 'b, 'c> {
         self.transcript.commit_scalar(LABEL_RESPONSE_Z_M, &z_m);
         self.transcript.commit_scalar(LABEL_RESPONSE_R, &z_r);
 
-        // Implicit: ElGamal pairs are being verified in two parts
-        // Normal rand proof
-        // self.m_prime + self.m.iter().enumerate().map(|i, m| m * c.pow(i+1)).sum();
-        let precomputation_table: Vec<Scalar> = precompute_exponentiate(&self.challenge, self.C_vec.c_vec.len()+1);
-
-        // TODO: Is this part strictly necessary? Maybe this is an additional check on the prover?
-        let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r);
-        // TODO: POW
-        let src_eg_pair = self.C_prime + self.C_vec.c_vec.
-            par_iter().enumerate()
-            .map(|(i, m)| m * &precomputation_table[i+1]).sum();
-        // let src_eg_pair: ElGamalPair = &self.C_prime + self.C_vec.c_vec.iter().enumerate().map(|(i, m)| m * &self.challenge).sum();
-        // let src_eg_pair = &self.C_prime + &(self.C_vec.c_vec.get(0).unwrap() * &self.challenge);
-        if dst_eg_pair != src_eg_pair {
-            // If you get this error, it could be that the parameters are outside of the parameter-wise
-            // range-proof range. (for L2)
-            return Err(ProofError::ProvingErrorRandomness);
-        }
+        // // Implicit: ElGamal pairs are being verified in two parts
+        // let precomputation_table: Vec<Scalar> = precompute_exponentiate(&self.challenge, self.C_vec.c_vec.len()+1);
+        // let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r);
+        // let src_eg_pair = self.C_prime + self.C_vec.c_vec.
+        //     par_iter().enumerate()
+        //     .map(|(i, m)| m * &precomputation_table[i+1]).sum();
+        // if dst_eg_pair != src_eg_pair {
+        //     return Err(ProofError::ProvingErrorRandomness);
+        // }
 
         Ok(CompressedRandProof {
             C_prime: self.C_prime,

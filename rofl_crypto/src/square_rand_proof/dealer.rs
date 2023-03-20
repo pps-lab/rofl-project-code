@@ -83,25 +83,25 @@ impl<'a, 'b> DealerAwaitingChallengeResponse<'a, 'b> {
         self.transcript.commit_scalar(LABEL_RESPONSE_R_2, &z_r_2);
 
         // Implicit: ElGamal pairs are being verified in two parts
-        // Normal rand proof
-        let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r_1);
-        let src_eg_pair: ElGamalPair = &self.C_prime.c + &(&self.challenge * &self.C.c);
-        if dst_eg_pair != src_eg_pair {
-            // If you get this error, it could be that the parameters are outside of the parameter-wise
-            // range-proof range. (for L2)
-            return Err(ProofError::ProvingErrorRandomness);
-        }
-
-        // Now for the extension:
-        let eg_base: PedersenCommitment = self.C.c.L;
-        let ped_blinding: RistrettoPoint = self.eg_gens.B_blinding;
-        let lhs_ped_pair: PedersenCommitment = (eg_base * z_m) + (ped_blinding * z_r_2);
-        let rhs_ped_pair: PedersenCommitment =
-            &self.C_prime.c_sq + &(self.challenge * &self.C.c_sq);
-
-        if lhs_ped_pair != rhs_ped_pair {
-            return Err(ProofError::ProvingErrorSquare);
-        }
+        // This is redundant, but it's a good sanity check
+        // let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r_1);
+        // let src_eg_pair: ElGamalPair = &self.C_prime.c + &(&self.challenge * &self.C.c);
+        // if dst_eg_pair != src_eg_pair {
+        //     // If you get this error, it could be that the parameters are outside of the parameter-wise
+        //     // range-proof range. (for L2)
+        //     return Err(ProofError::ProvingErrorRandomness);
+        // }
+        //
+        // // Now for the extension:
+        // let eg_base: PedersenCommitment = self.C.c.L;
+        // let ped_blinding: RistrettoPoint = self.eg_gens.B_blinding;
+        // let lhs_ped_pair: PedersenCommitment = (eg_base * z_m) + (ped_blinding * z_r_2);
+        // let rhs_ped_pair: PedersenCommitment =
+        //     &self.C_prime.c_sq + &(self.challenge * &self.C.c_sq);
+        //
+        // if lhs_ped_pair != rhs_ped_pair {
+        //     return Err(ProofError::ProvingErrorSquare);
+        // }
 
         Ok(SquareRandProof {
             C_prime: self.C_prime,
