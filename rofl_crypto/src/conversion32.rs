@@ -88,6 +88,18 @@ pub fn square(s1: &Scalar) -> Scalar {
     (mul.unwrap().to_bits() as URawFix).into()
 }
 
+pub fn precompute_exponentiate(value: &Scalar, exp: usize) -> Vec<Scalar> {
+    // Computes all the powers of value up to exp
+    // can we call this a multi-exponentiation?
+    let mut mul: Scalar = value.clone();
+    let mut output: Vec<Scalar> = vec![Scalar::one()];
+    for _ in 0..exp-1 {
+        output.push(mul);
+        mul = mul * value;
+    }
+    output
+}
+
 pub fn exponentiate(value: &Scalar, exp: usize) -> Scalar {
     let mut mul: Scalar = value.clone();
     if exp == 0 {

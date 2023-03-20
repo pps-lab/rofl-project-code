@@ -4,7 +4,8 @@
 use clear_on_drop::clear::Clear;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
-use crate::conversion32::exponentiate;
+use rayon::prelude::*;
+use crate::conversion32::{exponentiate, precompute_exponentiate};
 use super::types::CompressedRandProofCommitments;
 
 use crate::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
@@ -51,7 +52,7 @@ impl Party {
         m: Vec<Scalar>,
         r: Vec<Scalar>,
     ) -> Result<(PartyAwaitingChallenge, CompressedRandProofCommitments, ElGamalPair), ProofError> {
-        let c: Vec<ElGamalPair> = m.iter().zip(&r)
+        let c: Vec<ElGamalPair> = m.par_iter().zip(&r)
             .map(|(m_i, r_i)| eg_gens.commit(m_i.clone(), r_i.clone())).collect();
 
         // let c: Vec<ElGamalPair> = vec![eg_gens.commit(m.get(0).unwrap().clone(), r.get(0).unwrap().clone())];
@@ -89,8 +90,10 @@ impl<'a> PartyAwaitingChallenge<'a> {
     pub fn apply_challenge(self, c: Scalar) -> (Scalar, Scalar) {
         // apply c^i iteratively to elements of m where i is the index
         // TODO: POW
-        let z_m: Scalar = self.m_prime + self.m.iter().enumerate().map(|(i, m)| m.clone() * exponentiate(&c, i+1)).sum::<Scalar>();
-        let z_r: Scalar = self.r_prime + self.r.iter().enumerate().map(|(i, m)| m.clone() * exponentiate(&c, i+1)).sum::<Scalar>();
+        let precomputation_table: Vec<Scalar> = precompute_exponentiate(&c, self.m.len()+1);
+
+        let z_m: Scalar = self.m_prime + self.m.par_iter().enumerate().map(|(i, m)| m.clone() * precomputation_table[i+1]).sum::<Scalar>();
+        let z_r: Scalar = self.r_prime + self.r.par_iter().enumerate().map(|(i, m)| m.clone() * precomputation_table[i+1]).sum::<Scalar>();
 
         (z_m, z_r)
     }

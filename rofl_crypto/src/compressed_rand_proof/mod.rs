@@ -3,6 +3,7 @@ use core::fmt::Debug;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
+use rayon::prelude::*;
 use serde::de::Visitor;
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -26,7 +27,7 @@ use crate::compressed_rand_proof::constants::{
     label_commit_real_elgamal, LABEL_RESPONSE_R,
     LABEL_RESPONSE_Z_M,
 };
-use crate::conversion32::exponentiate;
+use crate::conversion32::{exponentiate, precompute_exponentiate};
 
 #[derive(PartialEq, Clone)]
 pub struct CompressedRandProof {
@@ -87,9 +88,11 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_Z_M, &self.Z_m);
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
+        let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
+
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
         // TODO: pow
-        let src_eg_pair: ElGamalPair = self.C_prime + c_vec.c_vec.iter().enumerate().map(|(i, m)| m * &exponentiate(&challenge, i+1)).sum();
+        let src_eg_pair: ElGamalPair = self.C_prime + c_vec.c_vec.par_iter().enumerate().map(|(i, m)| m * &precomputation_table[i+1]).sum();
         if dst_eg_pair != src_eg_pair {
             return Err(ProofError::VerificationError);
         }

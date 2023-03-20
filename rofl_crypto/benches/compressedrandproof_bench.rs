@@ -34,8 +34,8 @@ use merlin::Transcript;
 use rofl_crypto::compressed_rand_proof::{CompressedRandProof, ElGamalGens};
 use rofl_crypto::compressed_rand_proof::types::CompressedRandProofCommitments;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-// static DIM: [usize; 4] = [2, 400, 800, 16000];
+// static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+static DIM: [usize; 4] = [2, 400, 800, 16000];
 static num_samples: usize = 4;
 
 fn bench_compressedrandproof_fn(bench: &mut Bencher) {
@@ -72,11 +72,14 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
 
             println!("sample nr: {}", i);
+            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
+
+            // TODO: Figure out to only include expontentiation for encoding once!!! Or not came
+
             let createproof_now = Instant::now();
 
             let mut prove_transcript = Transcript::new(b"CompressedRandProof");
 
-            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
             let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
                 CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
 
