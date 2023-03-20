@@ -10,8 +10,8 @@ use super::errors::*;
 use super::CompressedRandProof;
 use super::types::CompressedRandProofCommitments;
 use crate::rand_proof::transcript::TranscriptProtocol;
-use crate::square_rand_proof::pedersen::{PedersenCommitment, SquareRandProofCommitments};
 use curve25519_dalek::ristretto::RistrettoPoint;
+use crate::conversion32::{exponentiate, exponentiate_in_range};
 
 pub struct Dealer {}
 
@@ -87,8 +87,9 @@ impl<'a, 'b, 'c> DealerAwaitingChallengeResponse<'a, 'b, 'c> {
         // TODO: Is this part strictly necessary? Maybe this is an additional check on the prover?
         let dst_eg_pair: ElGamalPair = self.eg_gens.commit(z_m, z_r);
         // TODO: POW
-        let src_eg_pair = self.C_vec.c_vec.iter().enumerate().map(|(i, m)| m * &self.challenge).sum();
+        let src_eg_pair = self.C_prime + self.C_vec.c_vec.iter().enumerate().map(|(i, m)| m * &exponentiate(&self.challenge, i+1)).sum();
         // let src_eg_pair: ElGamalPair = &self.C_prime + self.C_vec.c_vec.iter().enumerate().map(|(i, m)| m * &self.challenge).sum();
+        // let src_eg_pair = &self.C_prime + &(self.C_vec.c_vec.get(0).unwrap() * &self.challenge);
         if dst_eg_pair != src_eg_pair {
             // If you get this error, it could be that the parameters are outside of the parameter-wise
             // range-proof range. (for L2)

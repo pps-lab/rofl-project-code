@@ -26,6 +26,7 @@ use crate::compressed_rand_proof::constants::{
     label_commit_real_elgamal, LABEL_RESPONSE_R,
     LABEL_RESPONSE_Z_M,
 };
+use crate::conversion32::exponentiate;
 
 #[derive(PartialEq, Clone)]
 pub struct CompressedRandProof {
@@ -87,8 +88,8 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
-        // TODO: Pow
-        let src_eg_pair: ElGamalPair = self.C_prime + c_vec.c_vec.iter().enumerate().map(|(i, m)| m * &challenge).sum();
+        // TODO: pow
+        let src_eg_pair: ElGamalPair = self.C_prime + c_vec.c_vec.iter().enumerate().map(|(i, m)| m * &exponentiate(&challenge, i+1)).sum();
         if dst_eg_pair != src_eg_pair {
             return Err(ProofError::VerificationError);
         }
@@ -175,16 +176,25 @@ impl Debug for CompressedRandProof {
 mod tests {
     use super::*;
     use bincode;
-    use crate::conversion32::{f32_to_scalar, scalar_to_f32};
+    use crate::conversion32::{exponentiate_in_range, f32_to_scalar, scalar_to_f32, square};
+    use crate::fp::{Fix, N_BITS};
 
 
     #[test]
-    fn test_scalar_multiply() {
-        let val: f32 = 8.0;
+    fn test_scalar_multiply_fp() {
+        let num_bits = Fix::frac_nbits();
+        let correction = f32::powf(2.0, -(num_bits as f32));
+
+        let val: f32 = 1.0;
         let exp: f32 = 2.0;
         let val_scalar = f32_to_scalar(&val);
-        let value = val_scalar * f32_to_scalar(&exp);
-        println!("value: {:?}", scalar_to_f32(&value));
+        let value = val_scalar * f32_to_scalar(&exp) * f32_to_scalar(&correction);
+        let zero_float = 0.0;
+        let zero_scalar = f32_to_scalar(&zero_float);
+        println!(" {:?} ", N_BITS);
+        println!("in Scalar: {:?}", scalar_to_f32(&value));
+        println!("in Scalar val_scalar: {:?}", scalar_to_f32(&val_scalar));
+
         println!("in f32: {:?}", val.powf(exp));
     }
 
@@ -201,18 +211,20 @@ mod tests {
     //     assert_eq!(randproof, randproof_des);
     // }
     //
-    // #[test]
-    // fn test_randproof_roundtrip() {
-    //     let eg_gens = ElGamalGens::default();
-    //     let mut prove_transcript = Transcript::new(b"test_serde");
-    //     let mut rng = rand::thread_rng();
-    //     let m = Scalar::random(&mut rng);
-    //     let r = Scalar::random(&mut rng);
-    //     let (rand_proof, c) = CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m, r).unwrap();
-    //     let mut verify_transcript = Transcript::new(b"test_serde");
-    //     let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c);
-    //     assert!(res.is_ok());
-    // }
+    #[test]
+    fn test_randproof_roundtrip() {
+        let eg_gens = ElGamalGens::default();
+        let mut prove_transcript = Transcript::new(b"CompressedRandProof");
+        let mut rng = rand::thread_rng();
+        let m = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let r = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+
+        let (rand_proof, c) = CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m, r).unwrap();
+        let mut verify_transcript = Transcript::new(b"CompressedRandProof");
+        let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c);
+        assert!(res.is_ok());
+    }
+
     //
     // #[test]
     // fn test_fake_randproof() {
@@ -224,7 +236,7 @@ mod tests {
     //     let (rand_proof, _) = CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m, r).unwrap();
     //     let r_fake = Scalar::random(&mut rng);
     //     if r_fake == r {
-    //         println!("YOU WON 1 BILLION DOLLARS!!!");
+    //         println!("Problem detected");
     //         panic!();
     //     }
     //     let c_fake: ElGamalPair = eg_gens.commit(m, r_fake);

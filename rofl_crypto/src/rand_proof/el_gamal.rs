@@ -4,7 +4,7 @@ use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::traits::MultiscalarMul;
+use curve25519_dalek::traits::{Identity, MultiscalarMul};
 
 use bulletproofs::PedersenGens;
 
@@ -84,6 +84,13 @@ impl ElGamalPair {
         ElGamalPair {
             L: RISTRETTO_BASEPOINT_POINT,
             R: RISTRETTO_BASEPOINT_POINT,
+        }
+    }
+
+    pub fn identity() -> Self {
+        ElGamalPair {
+            L: RistrettoPoint::identity(),
+            R: RistrettoPoint::identity(),
         }
     }
 
@@ -170,12 +177,12 @@ impl<'a, 'b> Mul<&'b ElGamalPair> for &'a Scalar {
 // Implement Sum trait for ElGamalPair
 impl<'a, 'b> Sum<&'b ElGamalPair> for ElGamalPair {
     fn sum<I: Iterator<Item = &'b ElGamalPair>>(iter: I) -> ElGamalPair {
-        iter.fold(ElGamalPair::unity(), |acc, x| acc + *x)
+        iter.fold(ElGamalPair::identity(), |acc, x| acc + *x)
     }
 }
 impl Sum<ElGamalPair> for ElGamalPair {
     fn sum<I: Iterator<Item = ElGamalPair>>(iter: I) -> ElGamalPair {
-        iter.fold(ElGamalPair::unity(), |acc, x| acc + x)
+        iter.fold(ElGamalPair::identity(), |acc, x| acc + x)
     }
 }
 // impl<T> Sum<T> for ElGamalPair
