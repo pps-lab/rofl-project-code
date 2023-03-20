@@ -11,7 +11,7 @@ use super::CompressedRandProof;
 use super::types::CompressedRandProofCommitments;
 use crate::rand_proof::transcript::TranscriptProtocol;
 use curve25519_dalek::ristretto::RistrettoPoint;
-use crate::conversion32::{exponentiate, exponentiate_in_range};
+use crate::conversion32::exponentiate;
 
 pub struct Dealer {}
 

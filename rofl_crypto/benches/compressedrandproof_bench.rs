@@ -35,6 +35,7 @@ use rofl_crypto::compressed_rand_proof::{CompressedRandProof, ElGamalGens};
 use rofl_crypto::compressed_rand_proof::types::CompressedRandProofCommitments;
 
 static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+// static DIM: [usize; 4] = [2, 400, 800, 16000];
 static num_samples: usize = 4;
 
 fn bench_compressedrandproof_fn(bench: &mut Bencher) {
@@ -61,7 +62,7 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
         let value_scalar_vec = f32_to_scalar_vec(&value_vec);
         let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
             CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
-        randproof.verify(&eg, &mut verify_transcript, commit_vec).unwrap();
+        randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -87,7 +88,7 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             let verify_now = Instant::now();
 
             let mut verify_transcript = Transcript::new(b"CompressedRandProof");
-            randproof.verify(&eg, &mut verify_transcript, commit_vec).unwrap();
+            randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
 
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());

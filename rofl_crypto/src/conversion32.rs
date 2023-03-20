@@ -88,17 +88,15 @@ pub fn square(s1: &Scalar) -> Scalar {
     (mul.unwrap().to_bits() as URawFix).into()
 }
 
-fn scalar_to_fix(s1: &Scalar) -> Fix {
-    let is_neg: bool = *s1.as_bytes().last().unwrap() != 0u8;
-    let value_fp: Fix;
-    if is_neg {
-        let value_uint = read_from_bytes(&(-s1).to_bytes());
-        value_fp = Fix::from_bits(value_uint as URawFix);
-    } else {
-        let value_uint = read_from_bytes(&s1.to_bytes());
-        value_fp = Fix::from_bits(value_uint as URawFix);
+pub fn exponentiate(value: &Scalar, exp: usize) -> Scalar {
+    let mut mul: Scalar = value.clone();
+    if exp == 0 {
+        return Scalar::one();
     }
-    value_fp
+    for _ in 0..exp-1 {
+        mul = mul * value;
+    }
+    mul
 }
 
 #[cfg(test)]
