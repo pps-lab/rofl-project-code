@@ -24,6 +24,8 @@ use rofl_crypto::conversion32::*;
 use rofl_crypto::fp::N_BITS;
 use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::rand_proof::{ElGamalPair, RandProof};
+use rofl_crypto::rand_proof_vec::*;
+use rofl_crypto::range_proof_vec::*;
 use rofl_crypto::util::{create_bench_file, get_bench_dir};
 
 use std::io::prelude::*;
@@ -34,22 +36,19 @@ use merlin::Transcript;
 use rofl_crypto::compressed_rand_proof::{CompressedRandProof, ElGamalGens};
 use rofl_crypto::compressed_rand_proof::types::CompressedRandProofCommitments;
 
-// static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static DIM: [usize; 4] = [2, 400, 800, 16000];
+// static DIM: [usize; 1] = [100];
+
+static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 static num_samples: usize = 4;
 
-fn bench_compressedrandproof_fn(bench: &mut Bencher) {
+fn create_compressedrandproof_bench_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
-
     let eg_gens = ElGamalGens::default();
 
     for d in DIM.iter() {
         let createproof_label: String = createproof_label(*d);
         let mut createproof_file = create_bench_file(&createproof_label);
-
-        let verifyproof_label: String = verifyproof_label(*d);
-        let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range(fp_min..fp_max))
@@ -57,12 +56,10 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         println!("warming up...");
         let mut prove_transcript = Transcript::new(b"CompressedRandProof");
-        let mut verify_transcript = Transcript::new(b"CompressedRandProof");
-
         let value_scalar_vec = f32_to_scalar_vec(&value_vec);
         let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
             CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
-        randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
+
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -72,12 +69,10 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
 
             println!("sample nr: {}", i);
-            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
-
             let createproof_now = Instant::now();
 
             let mut prove_transcript = Transcript::new(b"CompressedRandProof");
-
+            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
             let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
                 CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
 
@@ -86,16 +81,6 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             createproof_file.write_all(create_elapsed.to_string().as_bytes());
             createproof_file.write_all(b"\n");
             createproof_file.flush();
-            let verify_now = Instant::now();
-
-            let mut verify_transcript = Transcript::new(b"CompressedRandProof");
-            randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
-
-            let verify_elapsed = verify_now.elapsed().as_millis();
-            println!("verifyproof elapsed: {}", verify_elapsed.to_string());
-            verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());
-            verifyproof_file.write_all(b"\n");
-            verifyproof_file.flush();
         }
     }
 
@@ -122,5 +107,5 @@ fn verifyproof_label(dim: usize) -> String {
     )
 }
 
-benchmark_group!(compressedrandproof_bench, bench_compressedrandproof_fn);
-benchmark_main!(compressedrandproof_bench);
+benchmark_group!(create_compressedrandproof_bench, create_compressedrandproof_bench_fn);
+benchmark_main!(create_compressedrandproof_bench);

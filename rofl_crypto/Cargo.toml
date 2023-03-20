@@ -138,3 +138,7 @@ harness = false
 [[bench]]
 name = "compressedrandproof_bench"
 harness = false
+
+[[bench]]
+name = "create_compressedrandproof_bench"
+harness = false
