@@ -134,3 +134,7 @@ harness = false
 [[bench]]
 name = "benchmark_randproof_bench"
 harness = false
+
+[[bench]]
+name = "compressedrandproof_bench"
+harness = false
