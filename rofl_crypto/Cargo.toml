@@ -84,6 +84,10 @@ name = "squarerandproof_bench"
 harness = false
 
 [[bench]]
+name = "squareproof_bench"
+harness = false
+
+[[bench]]
 name = "l2rangeproof_bench"
 harness = false
 
@@ -100,18 +104,6 @@ name = "addelgamal_bench"
 harness = false
 
 [[bench]]
-name = "criterion_dlog_bench"
-harness = false
-
-[[bench]]
-name = "criterion_rangeproof_bench"
-harness = false
-
-[[bench]]
-name = "criterion_randproof_bench"
-harness = false
-
-[[bench]]
 name = "create_rangeproof_bench"
 harness = false
 
@@ -121,6 +113,10 @@ harness = false
 
 [[bench]]
 name = "create_squarerandproof_bench"
+harness = false
+
+[[bench]]
+name = "create_squareproof_bench"
 harness = false
 
 [[bench]]

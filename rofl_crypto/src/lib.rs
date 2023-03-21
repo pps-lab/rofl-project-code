@@ -19,6 +19,7 @@ pub mod square_rand_proof;
 pub mod square_rand_proof_vec;
 pub mod compressed_rand_proof;
 pub mod square_proof;
+pub mod square_proof_vec;
 pub mod util;
 pub mod bench_constants;
 
