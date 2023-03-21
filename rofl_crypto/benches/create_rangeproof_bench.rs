@@ -51,7 +51,7 @@ fn create_rangeproof_bench_fn(bench: &mut Bencher) {
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
-            create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
+            create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION_SMALL).unwrap();
         // verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
@@ -64,7 +64,7 @@ fn create_rangeproof_bench_fn(bench: &mut Bencher) {
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
             let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
-                create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
+                create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION_SMALL).unwrap();
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());

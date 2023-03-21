@@ -96,10 +96,6 @@ name = "dlog_bench"
 harness = false
 
 [[bench]]
-name = "fp_bench"
-harness = false
-
-[[bench]]
 name = "addelgamal_bench"
 harness = false
 

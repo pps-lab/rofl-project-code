@@ -61,7 +61,7 @@ fn bench_rangeproof_l2_fn(bench: &mut Bencher) {
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
         let value_vec: Vec<f32> = (0..*d)
-            .map(|_| scalar_to_f32(&f32_to_scalar(&rng.gen_range::<f32>(fp_min, fp_max))))
+            .map(|_| scalar_to_f32(&f32_to_scalar(&rng.gen_range(fp_min..fp_max))))
             .collect();
         let value_clipped = clip_f32_to_range_vec(&value_vec, *r);
         if value_clipped != value_vec {
