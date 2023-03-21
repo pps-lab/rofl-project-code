@@ -34,6 +34,7 @@
     accept_hostkey: yes
     repo: "{{ e2e_framework_repository_remote }}"
     dest: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}"
+    version: "feature/compressed_rand_proof" # TODO: Remove this after merging into master
 
 - name: Install rust
   shell: curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -80,7 +81,7 @@
 
 - name: Generate requirements.txt from pipenv
   become: True
-  shell: python37 -m pipenv lock -r > requirements.txt
+  shell: python37 -m pipenv requirements > requirements.txt
   args:
     chdir: "{{ e2e_remote_base_dir}}/{{ analysis_framework_dir }}"
 

@@ -122,3 +122,7 @@ harness = false
 [[bench]]
 name = "create_compressedrandproof_bench"
 harness = false
+
+[[bench]]
+name = "rangeproof_part36_bench"
+harness = false

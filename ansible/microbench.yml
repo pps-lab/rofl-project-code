@@ -59,6 +59,8 @@
       - create_randproof_bench # for some reason `cargo bench` wants the function as filter, not the benchmark itself
       - create_rangeproof_bench
       - create_squarerandproof_bench
+      - create_compressedrandproof_bench
+      - create_squareproof_bench
       avx_target_cpu: "{{ hostvars['localhost'].micro_client.avx_target_cpu }}"
   tags: start
 
@@ -77,6 +79,9 @@
       - rangeproof_bench
       - squarerandproof_bench
       - l2rangeproof_bench
+      - squareproof_bench
+      - compressedrandproof_bench
+      - rangeproof_part36_bench
       avx_target_cpu: "{{ hostvars['localhost'].e2e_server.avx_target_cpu }}"
   tags: start
 

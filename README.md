@@ -79,7 +79,7 @@ Follow these steps to run the implementation on your local machine.
 ### Requirements
 Python 3.7 & Rust version:
 ```
-Min: 1.52.0-nightly 
+Min: 1.64.0-nightly (2022-07-24)
 ```
 
 ### Installation
