@@ -20,7 +20,7 @@ impl PartyExisting {
         m_com: Vec<RistrettoPoint>,
         r: Vec<Scalar>,
     ) -> Result<(PartyAwaitingChallenge, CompressedRandProofCommitments, ElGamalPair), ProofError> {
-        let c: Vec<ElGamalPair> = m_com.iter().zip(&r)
+        let c: Vec<ElGamalPair> = m_com.par_iter().zip(&r)
             .map(|(m_i, r_i)| eg_gens.complete_existing(m_i.clone(), r_i.clone())).collect();
 
         let mut rng = rand::thread_rng();

@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 use rofl_crypto::square_proof::pedersen::SquareProofCommitments;
 use rofl_crypto::square_proof::SquareProof;
 use std::thread::sleep;
+use rayon::prelude::*;
 
 use rofl_crypto::bench_constants::{DIM, num_samples};
 
@@ -49,11 +50,14 @@ fn create_squareproof_bench_fn(bench: &mut Bencher) {
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let random_sq_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let value_com_vec = value_vec.par_iter().zip(&blinding_vec)
+            .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
+
         println!("warming up...");
         let (randproof_vec, commit_vec_vec): (
             Vec<SquareProof>,
             Vec<SquareProofCommitments>,
-        ) = create_l2rangeproof_vec(&value_vec, &blinding_vec, &random_sq_vec).unwrap();
+        ) = create_l2rangeproof_vec_existing(&value_vec, value_com_vec, &blinding_vec, &random_sq_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -61,7 +65,7 @@ fn create_squareproof_bench_fn(bench: &mut Bencher) {
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
-            let value_vec_com: Vec<RistrettoPoint> = value_vec.iter().zip(&blinding_vec)
+            let value_vec_com: Vec<RistrettoPoint> = value_vec.par_iter().zip(&blinding_vec)
                 .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
 
             println!("sample nr: {}", i);

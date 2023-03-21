@@ -45,14 +45,6 @@ fn create_rangeproof_bench_fn(bench: &mut Bencher) {
         let createproof_label: String = createproof_label(*d, *r);
         let mut createproof_file = create_bench_file(&createproof_label);
 
-        // let verifyproof_label: String = verifyproof_label(*d, *r);
-        // let mut verifyproof_file = create_bench_file(&verifyproof_label);
-
-        let x_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range(fp_min..fp_max))
-            .collect();
-        let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
-        let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
         let value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range(fp_min..fp_max))

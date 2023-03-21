@@ -17,7 +17,7 @@ extern crate curve25519_dalek;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 extern crate bulletproofs;
-use bulletproofs::RangeProof;
+use bulletproofs::{PedersenGens, RangeProof};
 
 use rofl_crypto::bsgs32::*;
 use rofl_crypto::conversion32::*;
@@ -32,12 +32,14 @@ use std::io::prelude::*;
 use std::time::{Duration, Instant};
 
 use std::thread::sleep;
+use rayon::prelude::*;
 
 use rofl_crypto::bench_constants::{DIM, num_samples};
 
 fn bench_randproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
+    let ped_gens = PedersenGens::default();
 
     for d in DIM.iter() {
         let createproof_label: String = createproof_label(*d);
@@ -50,9 +52,12 @@ fn bench_randproof_fn(bench: &mut Bencher) {
             .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let value_com_vec = value_vec.par_iter().zip(&blinding_vec)
+            .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
+
         println!("warming up...");
         let (randproof_vec, commit_vec_vec): (Vec<RandProof>, Vec<ElGamalPair>) =
-            create_randproof_vec(&value_vec, &blinding_vec).unwrap();
+            create_randproof_vec_existing(&value_vec, value_com_vec, &blinding_vec).unwrap();
         verify_randproof_vec(&randproof_vec, &commit_vec_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
@@ -61,11 +66,13 @@ fn bench_randproof_fn(bench: &mut Bencher) {
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+            let value_com_vec = value_vec.par_iter().zip(&blinding_vec)
+                .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
 
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
             let (randproof_vec, commit_vec_vec): (Vec<RandProof>, Vec<ElGamalPair>) =
-                create_randproof_vec(&value_vec, &blinding_vec).unwrap();
+                create_randproof_vec_existing(&value_vec, value_com_vec, &blinding_vec).unwrap();
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());

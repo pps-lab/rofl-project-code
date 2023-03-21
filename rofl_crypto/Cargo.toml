@@ -120,18 +120,6 @@ name = "create_squareproof_bench"
 harness = false
 
 [[bench]]
-name = "rangeproof_verify_bench"
-harness = false
-
-[[bench]]
-name = "benchmark_rangeproof_bench"
-harness = false
-
-[[bench]]
-name = "benchmark_randproof_bench"
-harness = false
-
-[[bench]]
 name = "compressedrandproof_bench"
 harness = false
 

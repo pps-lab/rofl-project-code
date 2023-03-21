@@ -17,7 +17,7 @@ extern crate curve25519_dalek;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 extern crate bulletproofs;
-use bulletproofs::RangeProof;
+use bulletproofs::{PedersenGens, RangeProof};
 
 use rofl_crypto::bsgs32::*;
 use rofl_crypto::conversion32::*;
@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 use merlin::Transcript;
+use rayon::prelude::*;
 use rofl_crypto::compressed_rand_proof::{CompressedRandProof, ElGamalGens};
 use rofl_crypto::compressed_rand_proof::types::CompressedRandProofCommitments;
 
@@ -41,6 +42,7 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
     let (fp_min, fp_max) = get_clip_bounds(N_BITS);
 
     let eg_gens = ElGamalGens::default();
+    let ped_gens = PedersenGens::default();
 
     for d in DIM.iter() {
         let createproof_label: String = createproof_label(*d);
@@ -53,13 +55,16 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let value_scalar_vec = f32_to_scalar_vec(&value_vec);
+        let value_vec_com: Vec<RistrettoPoint> = value_scalar_vec.par_iter().zip(&blinding_vec)
+            .map(|(m, r)| ped_gens.commit(m.clone(), r.clone())).collect();
+
         println!("warming up...");
         let mut prove_transcript = Transcript::new(b"CompressedRandProof");
         let mut verify_transcript = Transcript::new(b"CompressedRandProof");
 
-        let value_scalar_vec = f32_to_scalar_vec(&value_vec);
         let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
-            CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
+            CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, value_scalar_vec, value_vec_com, blinding_vec).unwrap();
         randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
         println!("sampling {} / dim: {}", num_samples, d);
 
@@ -67,17 +72,19 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             let value_vec: Vec<f32> = (0..*d)
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
+            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+            let value_vec_com: Vec<RistrettoPoint> = value_scalar_vec.par_iter().zip(&blinding_vec)
+                .map(|(m, r)| ped_gens.commit(m.clone(), r.clone())).collect();
 
             println!("sample nr: {}", i);
-            let value_scalar_vec = f32_to_scalar_vec(&value_vec);
 
             let createproof_now = Instant::now();
 
             let mut prove_transcript = Transcript::new(b"CompressedRandProof");
 
             let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
-                CompressedRandProof::prove(&eg_gens, &mut prove_transcript, value_scalar_vec, blinding_vec).unwrap();
+                CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, value_scalar_vec, value_vec_com, blinding_vec).unwrap();
 
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
