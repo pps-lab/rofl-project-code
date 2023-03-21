@@ -179,7 +179,7 @@ impl Debug for CompressedRandProof {
 mod tests {
     use super::*;
     use bincode;
-    use crate::conversion32::{exponentiate_in_range, f32_to_scalar, scalar_to_f32, square};
+    use crate::conversion32::{f32_to_scalar, scalar_to_f32, square};
     use crate::fp::{Fix, N_BITS};
 
 
@@ -201,18 +201,18 @@ mod tests {
         println!("in f32: {:?}", val.powf(exp));
     }
 
-    // #[test]
-    // fn test_serde_randproof_roundtrip() {
-    //     let eg_gens = ElGamalGens::default();
-    //     let mut transcript = Transcript::new(b"test_serde");
-    //     let mut rng = rand::thread_rng();
-    //     let m = Scalar::random(&mut rng);
-    //     let r = Scalar::random(&mut rng);
-    //     let randproof = CompressedRandProof::prove(&eg_gens, &mut transcript, m, r).unwrap();
-    //     let randproof_ser = bincode::serialize(&randproof).unwrap();
-    //     let randproof_des = bincode::deserialize(&randproof_ser).unwrap();
-    //     assert_eq!(randproof, randproof_des);
-    // }
+    #[test]
+    fn test_serde_randproof_roundtrip() {
+        let eg_gens = ElGamalGens::default();
+        let mut transcript = Transcript::new(b"test_serde");
+        let mut rng = rand::thread_rng();
+        let m = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let r = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let randproof = CompressedRandProof::prove(&eg_gens, &mut transcript, m, r).unwrap();
+        let randproof_ser = bincode::serialize(&randproof).unwrap();
+        let randproof_des = bincode::deserialize(&randproof_ser).unwrap();
+        assert_eq!(randproof, randproof_des);
+    }
     //
     #[test]
     fn test_randproof_roundtrip() {
@@ -228,24 +228,25 @@ mod tests {
         assert!(res.is_ok());
     }
 
-    //
-    // #[test]
-    // fn test_fake_randproof() {
-    //     let eg_gens = ElGamalGens::default();
-    //     let mut prove_transcript = Transcript::new(b"test_serde");
-    //     let mut rng = rand::thread_rng();
-    //     let m = Scalar::random(&mut rng);
-    //     let r = Scalar::random(&mut rng);
-    //     let (rand_proof, _) = CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m, r).unwrap();
-    //     let r_fake = Scalar::random(&mut rng);
-    //     if r_fake == r {
-    //         println!("Problem detected");
-    //         panic!();
-    //     }
-    //     let c_fake: ElGamalPair = eg_gens.commit(m, r_fake);
-    //     let mut verify_transcript = Transcript::new(b"test_serde");
-    //     let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c_fake);
-    //     assert!(res.is_err());
-    //     assert_eq!(res.unwrap_err(), ProofError::VerificationError);
-    // }
+
+    #[test]
+    fn test_fake_randproof() {
+        let eg_gens = ElGamalGens::default();
+        let mut prove_transcript = Transcript::new(b"test_serde");
+        let mut rng = rand::thread_rng();
+        let m = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let r = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let (rand_proof, _) = CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m.clone(), r.clone()).unwrap();
+        let r_fake = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        if r_fake == r {
+            println!("Problem detected");
+            panic!();
+        }
+        let c_fake_egs: Vec<ElGamalPair> = m.iter().zip(r_fake).map(|(m, r_fake)| eg_gens.commit(*m, r_fake)).collect();
+        let c_fake = CompressedRandProofCommitments { c_vec: c_fake_egs };
+        let mut verify_transcript = Transcript::new(b"test_serde");
+        let res = rand_proof.verify(&eg_gens, &mut verify_transcript, c_fake);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), ProofError::VerificationError);
+    }
 }
