@@ -38,8 +38,8 @@ use rofl_crypto::compressed_rand_proof::types::CompressedRandProofCommitments;
 
 // static DIM: [usize; 1] = [100];
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples};
+
 
 fn create_compressedrandproof_bench_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();

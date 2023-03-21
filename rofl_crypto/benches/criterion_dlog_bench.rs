@@ -22,7 +22,9 @@ use rofl_crypto::fp::N_BITS;
 use rofl_crypto::pedersen_ops::*;
 use rofl_crypto::range_proof_vec::*;
 
-static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
+use rofl_crypto::bench_constants::{DIM, num_samples};
+
+// static DIM: [usize; 6] = [32768, 16384, 8192, 4096, 2048, 1024];
 //static DIM: [usize; 6] = [1024, 2048, 4096, 8192, 16384, 32768];
 //static DIM: [usize; 1] = [16384];
 //static TABLE_SIZE: [usize; 9] = [8 , 9, 10, 11, 12, 13, 14, 15, 16];
@@ -39,7 +41,7 @@ fn bench_solve_discrete_log(c: &mut Criterion) {
         c.bench_function(&label, move |b| {
             let mut rng = rand::thread_rng();
             let x_vec: Vec<f32> = (0..*d)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
             let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);

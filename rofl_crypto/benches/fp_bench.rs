@@ -62,7 +62,7 @@ fn bench_convert_from_float_to_fixed(c: &mut Criterion) {
     // let table_size: Vec<&usize> = TABLE_SIZE.iter().filter(|x| **x <= N_BITS).collect();
 
     // for (ts, d) in iproduct!(table_size, &DIM) {
-    //     let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
+    //     let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range(fp_min..fp_max)).collect();
     //     let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
     //     let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
     //     let label: String = label_solve_discrete_log(*d, *ts);
@@ -79,7 +79,7 @@ fn bench_convert_from_fixed_to_float(c: &mut Criterion) {
     // let table_size: Vec<&usize> = TABLE_SIZE.iter().filter(|x| **x <= N_BITS).collect();
 
     // for (ts, d) in iproduct!(table_size, &DIM) {
-    //     let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range::<f32>(fp_min, fp_max)).collect();
+    //     let x_vec: Vec<f32> = (0..*d).map(|_| rng.gen_range(fp_min..fp_max)).collect();
     //     let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
     //     let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
     //     let label: String = label_solve_discrete_log(*d, *ts);

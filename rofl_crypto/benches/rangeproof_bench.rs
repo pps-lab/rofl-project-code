@@ -31,11 +31,7 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 5] = [8192, 32768, 131072, 262144, 524288];
-// static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
-static RANGE: [usize; 1] = [8];
-static N_PARTITION: usize = 4;
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples, RANGE, N_PARTITION};
 
 fn bench_rangeproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
@@ -50,13 +46,13 @@ fn bench_rangeproof_fn(bench: &mut Bencher) {
         let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let x_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
         let value_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
@@ -66,7 +62,7 @@ fn bench_rangeproof_fn(bench: &mut Bencher) {
 
         for i in 0..num_samples {
             let value_vec: Vec<f32> = (0..*d)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
 

@@ -33,8 +33,8 @@ use rofl_crypto::square_rand_proof::pedersen::SquareRandProofCommitments;
 use rofl_crypto::square_rand_proof::SquareRandProof;
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples};
+
 
 fn bench_squarerandproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
@@ -48,7 +48,7 @@ fn bench_squarerandproof_fn(bench: &mut Bencher) {
         let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let value_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let random_sq_vec: Vec<Scalar> = rnd_scalar_vec(*d);
@@ -62,7 +62,7 @@ fn bench_squarerandproof_fn(bench: &mut Bencher) {
 
         for i in 0..num_samples {
             let value_vec: Vec<f32> = (0..*d)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
 

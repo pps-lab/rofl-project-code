@@ -29,8 +29,8 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples};
+
 
 fn bench_addelgamal_fn(bench: &mut Bencher) {
     for d in DIM.iter() {

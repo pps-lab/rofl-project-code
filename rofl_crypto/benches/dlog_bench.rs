@@ -29,9 +29,7 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static TABLE_SIZE: [usize; 1] = [16];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples, TABLE_SIZE};
 
 fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
@@ -47,7 +45,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
         let mut bench_file = create_bench_file(&label);
 
         let x_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
@@ -57,7 +55,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
 
         for i in 0..num_samples {
             let x_vec: Vec<f32> = (0..*d)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
             let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);

@@ -33,9 +33,7 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-// static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static DIM: [usize; 4] = [2, 400, 800, 16000];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples};
 
 fn bench_randproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
