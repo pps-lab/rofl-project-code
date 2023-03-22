@@ -33,7 +33,7 @@ use std::thread::sleep;
 
 use rofl_crypto::bench_constants::{DIM, num_samples, RANGE};
 
-static N_PARTITION: usize = 36;
+static N_PARTITION: usize = 32;
 
 fn bench_rangeproof_part36_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
