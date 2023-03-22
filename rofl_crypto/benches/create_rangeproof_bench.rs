@@ -46,10 +46,10 @@ fn create_rangeproof_bench_fn(bench: &mut Bencher) {
         let mut createproof_file = create_bench_file(&createproof_label);
 
         println!("warming up...");
-        let value_vec: Vec<f32> = (0..*d)
+        let mut value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
-        let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let mut blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
             create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION_SMALL).unwrap();
         black_box(rangeproof_vec);
@@ -59,14 +59,14 @@ fn create_rangeproof_bench_fn(bench: &mut Bencher) {
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
         for i in 0..num_samples {
-            let value_vec: Vec<f32> = (0..*d)
+            value_vec = (0..*d)
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
-            let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+            blinding_vec = rnd_scalar_vec(*d);
 
             println!("sample nr: {}", i);
             let createproof_now = Instant::now();
-            let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
+            let (rangeproof_vec, commit_vec_vec) =
                 create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION_SMALL).unwrap();
             black_box(rangeproof_vec);
             black_box(commit_vec_vec);
