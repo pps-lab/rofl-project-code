@@ -48,11 +48,11 @@ fn create_randproof_bench_fn(bench: &mut Bencher) {
         let createproof_label: String = createproof_label(*d);
         let mut createproof_file = create_bench_file(&createproof_label);
 
-        let value_vec: Vec<f32> = (0..*d)
+        let mut value_vec: Vec<f32> = (0..*d)
             .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
-        let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
-        let value_com_vec = value_vec.par_iter().zip(&blinding_vec)
+        let mut blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
+        let mut value_com_vec = value_vec.par_iter().zip(&blinding_vec)
             .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
         println!("warming up...");
         let (randproof_vec, commit_vec_vec): (Vec<RandProof>, Vec<ElGamalPair>) =
@@ -60,11 +60,11 @@ fn create_randproof_bench_fn(bench: &mut Bencher) {
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
-            let value_vec: Vec<f32> = (0..*d)
+            value_vec = (0..*d)
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
-            let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
-            let value_com_vec = value_vec.par_iter().zip(&blinding_vec)
+            blinding_vec = rnd_scalar_vec(*d);
+            value_com_vec = value_vec.par_iter().zip(&blinding_vec)
                 .map(|(m, r)| ped_gens.commit(f32_to_scalar(m), r.clone())).collect();
 
             println!("sample nr: {}", i);
