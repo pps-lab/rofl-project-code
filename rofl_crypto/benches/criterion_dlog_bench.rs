@@ -44,7 +44,7 @@ fn bench_solve_discrete_log(c: &mut Criterion) {
                 .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
-            let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
+            let x_vec_enc: Vec<RistrettoPoint> = black_box(commit_no_blinding_vec(&x_vec_scalar));
             b.iter(|| discrete_log_vec(&x_vec_enc, black_box(*ts)));
         });
     }

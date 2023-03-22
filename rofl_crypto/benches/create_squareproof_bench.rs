@@ -58,6 +58,8 @@ fn create_squareproof_bench_fn(bench: &mut Bencher) {
             Vec<SquareProof>,
             Vec<SquareProofCommitments>,
         ) = create_l2rangeproof_vec_existing(&value_vec, value_com_vec, &blinding_vec, &random_sq_vec).unwrap();
+        black_box(randproof_vec);
+        black_box(commit_vec_vec);
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -74,6 +76,8 @@ fn create_squareproof_bench_fn(bench: &mut Bencher) {
                 Vec<SquareProof>,
                 Vec<SquareProofCommitments>,
             ) = create_l2rangeproof_vec_existing(&value_vec, value_vec_com, &blinding_vec, &random_sq_vec).unwrap();
+            black_box(randproof_vec);
+            black_box(commit_vec_vec);
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());

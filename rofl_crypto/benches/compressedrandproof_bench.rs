@@ -65,7 +65,7 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
 
         let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
             CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, value_scalar_vec, value_vec_com, blinding_vec).unwrap();
-        randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
+        black_box(randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap());
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -94,7 +94,7 @@ fn bench_compressedrandproof_fn(bench: &mut Bencher) {
             let verify_now = Instant::now();
 
             let mut verify_transcript = Transcript::new(b"CompressedRandProof");
-            randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap();
+            black_box(randproof.verify(&eg_gens, &mut verify_transcript, commit_vec).unwrap());
 
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());

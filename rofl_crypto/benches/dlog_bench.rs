@@ -50,7 +50,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
-        discrete_log_vec(&x_vec_enc, ts);
+        black_box(discrete_log_vec(&x_vec_enc, ts));
         println!("sampling {} / dim: {} / table_size: {}", num_samples, d, ts);
 
         for i in 0..num_samples {
@@ -62,7 +62,7 @@ fn bench_solve_discrete_log2_fn(bench: &mut Bencher) {
 
             println!("sample nr: {}", i);
             let now = Instant::now();
-            discrete_log_vec(black_box(&x_vec_enc), black_box(ts));
+            black_box(discrete_log_vec(black_box(&x_vec_enc), black_box(ts)));
             let elapsed = now.elapsed().as_millis();
             println!("elapsed: {}", elapsed.to_string());
             bench_file.write_all(elapsed.to_string().as_bytes());

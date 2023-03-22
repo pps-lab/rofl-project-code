@@ -78,7 +78,8 @@ fn bench_rangeproof_part36_fn(bench: &mut Bencher) {
             createproof_file.write_all(b"\n");
             createproof_file.flush();
             let verify_now = Instant::now();
-            verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+            res = verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+            black_box(res);
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());
             verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());

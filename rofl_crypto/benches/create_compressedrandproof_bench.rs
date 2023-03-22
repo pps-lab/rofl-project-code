@@ -63,7 +63,8 @@ fn create_compressedrandproof_bench_fn(bench: &mut Bencher) {
             .map(|(m, r)| ped_gens.commit(m.clone(), r.clone())).collect();
         let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
             CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, value_scalar_vec, value_vec_com, blinding_vec).unwrap();
-
+        black_box(randproof);
+        black_box(commit_vec);
         println!("sampling {} / dim: {}", num_samples, d);
 
         for i in 0..num_samples {
@@ -81,7 +82,8 @@ fn create_compressedrandproof_bench_fn(bench: &mut Bencher) {
             let mut prove_transcript = Transcript::new(b"CompressedRandProof");
             let (randproof, commit_vec): (CompressedRandProof, CompressedRandProofCommitments) =
                 CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, value_scalar_vec, value_vec_com, blinding_vec).unwrap();
-
+            black_box(randproof);
+            black_box(commit_vec);
             let create_elapsed = createproof_now.elapsed().as_millis();
             println!("createproof elapsed: {}", create_elapsed.to_string());
             createproof_file.write_all(create_elapsed.to_string().as_bytes());

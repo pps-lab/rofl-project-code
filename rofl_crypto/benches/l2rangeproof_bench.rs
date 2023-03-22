@@ -74,7 +74,7 @@ fn bench_rangeproof_l2_fn(bench: &mut Bencher) {
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof, commit_vec): (RangeProof, RistrettoPoint) =
             create_rangeproof_l2(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
-        verify_rangeproof_l2(&rangeproof, &commit_vec, black_box(*r)).unwrap();
+        black_box(verify_rangeproof_l2(&rangeproof, &commit_vec, black_box(*r)).unwrap());
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
         for i in 0..num_samples {
@@ -94,7 +94,7 @@ fn bench_rangeproof_l2_fn(bench: &mut Bencher) {
             createproof_file.write_all(b"\n");
             createproof_file.flush();
             let verify_now = Instant::now();
-            verify_rangeproof_l2(&rangeproof, &commit, black_box(*r)).unwrap();
+            black_box(verify_rangeproof_l2(&rangeproof, &commit, black_box(*r)).unwrap());
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());
             verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());

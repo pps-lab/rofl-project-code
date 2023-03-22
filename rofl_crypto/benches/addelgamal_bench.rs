@@ -54,7 +54,7 @@ fn bench_addelgamal_fn(bench: &mut Bencher) {
                 .collect();
             println!("sample nr: {}", i);
             let now = Instant::now();
-            add_rp_vec_vec(&rnd_rp_vec_vec);
+            black_box(add_rp_vec_vec(&rnd_rp_vec_vec));
             let elapsed = now.elapsed().as_millis();
             println!("elapsed: {}", elapsed.to_string());
             bench_file.write_all(elapsed.to_string().as_bytes());
