@@ -126,3 +126,7 @@ harness = false
 [[bench]]
 name = "rangeproof_part36_bench"
 harness = false
+
+[[bin]]
+name = "debug"
+path = "src/bin/debug.rs"
