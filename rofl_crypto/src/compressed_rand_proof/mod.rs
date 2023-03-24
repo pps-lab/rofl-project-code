@@ -27,7 +27,7 @@ use crate::compressed_rand_proof::constants::{
     label_commit_real_elgamal, LABEL_RESPONSE_R,
     LABEL_RESPONSE_Z_M,
 };
-use crate::conversion32::{exponentiate, precompute_exponentiate};
+use crate::conversion32::{exponentiate, f32_to_scalar_vec, precompute_exponentiate};
 
 #[derive(PartialEq, Clone)]
 pub struct CompressedRandProof {
@@ -128,6 +128,32 @@ impl CompressedRandProof {
             Z_m: Z_m_opt.unwrap(),
             Z_r: Z_r_opt.unwrap(),
         })
+    }
+
+    pub fn helper_prove(m_vec: &Vec<f32>,
+                    r_vec: Vec<Scalar>) -> Result<(CompressedRandProof, CompressedRandProofCommitments), ProofError> {
+        let eg_gens = ElGamalGens::default();
+        let mut prove_transcript = Transcript::new(b"CompressedRandProof");
+        let m_vec_scalar = f32_to_scalar_vec(m_vec);
+        return CompressedRandProof::prove(&eg_gens, &mut prove_transcript, m_vec_scalar, r_vec);
+    }
+    pub fn helper_prove_existing(m_vec: &Vec<f32>, m_com: Vec<RistrettoPoint>, r_vec: Vec<Scalar>)
+        -> Result<(CompressedRandProof, CompressedRandProofCommitments), ProofError> {
+        let eg_gens = ElGamalGens::default();
+        let mut prove_transcript = Transcript::new(b"CompressedRandProof");
+        let m_vec_scalar = f32_to_scalar_vec(m_vec);
+        return CompressedRandProof::prove_existing(&eg_gens, &mut prove_transcript, m_vec_scalar, m_com, r_vec);
+    }
+    pub fn helper_verify(
+        &self,
+        c_vec: Vec<ElGamalPair>,
+    ) -> Result<(), ProofError> {
+        let eg_gens = ElGamalGens::default();
+        let mut prove_transcript = Transcript::new(b"CompressedRandProof");
+        let c_vec_commitments = CompressedRandProofCommitments {
+            c_vec: c_vec,
+        };
+        return self.verify(&eg_gens, &mut prove_transcript, c_vec_commitments);
     }
 }
 

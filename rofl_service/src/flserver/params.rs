@@ -7,7 +7,7 @@ use rand_distr::{Distribution, Normal};
 use rofl_crypto::bsgs32::BSGSTable;
 use rofl_crypto::conversion32::scalar_to_f32_vec;
 use rofl_crypto::pedersen_ops::discrete_log_vec_table;
-use rofl_crypto::rand_proof_vec;
+use rofl_crypto::{rand_proof_vec};
 use rofl_crypto::range_proof_vec;
 use rofl_crypto::{
     l2_range_proof_vec,
@@ -18,16 +18,19 @@ use rofl_crypto::{
 };
 use std::io::BufRead;
 use std::io::Cursor;
+use rofl_crypto::compressed_rand_proof::CompressedRandProof;
 
 pub const PLAIN_TYPE: u8 = 1;
 pub const ENC_RANGE_TYPE: u8 = 2;
 pub const ENC_L2_TYPE: u8 = 3;
+pub const ENC_RANGE_COMPRESSED_TYPE: u8 = 4;
 
 #[derive(Clone, Debug)]
 pub enum EncModelParamType {
     Plain,
     EncRange,
     EncL2,
+    EncRangeCompressed,
 }
 
 impl EncModelParamType {
@@ -36,6 +39,7 @@ impl EncModelParamType {
             EncModelParamType::Plain => PLAIN_TYPE,
             EncModelParamType::EncRange => ENC_RANGE_TYPE,
             EncModelParamType::EncL2 => ENC_L2_TYPE,
+            EncModelParamType::EncRangeCompressed => ENC_RANGE_COMPRESSED_TYPE,
         }
     }
 
@@ -45,6 +49,7 @@ impl EncModelParamType {
             PLAIN_TYPE => Some(EncModelParamType::Plain),
             ENC_RANGE_TYPE => Some(EncModelParamType::EncRange),
             ENC_L2_TYPE => Some(EncModelParamType::EncL2),
+            ENC_RANGE_COMPRESSED_TYPE => Some(EncModelParamType::EncRangeCompressed),
             _ => None,
         }
     }
@@ -101,6 +106,9 @@ impl EncModelParamsAccumulator {
             EncModelParams::EncL2(params) => {
                 self.l2_vec_accumulate(&params.enc_values)
             }
+            EncModelParams::EncRangeCompressed(params) => {
+                self.gamal_accumulate(&params.enc_values)
+            }
         }
     }
 
@@ -133,6 +141,7 @@ pub enum EncModelParams {
     Plain(PlainParams),
     EncRange(EncParamsRange),
     EncL2(EncParamsL2),
+    EncRangeCompressed(EncParamsRangeCompressed)
 }
 
 // Lubu: I started implementing the diffrent version of EncParams with enums instead of traits
@@ -148,8 +157,8 @@ impl EncModelParams {
                     content: vec![0.0; size],
                 })
             }
-            EncModelParamType::EncRange => {
-                EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size])
+            EncModelParamType::EncRange | EncModelParamType::EncRangeCompressed => {
+                EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size]) // TODO: Not default??
             }
             EncModelParamType::EncL2 => {
                 EncModelParamsAccumulator::Enc(vec![ElGamalPair::unity(); size])
@@ -211,6 +220,28 @@ impl EncModelParams {
                 }
                 false
             }
+            EncModelParams::EncRangeCompressed(params) => {
+                // TODO: Can we avoid the clone statement here?
+                let res = match params.rand_proof.helper_verify(params.enc_values.clone()) {
+                    Ok(_) => Ok(true),
+                    Err(err) => Err(err),
+                };
+                if let Ok(ok) = res {
+                    //Check range proof
+                    let num_elems =
+                        (params.enc_values.len() as f32 * params.check_percentage).round() as usize;
+                    let vec_tmp = extract_pedersen_vec(&params.enc_values, num_elems);
+                    let range_res = range_proof_vec::verify_rangeproof(
+                        &params.range_proofs,
+                        &vec_tmp,
+                        params.prove_range,
+                    );
+                    if let Ok(ok_range) = range_res {
+                        return ok && ok_range;
+                    }
+                }
+                false
+            }
         }
     }
 
@@ -230,6 +261,7 @@ impl EncModelParams {
             EncModelParams::Plain(params) => params.content.len(),
             EncModelParams::EncRange(params) => params.enc_values.len(),
             EncModelParams::EncL2(params) => params.enc_values.len(),
+            EncModelParams::EncRangeCompressed(params) => params.enc_values.len(),
         }
     }
 
@@ -242,6 +274,9 @@ impl EncModelParams {
                 params.serialize()
             }
             EncModelParams::EncL2(params) => {
+                params.serialize()
+            }
+            EncModelParams::EncRangeCompressed(params) => {
                 params.serialize()
             }
         }
@@ -259,6 +294,9 @@ impl EncModelParams {
             }
             EncModelParamType::EncL2 => {
                 EncModelParams::EncL2(EncParamsL2::deserialize(data))
+            }
+            EncModelParamType::EncRangeCompressed => {
+                EncModelParams::EncRangeCompressed(EncParamsRangeCompressed::deserialize(data))
             }
         }
     }
@@ -293,16 +331,17 @@ impl EncModelParams {
                     config.l2_value_range as usize,
                 )))
             }
+            EncModelParamType::EncRangeCompressed => {
+                Some(EncModelParams::EncRangeCompressed(EncParamsRangeCompressed::encrypt(
+                    &plain_params.content,
+                    blindings,
+                    config.value_range as usize,
+                    config.n_partition as usize,
+                    config.check_percentage,
+                )))
+            }
         }
     }
-}
-#[derive(Clone)]
-pub struct EncParamsRange {
-    pub enc_values: Vec<ElGamalPair>,
-    pub rand_proofs: Vec<RandProof>,
-    pub range_proofs: Vec<RangeProof>,
-    pub prove_range: usize,
-    pub check_percentage: f32,
 }
 
 fn encode_el_gamal_vec(enc_values: &Vec<ElGamalPair>) -> Vec<u8> {
@@ -356,14 +395,21 @@ fn decode_range_proof_vec(encoded: &Vec<Vec<u8>>) -> Vec<RangeProof> {
         .for_each(|x| out.push(RangeProof::from_bytes(&x[..]).unwrap()));
     out
 }
-
+#[derive(Clone)]
+pub struct EncParamsRange {
+    pub enc_values: Vec<ElGamalPair>,
+    pub rand_proofs: Vec<RandProof>,
+    pub range_proofs: Vec<RangeProof>,
+    pub prove_range: usize,
+    pub check_percentage: f32,
+}
 impl EncParamsRange {
     pub fn encrypt(
         plaintext_vec: &Vec<f32>,
         blinding_vec: &Vec<Scalar>,
         prove_range: usize,
         n_partition: usize,
-        check_percentage: f32,
+        check_percentage: f32
     ) -> Self {
         let range_clipped = range_proof_vec::clip_f32_to_range_vec(plaintext_vec, prove_range);
         // info!("First param {}, {}", plaintext_vec[0], range_clipped[0]);
@@ -559,6 +605,93 @@ impl EncParamsL2 {
 
     pub fn get_range_proof_slice(&self) -> &[RangeProof] {
         &self.range_proofs[0..(self.range_proofs.len() - 1)]
+    }
+}
+
+
+#[derive(Clone)]
+pub struct EncParamsRangeCompressed {
+    pub enc_values: Vec<ElGamalPair>,
+    pub rand_proof: CompressedRandProof,
+    pub range_proofs: Vec<RangeProof>,
+    pub prove_range: usize,
+    pub check_percentage: f32,
+}
+impl EncParamsRangeCompressed {
+    pub fn encrypt(
+        plaintext_vec: &Vec<f32>,
+        blinding_vec: &Vec<Scalar>,
+        prove_range: usize,
+        n_partition: usize,
+        check_percentage: f32
+    ) -> Self {
+        let range_clipped = range_proof_vec::clip_f32_to_range_vec(plaintext_vec, prove_range);
+        // info!("First param {}, {}", plaintext_vec[0], range_clipped[0]);
+        // Dummy probabilistic checking
+        let (range_proofs, enc_com) = if check_percentage >= 1.0 {
+            range_proof_vec::create_rangeproof(
+                &range_clipped,
+                blinding_vec,
+                prove_range,
+                n_partition,
+            )
+                .unwrap()
+        } else {
+            let num_elems = (range_clipped.len() as f32 * check_percentage).round() as usize;
+            let filtered_elems = range_clipped[..num_elems].to_vec();
+            let filtered_blidings = blinding_vec[..num_elems].to_vec();
+            range_proof_vec::create_rangeproof(
+                &filtered_elems,
+                &filtered_blidings,
+                prove_range,
+                n_partition,
+            )
+                .unwrap()
+        };
+        let (rand_proof, enc_update) = if check_percentage >= 1.0 {
+            CompressedRandProof::helper_prove_existing(plaintext_vec, enc_com, blinding_vec.clone())
+                .unwrap()
+        } else {
+            CompressedRandProof::helper_prove(plaintext_vec, blinding_vec.clone())
+                .unwrap()
+        };
+        EncParamsRangeCompressed {
+            enc_values: enc_update.c_vec,
+            rand_proof: rand_proof,
+            range_proofs,
+            prove_range,
+            check_percentage,
+        }
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        let enc_values = encode_el_gamal_vec(&self.enc_values);
+        let rand_proofs = self.rand_proof.to_bytes();
+        let range_proofs = encode_range_proof_vec(&self.range_proofs);
+        let enc_data = EncRangeData {
+            enc_values,
+            rand_proof: rand_proofs,
+            range_proof: range_proofs,
+            range_bits: self.prove_range as i32,
+            check_percentage: self.check_percentage,
+        };
+        let mut buffer = Vec::with_capacity(enc_data.encoded_len() + 1);
+        let _res = enc_data.encode_length_delimited(&mut buffer);
+        buffer
+    }
+
+    pub fn deserialize(data: &[u8]) -> EncParamsRangeCompressed {
+        let msg = EncRangeData::decode_length_delimited(&mut Cursor::new(data)).unwrap();
+        let enc_values = decode_el_gamal_vec(&msg.enc_values);
+        let rand_proof = CompressedRandProof::from_bytes(&msg.rand_proof).unwrap();
+        let range_proofs = decode_range_proof_vec(&msg.range_proof);
+        EncParamsRangeCompressed {
+            enc_values,
+            rand_proof,
+            range_proofs,
+            prove_range: msg.range_bits as usize,
+            check_percentage: msg.check_percentage,
+        }
     }
 }
 

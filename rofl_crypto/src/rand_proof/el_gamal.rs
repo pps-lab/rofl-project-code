@@ -185,17 +185,6 @@ impl Sum<ElGamalPair> for ElGamalPair {
         iter.fold(ElGamalPair::identity(), |acc, x| acc + x)
     }
 }
-// impl<T> Sum<T> for ElGamalPair
-//     where
-//         T: Borrow<ElGamalPair>
-// {
-//     fn sum<I>(iter: I) -> Self
-//         where
-//             I: Iterator<Item = T>
-//     {
-//         iter.fold(ElGamalPair::unity(), |acc, item| acc + item.borrow())
-//     }
-// }
 
 impl Debug for ElGamalPair {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {

@@ -62,6 +62,7 @@ message CryptoConfig {
     int32 l2_value_range = 3;
     float check_percentage = 4;
     int32 enc_type = 5;
+    bool compress_randomness_proof = 6;
 }
         
 
