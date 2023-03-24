@@ -1,6 +1,7 @@
 
-pub static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
+// pub static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
 // pub static DIM: [usize; 3] = [131072, 262144, 524288];
+pub static DIM: [usize; 1] = [524288];
 
 // pub static DIM: [usize; 1] = [100];
 pub static num_samples: usize = 4;

@@ -42,6 +42,8 @@ pub fn create_rangeproof(
         .map(|x| read_from_bytes(&x))
         .collect();
 
+    println!(" BP 2 convert...");
+
     // extend vector length to pow2
     let value_fp_vec_shifted_clipped_ext: Vec<u64> =
         extend_vec_to_pow2(&value_fp_vec_clipped_shifted, 0)
@@ -49,6 +51,7 @@ pub fn create_rangeproof(
             .map(|x| *x as u64)
             .collect();
     let blinding_vec_ext: Vec<Scalar> = extend_vec_to_pow2(&blinding_vec, Scalar::zero());
+    println!(" BP 3 convert...");
 
     // chunk the vector for par_iter
     let n_chunks: usize = std::cmp::min(value_fp_vec_shifted_clipped_ext.len(), n_partition);
@@ -57,23 +60,31 @@ pub fn create_rangeproof(
         .chunks(chunk_size)
         .map(|x| x.to_vec())
         .collect();
+    println!(" BP 4 convert...");
+
     let blinding_fp_vec_chunks: Vec<Vec<Scalar>> = blinding_vec_ext
         .chunks(chunk_size)
         .map(|x| x.to_vec())
         .collect();
+    println!(" BP 5 convert...");
+
     let proof_args: Vec<(&Vec<u64>, &Vec<Scalar>)> = value_fp_vec_chunks
         .iter()
         .zip(&blinding_fp_vec_chunks)
         .collect();
+    println!(" BP 6 convert...");
 
     let pc_gens = PedersenGens::default();
     let res_vec: Vec<Result<(RangeProof, Vec<CompressedRistretto>), ProofError>> = proof_args
         .par_iter()
         .map(|(v, b)| create_rangeproof_helper(v, b, prove_range, &pc_gens))
         .collect();
+    println!(" BP 7 convert...");
 
     // bundle up results
     let mut res_range_proof_vec: Vec<RangeProof> = Vec::with_capacity(n_chunks);
+    println!(" BP 8 convert...");
+
     let mut res_commit_vec: Vec<CompressedRistretto> =
         Vec::with_capacity(value_fp_vec_shifted_clipped_ext.len());
     for r in res_vec {
@@ -85,12 +96,14 @@ pub fn create_rangeproof(
             Err(e) => return Err(e.into()),
         }
     }
+    println!(" BP 9 convert...");
 
     // downshift values
     let rp_vec_shifted = crp_to_rp_vec(&res_commit_vec);
     let inv_offset_rp: RistrettoPoint = pc_gens.commit(-offset_value_scalar, Scalar::zero());
     let rp_vec =
         compute_shifted_values_rp(&rp_vec_shifted[0..value_vec_clipped.len()], &inv_offset_rp);
+    println!(" BP 10 convert...");
 
     Ok((res_range_proof_vec, rp_vec))
 }
@@ -117,6 +130,7 @@ fn create_rangeproof_helper(
 ) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
     let bp_gens = BulletproofGens::new(64, value_vec.len());
     let mut transcript = Transcript::new(b"RangeProof");
+    println!(" BP 1 proving range...");
     match RangeProof::prove_multiple(
         &bp_gens,
         &pc_gens,
