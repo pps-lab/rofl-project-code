@@ -50,7 +50,7 @@ micro_client:
   ec2_volume_size: 64
   instance_tag: rofl_micro_client
   host_group: tag_Name_rofl_micro_client # instance tag
-  avx_target_cpu: skylake # skylake for non-512 version
+  avx_target_cpu: broadwell # skylake for non-512 version
 
 
 e2e_client:
