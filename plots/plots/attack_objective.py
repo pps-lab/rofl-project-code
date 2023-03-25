@@ -251,12 +251,24 @@ def build_attack_plot(name, df, model, configs=None, leftmost=False, grid=True, 
             'tasks_None_l2': {'label': 'Prototype', 'marker': get_markers()[1], 'color_index': 2},
         }
     elif model == 'FEMNIST_median':
-        configs = {
-            'FEMNISTRandomNoiseEdgeCase_None_median_l2': {'label': 'Noise', 'marker': markers[0], 'color': colors[0]},
-            'EuropeanSevenEdgeCase_0.9_median_l2': {'label': 'Tail', 'marker': markers[1], 'color': colors[1]},
-            'tasks_None_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
-            # 'pixel_pattern_None_median_l2': {'label': 'Pixel-pattern', 'marker': get_markers()[3], 'color_index': 4},
-        }
+        if noise:
+            configs = {
+                'FEMNISTRandomNoiseEdgeCase_None_median_l2': {'label': 'Noise', 'marker': markers[0], 'color': colors[0]},
+                'EuropeanSevenEdgeCase_0.9_median_l2': {'label': 'Tail', 'marker': markers[1], 'color': colors[1]},
+                'tasks_None_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
+                # 'pixel_pattern_None_median_l2': {'label': 'Pixel-pattern', 'marker': get_markers()[3], 'color_index': 4},
+            }
+        else:
+            if animation_step == 1:
+                configs = {
+                    'tasks_None_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
+                }
+            elif animation_step == 2:
+                configs = {
+                    'EuropeanSevenEdgeCase_0.9_median_l2': {'label': 'Tail', 'marker': markers[1], 'color': colors[1]},
+                    'tasks_None_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
+                }
+
     elif model == 'CIFAR10':
         if noise:
             configs = {
@@ -272,12 +284,12 @@ def build_attack_plot(name, df, model, configs=None, leftmost=False, grid=True, 
         else:
             if animation_step == 1:
                 configs = {
-                    'semantic_median_l2': {'label': 'Prototype', 'marker': get_markers()[2], 'color_index': 2},
+                    'semantic_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
                 }
             else:
                 configs = {
-                    'NorthWesternEdgeCase_median_l2': {'label': 'Tail', 'marker': get_markers()[1], 'color_index': 1},
-                    'semantic_median_l2': {'label': 'Prototype', 'marker': get_markers()[2], 'color_index': 2},
+                    'NorthWesternEdgeCase_median_l2': {'label': 'Tail', 'marker': markers[1], 'color': colors[1]},
+                    'semantic_median_l2': {'label': 'Prototype', 'marker': markers[2], 'color': colors[2]},
                 }
         df = df[df["round"] <= 800]
 

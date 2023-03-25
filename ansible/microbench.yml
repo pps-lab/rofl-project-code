@@ -27,7 +27,7 @@
 - name: Setup client machines with common packages
   hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
   tasks:
-  - name: 
+  - name:
     include_role:
       name: e2e-common
   vars:
@@ -56,7 +56,7 @@
       name: microbench-start
   vars:
       benchmarks:
-      - create_randproof_bench # for some reason `cargo bench` wants the function as filter, not the benchmark itself
+      - create_randproof_bench
       - create_rangeproof_bench
       - create_squarerandproof_bench
       - create_compressedrandproof_bench
@@ -88,6 +88,7 @@
 
 - name: Fetch Microbenchmark Results
   hosts:  "{{ hostvars['localhost'].micro_client.host_group }}:{{ hostvars['localhost'].e2e_server.host_group }}"
+#  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
   gather_facts: True
   tasks:
   - name:

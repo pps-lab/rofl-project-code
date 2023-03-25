@@ -20,3 +20,9 @@
       src: "{{ microbenchmark.log_dir }}"
       dest: "{{ microbenchmark.results_dir }}/{{ inventory_hostname }}"
       recursive: yes
+  - name: Fetch microbenchmark benchmark logs results
+    synchronize:
+      mode: pull
+      src: "{{ e2e_remote_base_dir }}/{{ e2e_framework_dir }}/target/benchmarks"
+      dest: "{{ microbenchmark.results_dir }}/{{ inventory_hostname }}"
+      recursive: yes
