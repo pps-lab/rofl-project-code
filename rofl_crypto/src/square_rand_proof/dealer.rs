@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 
 use super::super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
@@ -10,7 +10,7 @@ use super::errors::*;
 use super::SquareRandProof;
 use crate::rand_proof::transcript::TranscriptProtocol;
 use crate::square_rand_proof::pedersen::{PedersenCommitment, SquareRandProofCommitments};
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
 
 pub struct Dealer {}
 

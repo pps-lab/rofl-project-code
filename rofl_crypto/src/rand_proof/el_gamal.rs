@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::traits::{Identity, MultiscalarMul};
+use curve25519_dalek_ng::constants::RISTRETTO_BASEPOINT_COMPRESSED;
+use curve25519_dalek_ng::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::scalar::Scalar;
+use curve25519_dalek_ng::traits::{Identity, MultiscalarMul};
 
 use bulletproofs::PedersenGens;
 

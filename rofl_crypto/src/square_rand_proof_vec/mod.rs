@@ -1,4 +1,4 @@
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
@@ -12,7 +12,7 @@ pub use self::errors::L2RangeProofError;
 
 use crate::square_rand_proof::pedersen::SquareRandProofCommitments;
 
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
 use itertools::Itertools;
 
 pub fn create_l2rangeproof_vec_existing(
@@ -162,8 +162,8 @@ pub fn verify_l2rangeproof_vec(
 mod tests {
     use super::*;
     use crate::pedersen_ops::rnd_scalar_vec;
-    use curve25519_dalek::ristretto::RistrettoPoint;
-    use curve25519_dalek::scalar::Scalar;
+    use curve25519_dalek_ng::ristretto::RistrettoPoint;
+    use curve25519_dalek_ng::scalar::Scalar;
     use crate::range_proof_vec::create_rangeproof;
     use crate::conversion32::get_clip_bounds;
 

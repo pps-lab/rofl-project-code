@@ -10,7 +10,7 @@ name = "rofl_crypto"
 crate-type = ["rlib", "dylib"]
 
 [dependencies]
-curve25519-dalek = {  package = "curve25519-dalek-ng", version = "4", default-features = false, features = ["std", "avx2_backend"], optional = false }
+curve25519-dalek-ng = { version = "4.1", default-features = false, features = ["std", "avx2_backend"], optional = false }
 
 proc-macro2 = { version = "1.0.28" }
 #NOTE mlei: cannot be higher otherwise wont compile
@@ -63,7 +63,7 @@ frac10 = []
 frac11 = []
 frac12 = []
 
-avx2_backend = ["curve25519-dalek/avx2_backend"]
+avx2_backend = ["curve25519-dalek-ng/avx2_backend"]
 
 [profile.dev]
 opt-level = 2

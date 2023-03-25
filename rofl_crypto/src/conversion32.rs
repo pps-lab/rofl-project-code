@@ -2,7 +2,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 use rand::Rng;
 
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 
 use crate::fp::{read_from_bytes, Fix, IRawFix, URawFix, N_BITS};
 
@@ -115,8 +115,8 @@ pub fn exponentiate(value: &Scalar, exp: usize) -> Scalar {
 mod tests {
     use super::*;
     use crate::pedersen_ops::{commit_no_blinding_vec, default_discrete_log_vec};
-    use curve25519_dalek::ristretto::RistrettoPoint;
-    use curve25519_dalek::scalar::Scalar;
+    use curve25519_dalek_ng::ristretto::RistrettoPoint;
+    use curve25519_dalek_ng::scalar::Scalar;
     use rand::Rng;
 
     #[test]

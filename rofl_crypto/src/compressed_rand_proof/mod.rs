@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use core::fmt::Debug;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::de::Visitor;
@@ -89,6 +89,8 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
         let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
+        // TODO: Make this faster by montgomery squaring
+        // let precomputation_table: Vec<Scalar> = challengge.precompute_exponentiate(c_vec.c_vec.len()+1);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
         // TODO: pow
@@ -232,8 +234,9 @@ mod tests {
         let eg_gens = ElGamalGens::default();
         let mut transcript = Transcript::new(b"test_serde");
         let mut rng = rand::thread_rng();
-        let m = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
-        let r = vec![Scalar::random(&mut rng), Scalar::random(&mut rng), Scalar::random(&mut rng)];
+        let n_proofs = 1000;
+        let m = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
+        let r = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
         let randproof = CompressedRandProof::prove(&eg_gens, &mut transcript, m, r).unwrap();
         let randproof_ser = bincode::serialize(&randproof).unwrap();
         let randproof_des = bincode::deserialize(&randproof_ser).unwrap();

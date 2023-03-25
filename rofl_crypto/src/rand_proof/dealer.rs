@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 
 use super::el_gamal::{ElGamalGens, ElGamalPair};

@@ -2,8 +2,8 @@
 #![allow(non_snake_case)]
 
 use clear_on_drop::clear::Clear;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 
 use super::super::rand_proof::el_gamal::{ElGamalGens, ElGamalPair};
 use super::errors::*;
