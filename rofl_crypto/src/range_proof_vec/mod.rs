@@ -174,7 +174,7 @@ pub fn verify_rangeproof(
 
     let res_vec: Vec<Result<bool, ProofError>> = verify_args
         .par_iter()
-        .map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens, &bp_gens))
+        .map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens))
         .collect();
 
     let mut res: bool = true;
