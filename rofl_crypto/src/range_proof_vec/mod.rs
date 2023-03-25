@@ -172,9 +172,10 @@ pub fn verify_rangeproof(
         .zip(&commit_vec_vec_shifted)
         .collect();
 
+    let bp_gens = BulletproofGens::new(prove_range, commit_vec.len());
     let res_vec: Vec<Result<bool, ProofError>> = verify_args
         .par_iter()
-        .map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens))
+        .map(|(rp, crp_chunk)| verify_rangeproof_helper(rp, crp_chunk, prove_range, &pc_gens, &bp_gens))
         .collect();
 
     let mut res: bool = true;
@@ -192,13 +193,14 @@ pub fn verify_rangeproof_helper(
     commit_vec: &Vec<CompressedRistretto>,
     range_exp: usize,
     pc_gens: &PedersenGens,
+    bp_gens: &BulletproofGens,
 ) -> Result<bool, ProofError> {
     let verify_range: usize = range_exp;
-    let bp_gens = BulletproofGens::new(range_exp, commit_vec.len());
     let mut transcript = Transcript::new(b"RangeProof");
+    let local_bp_gens = bp_gens.clone();
 
     match range_proof.verify_multiple(
-        &bp_gens,
+        &local_bp_gens,
         &pc_gens,
         &mut transcript,
         &commit_vec,
