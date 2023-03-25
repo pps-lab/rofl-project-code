@@ -195,8 +195,7 @@ pub fn verify_rangeproof_helper(
 ) -> Result<bool, ProofError> {
     let verify_range: usize = range_exp;
     let mut transcript = Transcript::new(b"RangeProof");
-    let bp_gens = BulletproofGens::new(prove_range, commit_vec.len());
-
+    let bp_gens = BulletproofGens::new(range_exp, commit_vec.len());
 
     match range_proof.verify_multiple(
         &bp_gens,
