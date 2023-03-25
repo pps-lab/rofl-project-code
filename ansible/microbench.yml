@@ -87,8 +87,8 @@
 
 
 - name: Fetch Microbenchmark Results
-  hosts:  "{{ hostvars['localhost'].micro_client.host_group }}:{{ hostvars['localhost'].e2e_server.host_group }}"
-#  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
+#  hosts:  "{{ hostvars['localhost'].micro_client.host_group }}:{{ hostvars['localhost'].e2e_server.host_group }}"
+  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
   gather_facts: True
   tasks:
   - name:
