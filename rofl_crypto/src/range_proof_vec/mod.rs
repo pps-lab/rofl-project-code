@@ -128,7 +128,8 @@ fn create_rangeproof_helper(
     prove_range: usize,
     pc_gens: &PedersenGens,
 ) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
-    let bp_gens = BulletproofGens::new(64, value_vec.len());
+    println!(" BP gens...");
+    let bp_gens = BulletproofGens::new(prove_range, value_vec.len());
     let mut transcript = Transcript::new(b"RangeProof");
     println!(" BP 1 proving range...");
     match RangeProof::prove_multiple(
