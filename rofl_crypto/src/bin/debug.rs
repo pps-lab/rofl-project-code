@@ -31,14 +31,14 @@ use std::thread::sleep;
 
 // static DIM: [usize; 1] = [100];
 
-use rofl_crypto::bench_constants::{DIM, num_samples, RANGE, N_PARTITION_SMALL};
+use rofl_crypto::bench_constants::{DIM_RANGEPROOF, num_samples, RANGE, N_PARTITION_SMALL};
 
 
 fn create_rangeproof_bench_fn() {
     let mut rng = rand::thread_rng();
 
     let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
-    for (r, d) in iproduct!(range, &DIM) {
+    for (r, d) in iproduct!(range, &DIM_RANGEPROOF) {
         let (fp_min, fp_max) = get_clip_bounds(*r);
         let createproof_label: String = createproof_label(*d, *r);
         let mut createproof_file = create_bench_file(&createproof_label);
