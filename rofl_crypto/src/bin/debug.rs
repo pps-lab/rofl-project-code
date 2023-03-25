@@ -11,7 +11,7 @@ use rand::Rng;
 extern crate chrono;
 use chrono::prelude::*;
 
-extern crate curve25519_dalek;
+extern crate curve25519_dalek_ng;
 use curve25519_dalek_ng::ristretto::RistrettoPoint;
 use curve25519_dalek_ng::scalar::Scalar;
 extern crate bulletproofs;

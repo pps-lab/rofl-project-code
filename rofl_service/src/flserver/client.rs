@@ -7,7 +7,7 @@ use super::params::{EncModelParamType, EncModelParams, PlainParams};
 use super::{flservice::flservice_client::FlserviceClient, logs::TimeState};
 use crate::flserver::trainclient::FlTraining;
 use crate::flserver::util::DataBlockStorage;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 use log::info;
 use model_parameters::{ModelParametersMeta, ParamMessage};
 use prost::Message;
