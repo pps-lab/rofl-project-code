@@ -89,8 +89,7 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
         let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
-        // TODO: Make this faster by montgomery squaring
-        // let precomputation_table: Vec<Scalar> = challengge.precompute_exponentiate(c_vec.c_vec.len()+1);
+        // let precomputation_table: Vec<Scalar> = challenge.precompute_exponentiate(c_vec.c_vec.len()+1);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
         // TODO: pow
@@ -207,8 +206,9 @@ impl Debug for CompressedRandProof {
 mod tests {
     use super::*;
     use bincode;
+    use curve25519_dalek_ng::scalar::Scalar;
     use crate::conversion32::{f32_to_scalar, scalar_to_f32, square};
-    use crate::fp::{Fix, N_BITS};
+    use crate::fp::{Fix, N_BITS, read_from_bytes};
 
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         let eg_gens = ElGamalGens::default();
         let mut transcript = Transcript::new(b"test_serde");
         let mut rng = rand::thread_rng();
-        let n_proofs = 1000;
+        let n_proofs = 10000;
         let m = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
         let r = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
         let randproof = CompressedRandProof::prove(&eg_gens, &mut transcript, m, r).unwrap();
@@ -257,6 +257,13 @@ mod tests {
         assert!(res.is_ok());
     }
 
+    // #[test]
+    // fn test_compressed_exponentiate() {
+    //     let scalar = Scalar::one() + Scalar::one();
+    //     let res = scalar.exponentiate(10);
+    //     let conv  = read_from_bytes(&(res).to_bytes());
+    //     println!("Conf {:?}", conv);
+    // }
 
     #[test]
     fn test_fake_randproof() {

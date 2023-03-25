@@ -37,11 +37,6 @@ chrono = "0.4.6"
 bencher = "0.1.5"
 reduce = "0.1.2"
 
-# Temporary until this package is fixed for Nightly
-#tinytemplate = { git = "https://github.com/botika/TinyTemplate", branch = "master" }
-#[patch.crates-io]
-#tinytemplate = { git = "https://github.com/botika/TinyTemplate", branch = "master" }
-
 
 [features]
 fp8 = []

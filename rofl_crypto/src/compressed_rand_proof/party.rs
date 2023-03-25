@@ -91,6 +91,7 @@ impl<'a> PartyAwaitingChallenge<'a> {
         // apply c^i iteratively to elements of m where i is the index
         // TODO: POW
         let precomputation_table: Vec<Scalar> = precompute_exponentiate(&c, self.m.len()+1);
+        // let precomputation_table: Vec<Scalar> = c.precompute_exponentiate(self.m.len()+1);
 
         let z_m: Scalar = self.m_prime + self.m.par_iter().enumerate().map(|(i, m)| m.clone() * precomputation_table[i+1]).sum::<Scalar>();
         let z_r: Scalar = self.r_prime + self.r.par_iter().enumerate().map(|(i, m)| m.clone() * precomputation_table[i+1]).sum::<Scalar>();
