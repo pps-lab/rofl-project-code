@@ -120,7 +120,6 @@ fn create_rangeproof_helper(
     blinding_vec: &[Scalar],
     prove_range: usize,
     pc_gens: &PedersenGens,
-    bp_gens: &BulletproofGens,
 ) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
     let mut transcript = Transcript::new(b"RangeProof");
     println!("Generaing BPs");
