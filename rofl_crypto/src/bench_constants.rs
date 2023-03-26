@@ -11,6 +11,6 @@ pub static num_samples: usize = 4;
 
 pub static RANGE: [usize; 1] = [8];
 pub static N_PARTITION: usize = 4;
-pub static N_PARTITION_SMALL: usize = 2;
+pub static N_PARTITION_SMALL: usize = 4;
 
 pub static TABLE_SIZE: [usize; 1] = [16];
