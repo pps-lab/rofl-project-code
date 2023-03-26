@@ -73,7 +73,7 @@ pub fn create_rangeproof(
     // let bp_gens = BulletproofGens::new(prove_range, chunk_size);
     // println!("Generaing BPs done");
     let res_vec: Vec<Result<(RangeProof, Vec<CompressedRistretto>), ProofError>> = proof_args
-        .par_iter()
+        .iter()
         .map(|(v, b)| create_rangeproof_helper(v, b, prove_range, &pc_gens))
         .collect();
 
