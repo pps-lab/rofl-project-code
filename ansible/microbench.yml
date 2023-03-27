@@ -17,25 +17,26 @@
       # start one server and one client instance
       server_ec2_instances_num: 1
       server_ec2_instances_max_num: 1
-      client_ec2_instances_num: 1
+      client_ec2_instances_num: 0
       client_ec2_instances_max_num: 1
       e2e_client: "{{ micro_client }}"
+      e2e_server: "{{ micro_server }}"
   tags: start
 
 
 # TODO[nicolas] Can we simplify the below two tasks, by including the avx_target_cpu in the host-specific variables somehow?
-- name: Setup client machines with common packages
-  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
-  tasks:
-  - name:
-    include_role:
-      name: e2e-common
-  vars:
-    avx_target_cpu: "{{ hostvars['localhost'].micro_client.avx_target_cpu }}"
-    fp_bits: "{{ fp | default('16') }}"
-    fp_frac: "{{ frac | default('7') }}"
-  tags: start
-
+#- name: Setup client machines with common packages
+#  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
+#  tasks:
+#  - name:
+#    include_role:
+#      name: e2e-common
+#  vars:
+#    avx_target_cpu: "{{ hostvars['localhost'].micro_client.avx_target_cpu }}"
+#    fp_bits: "{{ fp | default('16') }}"
+#    fp_frac: "{{ frac | default('7') }}"
+#  tags: start
+#
 - name: Setup server machines with common packages
   hosts: "{{ hostvars['localhost'].e2e_server.host_group }}"
   tasks:
@@ -48,21 +49,22 @@
     fp_frac: "{{ frac | default('7') }}"
   tags: start
 
-- name: Start the Microbenchmark on the Client
-  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
-  tasks:
-  - name:
-    include_role:
-      name: microbench-start
-  vars:
-      benchmarks:
-      - create_randproof_bench
-      - create_rangeproof_bench
-      - create_squarerandproof_bench
-      - create_compressedrandproof_bench
-      - create_squareproof_bench
-      avx_target_cpu: "{{ hostvars['localhost'].micro_client.avx_target_cpu }}"
-  tags: start
+#- name: Start the Microbenchmark on the Client
+#  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
+#  tasks:
+#  - name:
+#    include_role:
+#      name: microbench-start
+#  vars:
+#      benchmarks:
+#      - create_randproof_bench
+#      - create_rangeproof_bench
+#      - create_squarerandproof_bench
+#      - create_compressedrandproof_bench
+#      - create_squareproof_bench
+#      - l2rangeproof_bench
+#      avx_target_cpu: "{{ hostvars['localhost'].micro_client.avx_target_cpu }}"
+#  tags: start
 
 
 - name: Start the Microbenchmark on the Server
@@ -88,7 +90,8 @@
 
 - name: Fetch Microbenchmark Results
 #  hosts:  "{{ hostvars['localhost'].micro_client.host_group }}:{{ hostvars['localhost'].e2e_server.host_group }}"
-  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
+#  hosts: "{{ hostvars['localhost'].micro_client.host_group }}"
+  hosts: "{{ hostvars['localhost'].e2e_server.host_group }}"
   gather_facts: True
   tasks:
   - name:

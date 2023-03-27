@@ -8,6 +8,7 @@
     - server_ec2_instances_max_num | int >=  server_ec2_instances_num|int
     - client_ec2_instances_max_num | int >=  client_ec2_instances_num|int
     - e2e_client is defined
+    - e2e_server is defined
 
 - name: Create VPC in AWS
   include_role:
