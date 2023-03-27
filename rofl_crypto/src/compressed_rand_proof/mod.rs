@@ -88,8 +88,8 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_Z_M, &self.Z_m);
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
-        // let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
-        let precomputation_table: Vec<Scalar> = challenge.precompute_exponentiate_optimized(c_vec.c_vec.len()+1);
+        let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
+        // let precomputation_table: Vec<Scalar> = challenge.precompute_exponentiate_optimized(c_vec.c_vec.len()+1);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
         // TODO: pow
