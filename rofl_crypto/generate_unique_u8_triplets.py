@@ -1,5 +1,5 @@
 def main():
-    num_entries = 800000
+    num_entries = 900000
     file_name = "unique_u8_triplets.rs"
 
     with open(file_name, "w") as f:
