@@ -59,6 +59,7 @@ fn get_training_state_from_config(path: &str, lazy_eval: bool, std_init: f32) ->
         "l2" => params::ENC_L2_TYPE,
         "Plain" => params::PLAIN_TYPE,
         "RangeCompressed" => params::ENC_RANGE_COMPRESSED_TYPE,
+        "l2Compressed" => params::ENC_L2_COMPRESSED_TYPE,
         _ => params::PLAIN_TYPE,
     };
 
