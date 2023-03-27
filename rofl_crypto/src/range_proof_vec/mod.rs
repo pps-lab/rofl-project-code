@@ -122,9 +122,9 @@ fn create_rangeproof_helper(
     pc_gens: &PedersenGens,
 ) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
     let mut transcript = Transcript::new(b"RangeProof");
-    println!("Generaing BPs");
+    // println!("Generaing BPs");
     let bp_gens = BulletproofGens::new(prove_range, value_vec.len());
-    println!("Generaing BPs done");
+    // println!("Generaing BPs done");
     match RangeProof::prove_multiple(
         &bp_gens,
         &pc_gens,
