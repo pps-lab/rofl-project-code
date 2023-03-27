@@ -95,10 +95,10 @@ def extract(filename, pattern, label, data_dir, fixed_point_repr=None):
 def build_df_mbench_computation():
 
     df1 = _build_df_mbench_computation(data_dir="./data/microbenchmarks/large", cmachine="clientlarge", run_server=True)
-    # df2 = _build_df_mbench_computation(data_dir="./data/microbenchmarks/small", cmachine="clientsmall", run_server=False)
+    df2 = _build_df_mbench_computation(data_dir="./data/microbenchmarks/small", cmachine="clientsmall", run_server=False)
 
-    # df = df1.merge(df2)
-    df = df1
+    df = df1.merge(df2)
+    # df = df1
 
     return df
 

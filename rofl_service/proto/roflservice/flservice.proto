@@ -89,6 +89,16 @@ message EncNormData {
     int32 l2_range_bits = 6;
 }
 
+message EncNormDataCompressed {
+    bytes enc_values = 1;
+    bytes square_proof = 2;
+    bytes rand_proof = 3;
+    repeated bytes range_proof = 4;
+    bytes square_range_proof = 5;
+    int32 range_bits = 6;
+    int32 l2_range_bits = 7;
+}
+
 message Config {
     ModelConfig model_config = 1;
     CryptoConfig crypto_config = 2;
