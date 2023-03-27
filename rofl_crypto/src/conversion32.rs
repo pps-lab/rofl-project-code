@@ -103,10 +103,9 @@ pub fn precompute_exponentiate_old(value: &Scalar, exp: usize) -> Vec<Scalar> {
 pub fn precompute_exponentiate(value: &Scalar, exp: usize) -> Vec<Scalar> {
     // Computes all the powers of value up to exp
     // can we call this a multi-exponentiation?
-    let mut mul: Scalar = value.clone();
+    let mut mul: Scalar = Scalar::one();
     let mut output: Vec<Scalar> = Vec::with_capacity(exp);
-    output.push(Scalar::one());
-    for _ in 0..exp-1 {
+    for _ in 0..exp {
         output.push(mul);
         mul = mul * value;
     }
@@ -262,8 +261,8 @@ mod tests {
         let exponent: usize = 2_usize.pow(19) as usize;
         let result = timeit(|| precompute_exponentiate(&base, exponent));
         let result_optimized = timeit(|| precompute_exponentiate_old(&base, exponent));
-        let result_optimized_new = timeit(|| base.precompute_exponentiate(exponent));
-        let result_optimized_new_opt = timeit(|| base.precompute_exponentiate_optimized(exponent));
+        // let result_optimized_new = timeit(|| base.precompute_exponentiate(exponent));
+        // let result_optimized_new_opt = timeit(|| base.precompute_exponentiate_optimized(exponent));
         // println!("result: {:?}", result);
         // println!("result_optimized: {:?}", result_optimized);
         assert_eq!(result, result_optimized);
