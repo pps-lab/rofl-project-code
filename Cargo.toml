@@ -8,6 +8,7 @@ members = [
 [patch.crates-io]
 tinytemplate = { git = "https://github.com/bheisler/TinyTemplate", branch = "master" }
 #curve25519-dalek-ng = { path = "/Users/hidde/Documents/PhD/curve25519-dalek-ng" }
+curve25519-dalek-ng = { git = "https://github.com/hiddely/curve25519-dalek-ng", branch = "main" }
 
 [profile.release]
 opt-level = 3

@@ -88,11 +88,24 @@ pub fn square(s1: &Scalar) -> Scalar {
     (mul.unwrap().to_bits() as URawFix).into()
 }
 
-pub fn precompute_exponentiate(value: &Scalar, exp: usize) -> Vec<Scalar> {
+pub fn precompute_exponentiate_old(value: &Scalar, exp: usize) -> Vec<Scalar> {
     // Computes all the powers of value up to exp
     // can we call this a multi-exponentiation?
     let mut mul: Scalar = value.clone();
     let mut output: Vec<Scalar> = vec![Scalar::one()];
+    for _ in 0..exp-1 {
+        output.push(mul);
+        mul = mul * value;
+    }
+    output
+}
+
+pub fn precompute_exponentiate(value: &Scalar, exp: usize) -> Vec<Scalar> {
+    // Computes all the powers of value up to exp
+    // can we call this a multi-exponentiation?
+    let mut mul: Scalar = value.clone();
+    let mut output: Vec<Scalar> = Vec::with_capacity(exp);
+    output.push(Scalar::one());
     for _ in 0..exp-1 {
         output.push(mul);
         mul = mul * value;
@@ -113,6 +126,7 @@ pub fn exponentiate(value: &Scalar, exp: usize) -> Scalar {
 
 #[cfg(test)]
 mod tests {
+    use std::time::SystemTime;
     use super::*;
     use crate::pedersen_ops::{commit_no_blinding_vec, default_discrete_log_vec};
     use curve25519_dalek_ng::ristretto::RistrettoPoint;
@@ -231,5 +245,27 @@ mod tests {
 
         assert_eq!(y_vec[0], max);
         assert_eq!(y_vec[1], min);
+    }
+
+    #[test]
+    fn test_exponentiate() {
+        fn timeit<F: Fn() -> T, T>(f: F) -> T {
+            let start = SystemTime::now();
+            let result = f();
+            let end = SystemTime::now();
+            let duration = end.duration_since(start).unwrap();
+            println!("it took {} milliseconds", duration.as_millis());
+            result
+        }
+        let base = Scalar::random(&mut rand::thread_rng());
+        println!("base: {:?}", base);
+        let exponent: usize = 2_usize.pow(19) as usize;
+        let result = timeit(|| precompute_exponentiate(&base, exponent));
+        let result_optimized = timeit(|| precompute_exponentiate_old(&base, exponent));
+        let result_optimized_new = timeit(|| base.precompute_exponentiate(exponent));
+        let result_optimized_new_opt = timeit(|| base.precompute_exponentiate_optimized(exponent));
+        // println!("result: {:?}", result);
+        // println!("result_optimized: {:?}", result_optimized);
+        assert_eq!(result, result_optimized);
     }
 }

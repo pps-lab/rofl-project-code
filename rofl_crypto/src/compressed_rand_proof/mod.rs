@@ -88,8 +88,8 @@ impl CompressedRandProof {
         transcript.commit_scalar(LABEL_RESPONSE_Z_M, &self.Z_m);
         transcript.commit_scalar(LABEL_RESPONSE_R, &self.Z_r);
 
-        let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
-        // let precomputation_table: Vec<Scalar> = challenge.precompute_exponentiate(c_vec.c_vec.len()+1);
+        // let precomputation_table: Vec<Scalar> = precompute_exponentiate(&challenge, c_vec.c_vec.len()+1);
+        let precomputation_table: Vec<Scalar> = challenge.precompute_exponentiate_optimized(c_vec.c_vec.len()+1);
 
         let dst_eg_pair: ElGamalPair = eg_gens.commit(self.Z_m, self.Z_r);
         // TODO: pow
@@ -234,9 +234,9 @@ mod tests {
         let eg_gens = ElGamalGens::default();
         let mut transcript = Transcript::new(b"test_serde");
         let mut rng = rand::thread_rng();
-        let n_proofs = 10000;
-        let m = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
-        let r = (0..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
+        let n_proofs = 32768;
+        let m = (1..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
+        let r = (1..n_proofs).map(|_| Scalar::random(&mut rng)).collect::<Vec<_>>();
         let randproof = CompressedRandProof::prove(&eg_gens, &mut transcript, m, r).unwrap();
         let randproof_ser = bincode::serialize(&randproof).unwrap();
         let randproof_des = bincode::deserialize(&randproof_ser).unwrap();
