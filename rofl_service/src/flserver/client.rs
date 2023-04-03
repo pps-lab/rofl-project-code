@@ -1,3 +1,4 @@
+
 use super::flservice::{model_parameters, server_model_data, train_request, train_response};
 use super::flservice::{
     Config, CryptoConfig, DataBlock, ModelConfig, ModelParameters, TrainRequest,
@@ -8,6 +9,7 @@ use super::{flservice::flservice_client::FlserviceClient, logs::TimeState};
 use crate::flserver::trainclient::FlTraining;
 use crate::flserver::util::DataBlockStorage;
 use curve25519_dalek_ng::scalar::Scalar;
+use futures::TryFutureExt;
 use log::info;
 use model_parameters::{ModelParametersMeta, ParamMessage};
 use prost::Message;
@@ -15,6 +17,8 @@ use rofl_crypto::pedersen_ops::zero_scalar_vec;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::Request;
+
+use crate::flserver::errors::ClientTrainerError;
 
 const CHAN_BUFFER_SIZE: usize = 100;
 const NUM_PARAM_BYTES_PER_PACKET: usize = 1 << 20;
@@ -71,6 +75,7 @@ pub struct FlServiceClient {
     client_id: i32,
     grpc: Box<FlserviceClient<tonic::transport::Channel>>,
     training_client: Box<FlTraining>,
+    trainer_port: i32,
 }
 
 impl FlServiceClient {
@@ -78,11 +83,13 @@ impl FlServiceClient {
         client_id: i32,
         channel: tonic::transport::Channel,
         training_client: Box<FlTraining>,
+        trainer_port: i32
     ) -> Self {
         FlServiceClient {
             client_id,
             grpc: Box::new(FlserviceClient::new(channel)),
             training_client,
+            trainer_port
         }
     }
 
@@ -94,9 +101,31 @@ impl FlServiceClient {
         model_id: i32,
     ) -> Option<PlainParams> {
         let model_config = get_model_config(conifg).unwrap();
+
+        // let shared_self = Arc::new(Mutex::new(self));
+        // let req = FutureRetry::new(
+        //     move || {
+        //         let mut locked_self = shared_self.lock().unwrap();
+        //         locked_self.training_client
+        //             .train_for_round(model_config.clone(), params.clone().into_vec(), round_id, model_id)
+        //     },
+        //     |e| {
+        //         println!("Error: {:?}", e);
+        //         return RetryPolicy::<ClientTrainerError>::WaitRetry(Duration::from_millis(5000))
+        //     },
+        // );
+        // let c = match req.await {
+        //     Ok((c, _)) => c,
+        //     Err((e, _)) => {
+        //         println!("Error: {:?}", e);
+        //         return None;
+        //     }
+        // };
+        // println!("Succeeded to do training after no_attempts {:?} attempts!", _no_attempts);
         let trained_params_opt = self
             .training_client
-            .train_for_round(model_config.clone(), params.into_vec(), round_id, model_id)
+            .train_for_round(model_config.clone(), params.into_vec(), round_id, model_id,
+                             self.trainer_port)
             .await;
         trained_params_opt.map(|trained_params| PlainParams {content: trained_params,})
     }

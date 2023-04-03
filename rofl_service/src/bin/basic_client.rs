@@ -30,7 +30,7 @@ async fn start_client(
             .unwrap_or_else(|_| panic!("Failed to connect to trainer at port {}", trainer_port));
         Box::new(FlTraining::Grpc(FlTrainClient::new(channel)))
     };
-    let mut client = FlServiceClient::new(client_id, channel, trainer);
+    let mut client = FlServiceClient::new(client_id, channel, trainer, trainer_port);
     client.train_model(model_id, verbose).await;
 }
 

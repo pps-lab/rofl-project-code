@@ -5,7 +5,7 @@
     <img src="https://github.com/pps-lab/fl-analysis/blob/master/documentation/ml-sec-square.png?raw=true" alt="Logo" width="80" height="80">  
   </a>
 
-<h2 align="center"><u>RoFL</u>: Attestable <u>Ro</u>bustness for <u>F</u>ederated <u>L</u>earning</h2>
+<h2 align="center"><u>RoFL</u>: <u>Ro</u>bustness of <u>F</u>ederated <u>L</u>earning</h2>
 </p>
 
 <!-- TABLE OF CONTENTS -->
@@ -156,7 +156,6 @@ cd ../rofl-project-code/rofl_train_client
 ```
 From the `rofl_train_client` directory, run the python service.
 ```
-cd rofl_train_client
 PYTHONPATH=$(pwd) python trainservice/service.py
 ```
 
