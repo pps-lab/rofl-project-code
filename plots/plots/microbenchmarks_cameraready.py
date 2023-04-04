@@ -14,7 +14,7 @@ from common import get_colorful_styles, output_dir
 
 def setup_plt():
 
-    fig_width_pt = 220  # Get this from LaTeX using \showthe
+    fig_width_pt = 240  # Get this from LaTeX using \showthe
     inches_per_pt = 1.0 / 72.27 * 2  # Convert pt to inches
     golden_mean = ((np.math.sqrt(5) - 1.0) / 2.0) * .8  # Aesthetic ratio
     fig_width = fig_width_pt * inches_per_pt  # width in inches
@@ -98,6 +98,7 @@ def build_df_mbench_computation():
     df2 = _build_df_mbench_computation(data_dir="./data/microbenchmarks/small", cmachine="clientsmall", run_server=False)
 
     df = df1.merge(df2)
+    # df = df1
 
     return df
 
@@ -250,82 +251,62 @@ def _build_df_mbench_computation(data_dir, cmachine, run_server):
     # Construct relevant metrics
 
     # client wellformedness
-    df[f"l2_{cmachine}_wellformed_ms"] = df["create_squareproof_ms_mean"] + df["create_compressedrandproof_ms_mean"]
-    df[f"l2opt_{cmachine}_wellformed_ms"] = df["create_squareproof_ms_mean"] + df["create_compressedrandproof_ms_mean"]
+    df[f"l2_{cmachine}_wellformed_ms"] = df["create_squarerandproof_ms_mean"]
+    df[f"l2opt_{cmachine}_wellformed_ms"] = df["create_squareproof_ms_mean"] + df["create_compressedrandproof_ms_mean"] # TODO: squareproof + compressedrandproof
     df[f"l8_{cmachine}_wellformed_ms"] = df["create_randproof_ms_mean"]
-    df[f"l8opt_{cmachine}_wellformed_ms"] = df["create_compressedrandproof_ms_mean"]
-    df[f"l8p_{cmachine}_wellformed_ms"] = df["create_compressedrandproof_ms_mean"]
-    df[f"l8popt_{cmachine}_wellformed_ms"] = df["create_compressedrandproof_ms_mean"]
+    df[f"l8p_{cmachine}_wellformed_ms"] = df["create_compressedrandproof_ms_mean"] # TODO: compressedrandproof
 
     df[f"l2_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_squarerandproof_ms_var"])
-    df[f"l2opt_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_squareproof_ms_var"] + df["create_compressedrandproof_ms_var"])
+    df[f"l2opt_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_squareproof_ms_var"] + df["create_compressedrandproof_ms_var"]) # TODO: squareproof + compressedrandproof
     df[f"l8_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_randproof_ms_var"])
-    df[f"l8opt_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_compressedrandproof_ms_var"])
-    df[f"l8p_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_compressedrandproof_ms_var"])
-    df[f"l8popt_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_compressedrandproof_ms_var"])
+    df[f"l8p_{cmachine}_wellformed_ms_std"] = np.sqrt(df["create_compressedrandproof_ms_var"]) # TODO: compressedrandproof
 
     # server wellformedness
     if run_server:
         df["l2_server_wellformed_ms"] = df["verify_squarerandproof_ms_mean"]
-        df["l2opt_server_wellformed_ms"] = df["verify_squareproof_ms_mean"] + df["verify_compressedrandproof_ms_mean"]
+        df["l2opt_server_wellformed_ms"] = df["verify_squareproof_ms_mean"] + df["verify_compressedrandproof_ms_mean"] # TODO: squareproof + compressedrandproof
         df["l8_server_wellformed_ms"] = df["verify_randproof_ms_mean"]
-        df["l8opt_server_wellformed_ms"] = df["verify_compressedrandproof_ms_mean"]
-        df["l8p_server_wellformed_ms"] = df["verify_compressedrandproof_ms_mean"]
-        df["l8popt_server_wellformed_ms"] = df["verify_compressedrandproof_ms_mean"]
+        df["l8p_server_wellformed_ms"] = df["verify_compressedrandproof_ms_mean"] # TODO: compressedrandproof
 
         df["l2_server_wellformed_ms_std"] = np.sqrt(df["verify_squarerandproof_ms_var"])
         df["l2opt_server_wellformed_ms_std"] = np.sqrt(df["verify_squareproof_ms_var"] + df["verify_compressedrandproof_ms_var"])
         df["l8_server_wellformed_ms_std"] = np.sqrt(df["verify_randproof_ms_var"])
-        df["l8opt_server_wellformed_ms_std"] = np.sqrt(df["verify_randproof_ms_var"])
         df["l8p_server_wellformed_ms_std"] = np.sqrt(df["verify_randproof_ms_var"])
-        df["l8popt_server_wellformed_ms_std"] = np.sqrt(df["verify_randproof_ms_var"])
 
     # client range
     df[f"l2_{cmachine}_range_ms"] = df["create_rangeproofl2_ms_mean"] + df["create_rangeproof_ms_mean"]
     df[f"l2opt_{cmachine}_range_ms"] = df["create_rangeproofl2_ms_mean"] + df["create_rangeproof_ms_mean"]
     df[f"l8_{cmachine}_range_ms"] = df["create_rangeproof_ms_mean"]
-    df[f"l8opt_{cmachine}_range_ms"] = df["create_rangeproof_ms_mean"]
     df[f"l8p_{cmachine}_range_ms"] = df[df["n_weights"] == 8192]["create_rangeproof_ms_mean"].values[0]
-    df[f"l8popt_{cmachine}_range_ms"] = df[df["n_weights"] == 8192]["create_rangeproof_ms_mean"].values[0]
 
     df[f"l2_{cmachine}_range_ms_std"] = np.sqrt(df["create_rangeproofl2_ms_var"] + df["create_rangeproof_ms_var"])
     df[f"l2opt_{cmachine}_range_ms_std"] = np.sqrt(df["create_rangeproofl2_ms_var"] + df["create_rangeproof_ms_var"])
     df[f"l8_{cmachine}_range_ms_std"] = np.sqrt(df["create_rangeproof_ms_var"])
-    df[f"l8opt_{cmachine}_range_ms_std"] = np.sqrt(df["create_rangeproof_ms_var"])
     df[f"l8p_{cmachine}_range_ms_std"] = np.sqrt(df[df["n_weights"] == 8192]["create_rangeproof_ms_var"].values[0])
-    df[f"l8popt_{cmachine}_range_ms_std"] = np.sqrt(df[df["n_weights"] == 8192]["create_rangeproof_ms_var"].values[0])
 
     # server range
     if run_server:
         df["l2_server_range_ms"] = df["verify_rangeproofl2_ms_mean"] + df["verify_rangeproof_ms_mean"]
         df["l2opt_server_range_ms"] = df["verify_rangeproofl2_ms_mean"] + df["verify_rangeproof_ms_mean"]
         df["l8_server_range_ms"] = df["verify_rangeproof_ms_mean"]
-        df["l8opt_server_range_ms"] = df["verify_rangeproof_ms_mean"]
         df["l8p_server_range_ms"] = df[df["n_weights"] == 8192]["verify_rangeproof_ms_mean"].values[0]
-        df["l8popt_server_range_ms"] = df[df["n_weights"] == 8192]["verify_rangeproof_ms_mean"].values[0]
 
         df["l2_server_range_ms_std"] = np.sqrt(df["verify_rangeproofl2_ms_var"] + df["verify_rangeproof_ms_var"])
         df["l2opt_server_range_ms_std"] = np.sqrt(df["verify_rangeproofl2_ms_var"] + df["verify_rangeproof_ms_var"])
         df["l8_server_range_ms_std"] = np.sqrt(df["verify_rangeproof_ms_var"])
-        df["l8opt_server_range_ms_std"] = np.sqrt(df["verify_rangeproof_ms_var"])
         df["l8p_server_range_ms_std"] = np.sqrt(df[df["n_weights"] == 8192]["verify_rangeproof_ms_var"].values[0])
-        df["l8popt_server_range_ms_std"] = np.sqrt(df[df["n_weights"] == 8192]["verify_rangeproof_ms_var"].values[0])
 
     # el gamal aggregation
     if run_server:
         df["l2_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
         df["l2opt_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
         df["l8_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
-        df["l8opt_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
         df["l8p_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
-        df["l8popt_server_caggregation_ms"] = df["elgamal_add_ms_mean"]
 
         df["l2_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
         df["l2opt_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
         df["l8_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
-        df["l8opt_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
         df["l8p_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
-        df["l8popt_server_caggregation_ms_std"] = np.sqrt(df["elgamal_add_ms_var"])
 
     # log2 reconstruction
     if run_server:
@@ -338,12 +319,7 @@ def _build_df_mbench_computation(data_dir, cmachine, run_server):
 
     # project to new columns
     cols = ["n_weights", "fixed_point_repr"]
-    new_cols = [col for col in df.columns.values if col.startswith("l2_") or
-                col.startswith("l2opt_") or
-                col.startswith("l8_") or
-                col.startswith("l8p_") or
-                col.startswith("l8popt_") or
-                col.startswith("l8opt")]
+    new_cols = [col for col in df.columns.values if col.startswith("l2_") or col.startswith("l2opt_") or col.startswith("l8_") or col.startswith("l8p_")]
     cols += new_cols
     if run_server:
         cols += ["server_log2reconstruct_ms", "server_log2reconstruct_ms_std"]
@@ -351,6 +327,7 @@ def _build_df_mbench_computation(data_dir, cmachine, run_server):
 
 
     return df
+
 
 def format_plot_computation(ax, ind, width, group_labels, ytick_step=50):
     ##########################
@@ -380,14 +357,19 @@ def format_plot_computation(ax, ind, width, group_labels, ytick_step=50):
     ##########################
     # X - Axis Format
     ##########################
+    offsets = np.arange(0, width * 4, width)
+    offsets = offsets - (width * 4 / 2)
+    xticks = []
+    for i in range(offsets.shape[0]):
+        xticks = np.append(xticks, ind + offsets[i])
 
-    # add 1st axis for norm (l2, l8, l8p)
-    xticks = np.append(ind, ind-width, axis=0)
-    xticks = np.append(xticks, ind+width, axis=0)
+    # # add 1st axis for norm (l2, l8, l8p)
+    # xticks = np.append(ind, ind-width, axis=0)
+    # xticks = np.append(xticks, ind+width, axis=0)
     xticks = np.sort(xticks)
-    labels = 4 * ["$L_2$", "$L_{\infty}$", "$L_{\infty}^{(p)}$"]
+    labels = 4 * ["$L_2^{}$", "$L_2^{(o)}$", "$L^{}_{\infty}$", "$L_{\infty}^{(o)}$"]
     ax.set_xticks(xticks)
-    ax.set_xticklabels(labels, fontsize=16, rotation=345)
+    ax.set_xticklabels(labels, fontsize=14, rotation=345)
 
 
     # add 2nd axis for number of parameters
@@ -418,13 +400,15 @@ def build_fig_mbench_computation_server_perclient_zkp(df, name="mbench_computati
         ##########################
 
         # build ind, width
-        ind = np.arange(0, len(df.index)) * 1.2
+        ind = np.arange(0, len(df.index)) * 1.35
         width = 0.3  # the width of the bars
+        offsets = np.arange(0, width * 4, width)
+        offsets = offsets - (width * 4 / 2)
 
 
         # build the barcharts
 
-        for offset, norm in zip([-width, 0, width], ["l2opt", "l8opt", "l8popt"]):
+        for offset, norm in zip(offsets, ["l2", "l2opt", "l8", "l8p"]):
 
             ax.bar(ind +offset, df[f"{norm}_server_range_ms"] / 1000, width,
                    bottom=(df[f"{norm}_server_wellformed_ms"] + df[f"{norm}_server_caggregation_ms"]) / 1000, label=range_config["server_label"],
@@ -465,13 +449,15 @@ def build_fig_mbench_computation_client_zkp(df, clientsuffix="small"):
         ##########################
 
         # build ind, width
-        ind = np.arange(0, len(df.index)) * 1.2
+        ind = np.arange(0, len(df.index)) * 1.35
         width = 0.3  # the width of the bars
+        offsets = np.arange(0, width * 4, width)
+        offsets = offsets - (width * 4 / 2)
 
 
         # build the barcharts
 
-        for offset, norm in zip([-width, 0, width], ["l2opt", "l8opt", "l8popt"]):
+        for offset, norm in zip(offsets, ["l2", "l2opt", "l8", "l8p"]):
 
             ax.bar(ind +offset, df[f"{norm}_{machine}_range_ms"] / 1000, width,
                    bottom=df[f"{norm}_{machine}_wellformed_ms"] / 1000, label=range_config["client_label"],
@@ -489,7 +475,6 @@ def build_fig_mbench_computation_client_zkp(df, clientsuffix="small"):
 
         # format the computation barchart
         format_plot_computation(ax, ind, width, df["n_weights"], ytick_step=ytick_step)
-
 
         pdf.savefig(bbox_inches='tight', pad_inches=0)
         plt.close()

@@ -61,14 +61,14 @@ experiments: # in the experiments object you have a list for the different exper
   server:
     intrinsic_dimension: 12000
   crypto:
-    enc_type: l2
+    enc_type: l2Compressed
     fp_bits: 32
     fp_frac: 7
   e2e:
     speculative_execution: true
 
 - crypto:
-    enc_type: Range
+    enc_type: RangeCompressed
     check_percentage: 0.0576 # 0-100 for Range, # 3569
   e2e:
     speculative_execution: true
@@ -83,13 +83,13 @@ experiments: # in the experiments object you have a list for the different exper
 
 
 - crypto:
-    enc_type: l2
+    enc_type: l2Compressed
     fp_bits: 32
   e2e:
     speculative_execution: false
 
 - crypto:
-    enc_type: Range
+    enc_type: RangeCompressed
     check_percentage: 1.0
   e2e:
     speculative_execution: false

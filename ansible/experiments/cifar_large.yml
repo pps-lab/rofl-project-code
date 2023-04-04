@@ -56,6 +56,7 @@ experiments: # in the experiments object you have a list for the different exper
     model_name: resnet18_intrinsic
     num_params: 40000 # different from int dim because of batchnorm ... ?
     model_init_path: "/home/ubuntu/rofl-project-code/models/resnet18_intrinsic_40k.txt"
+    optimized_training: False
     quantization:
       type: probabilistic
       bits: 8
@@ -86,6 +87,13 @@ experiments: # in the experiments object you have a list for the different exper
   e2e:
     speculative_execution: true
 
+- client:
+    quantization: ~
+  crypto:
+    enc_type: Plain
+  e2e:
+    speculative_execution: false
+
 - crypto: # extrapolate
     enc_type: l2Compressed
     fp_bits: 32
@@ -111,10 +119,3 @@ experiments: # in the experiments object you have a list for the different exper
     speculative_execution: false
   server:
     num_rounds: 5
-
-- client:
-    quantization: ~
-  crypto:
-    enc_type: Plain
-  e2e:
-    speculative_execution: false
