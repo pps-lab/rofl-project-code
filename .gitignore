@@ -252,3 +252,5 @@ ansible/.boto
 
 benchlog/
 .vscode/
+
+*.icloud
