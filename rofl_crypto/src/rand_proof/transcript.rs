@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use curve25519_dalek::ristretto::CompressedRistretto;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::CompressedRistretto;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 
 use super::super::square_rand_proof::pedersen::PedersenCommitment;

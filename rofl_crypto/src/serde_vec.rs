@@ -1,7 +1,7 @@
 use crate::rand_proof::{ElGamalPair, RandProof};
 use bulletproofs::RangeProof;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::scalar::Scalar;
 // Scalars serialized into bincode have constant size
 pub const SCALAR_BINCODE_SIZE: usize = 40;
 pub const RP_BINCODE_SIZE: usize = 40;

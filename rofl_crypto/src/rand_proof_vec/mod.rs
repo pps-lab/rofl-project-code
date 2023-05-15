@@ -1,5 +1,5 @@
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
@@ -121,8 +121,8 @@ pub fn verify_randproof_vec(
 mod tests {
     use super::*;
     use crate::pedersen_ops::rnd_scalar_vec;
-    use curve25519_dalek::ristretto::RistrettoPoint;
-    use curve25519_dalek::scalar::Scalar;
+    use curve25519_dalek_ng::ristretto::RistrettoPoint;
+    use curve25519_dalek_ng::scalar::Scalar;
 
     #[test]
     fn test_randproof_roundtrip() {

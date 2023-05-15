@@ -275,7 +275,7 @@
 
 - name: Sleep for X seconds for server and trainers to launch
   wait_for:
-    timeout: 30 # 30
+    timeout: 60 # 30
   delegate_to: localhost
 
 - name: Start E2E Client

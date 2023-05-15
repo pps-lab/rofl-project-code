@@ -13,9 +13,9 @@ use rand::Rng;
 extern crate chrono;
 use chrono::prelude::*;
 
-extern crate curve25519_dalek;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+extern crate curve25519_dalek_ng;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 extern crate bulletproofs;
 use bulletproofs::RangeProof;
 
@@ -31,17 +31,13 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 5] = [8192, 32768, 131072, 262144, 524288];
-// static DIM: [usize; 4] = [25000, 100000, 250000, 500000];
-static RANGE: [usize; 1] = [8];
-static N_PARTITION: usize = 4;
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM_RANGEPROOF, num_samples, RANGE, N_PARTITION};
 
 fn bench_rangeproof_fn(bench: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let range: Vec<&usize> = RANGE.into_iter().filter(|x| **x <= N_BITS).collect();
-    for (r, d) in iproduct!(range, &DIM) {
+    for (r, d) in iproduct!(range, &DIM_RANGEPROOF) {
         let (fp_min, fp_max) = get_clip_bounds(*r);
         let createproof_label: String = createproof_label(*d, *r);
         let mut createproof_file = create_bench_file(&createproof_label);
@@ -50,23 +46,23 @@ fn bench_rangeproof_fn(bench: &mut Bencher) {
         let mut verifyproof_file = create_bench_file(&verifyproof_label);
 
         let x_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
         println!("warming up...");
         let value_vec: Vec<f32> = (0..*d)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range(fp_min..fp_max))
             .collect();
         let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
         let (rangeproof_vec, commit_vec_vec): (Vec<RangeProof>, Vec<RistrettoPoint>) =
             create_rangeproof(&value_vec, &blinding_vec, black_box(*r), N_PARTITION).unwrap();
-        verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+        black_box(verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap());
         println!("sampling {} / dim: {} / range: {}", num_samples, d, r);
 
         for i in 0..num_samples {
             let value_vec: Vec<f32> = (0..*d)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range(fp_min..fp_max))
                 .collect();
             let blinding_vec: Vec<Scalar> = rnd_scalar_vec(*d);
 
@@ -80,7 +76,7 @@ fn bench_rangeproof_fn(bench: &mut Bencher) {
             createproof_file.write_all(b"\n");
             createproof_file.flush();
             let verify_now = Instant::now();
-            verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap();
+            black_box(verify_rangeproof(&rangeproof_vec, &commit_vec_vec, black_box(*r)).unwrap());
             let verify_elapsed = verify_now.elapsed().as_millis();
             println!("verifyproof elapsed: {}", verify_elapsed.to_string());
             verifyproof_file.write_all(verify_elapsed.to_string().as_bytes());

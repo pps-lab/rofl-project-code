@@ -1,7 +1,7 @@
 use super::super::rand_proof::ElGamalPair;
 use crate::square_rand_proof::errors::SquareRandProofCommitmentsError;
 use crate::square_rand_proof::util::read32;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
 
 use serde::de::Visitor;
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};

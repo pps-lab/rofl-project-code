@@ -1,16 +1,17 @@
 #![allow(non_snake_case)]
 
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_COMPRESSED;
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::traits::MultiscalarMul;
+use curve25519_dalek_ng::constants::RISTRETTO_BASEPOINT_COMPRESSED;
+use curve25519_dalek_ng::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::scalar::Scalar;
+use curve25519_dalek_ng::traits::{Identity, MultiscalarMul};
 
 use bulletproofs::PedersenGens;
 
 use super::util::read32;
 use core::fmt::Debug;
 use core::ops::{Add, AddAssign, Mul};
+use std::iter::Sum;
 use serde::de::Visitor;
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use sha3::Sha3_512;
@@ -83,6 +84,13 @@ impl ElGamalPair {
         ElGamalPair {
             L: RISTRETTO_BASEPOINT_POINT,
             R: RISTRETTO_BASEPOINT_POINT,
+        }
+    }
+
+    pub fn identity() -> Self {
+        ElGamalPair {
+            L: RistrettoPoint::identity(),
+            R: RistrettoPoint::identity(),
         }
     }
 
@@ -163,6 +171,18 @@ impl<'a, 'b> Mul<&'b ElGamalPair> for &'a Scalar {
             L: self * eg_pair.L,
             R: self * eg_pair.R,
         }
+    }
+}
+
+// Implement Sum trait for ElGamalPair
+impl<'a, 'b> Sum<&'b ElGamalPair> for ElGamalPair {
+    fn sum<I: Iterator<Item = &'b ElGamalPair>>(iter: I) -> ElGamalPair {
+        iter.fold(ElGamalPair::identity(), |acc, x| acc + *x)
+    }
+}
+impl Sum<ElGamalPair> for ElGamalPair {
+    fn sum<I: Iterator<Item = ElGamalPair>>(iter: I) -> ElGamalPair {
+        iter.fold(ElGamalPair::identity(), |acc, x| acc + x)
     }
 }
 

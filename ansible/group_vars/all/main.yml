@@ -50,8 +50,21 @@ micro_client:
   ec2_volume_size: 64
   instance_tag: rofl_micro_client
   host_group: tag_Name_rofl_micro_client # instance tag
-  avx_target_cpu: skylake # skylake for non-512 version
+  avx_target_cpu: broadwell # skylake for non-512 version
 
+micro_server:
+#  instance_type: c5d.9xlarge
+  instance_type: c5d.4xlarge
+  #  instance_type: t2.large
+  ec2_image: ami-0093cac2bf998a669
+  ec2_volume_snapshot: snap-0de0ff3947a9b6577
+  ec2_volume_size: 64
+  instance_tag: rofl_micro_server
+  host_group: tag_Name_rofl_micro_server # instance tag
+  avx_target_cpu: skylake-avx512 # skylake for non-512 version
+  #  avx_target_cpu: skylake # skylake for non-512 version
+
+  port: 50051
 
 e2e_client:
   instance_type: c5d.9xlarge
@@ -68,11 +81,14 @@ e2e_client:
 
 e2e_server:
   instance_type: c5d.9xlarge
-#  instance_type: t2.large
+#  instance_type: c5d.4xlarge
+  #  instance_type: t2.large
   ec2_image: ami-0093cac2bf998a669
   ec2_volume_snapshot: snap-0de0ff3947a9b6577
   ec2_volume_size: 64
   instance_tag: rofl_server
+#  instance_tag: rofl_micro_server
+#  host_group: tag_Name_rofl_micro_server # instance tag
   host_group: tag_Name_rofl_server # instance tag
   avx_target_cpu: skylake-avx512 # skylake for non-512 version
 #  avx_target_cpu: skylake # skylake for non-512 version

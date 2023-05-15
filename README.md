@@ -5,7 +5,7 @@
     <img src="https://github.com/pps-lab/fl-analysis/blob/master/documentation/ml-sec-square.png?raw=true" alt="Logo" width="80" height="80">  
   </a>
 
-<h2 align="center"><u>RoFL</u>: Attestable <u>Ro</u>bustness for <u>F</u>ederated <u>L</u>earning</h2>
+<h2 align="center"><u>RoFL</u>: <u>Ro</u>bustness of <u>F</u>ederated <u>L</u>earning</h2>
 </p>
 
 <!-- TABLE OF CONTENTS -->
@@ -79,7 +79,7 @@ Follow these steps to run the implementation on your local machine.
 ### Requirements
 Python 3.7 & Rust version:
 ```
-Min: 1.52.0-nightly 
+Min: 1.64.0-nightly (2022-07-24)
 ```
 
 ### Installation
@@ -156,7 +156,6 @@ cd ../rofl-project-code/rofl_train_client
 ```
 From the `rofl_train_client` directory, run the python service.
 ```
-cd rofl_train_client
 PYTHONPATH=$(pwd) python trainservice/service.py
 ```
 
@@ -215,6 +214,26 @@ t5: model sent to server
 Format of a benchmark log line:
 <Round ID>, <t2 - t1>, <t3 - t2>, <t4 - t3>, <t5 - t4>, <total duration>, <bytes received>,  <bytes sent>
 ```
+
+## Microbenchmarks
+We provide cargo bench benchmarks for the following individual components:
+
+| Bench                     | Purpose                                                                                                    |
+|---------------------------|------------------------------------------------------------------------------------------------------------|
+| **Well-formedness**       |                                                                                                            |
+| randproof_bench           | Unoptimized per-parameter randomness proof                                                                 |
+| squarerandproof_bench     | Unoptimized per-parameter randomness + proof of square relation proof (in a single Sigma protocol)         |
+| compressedrandproof_Bench | Compressed single randomness proof                                                                         |
+| squareproof_bench         | Per-parameter proof of square relation (to be used with the compressed randomness proof in the L2 norm)    |
+| **Range proofs**          |                                                                                                            |
+| rangeproof_bench          | Per-parameter range proof (partitioned in 4 chunks)                                                        |
+| rangeproof_part36_bench   | Per-parameter range proof (partitioned in 32 chunks to measure optimized verification speed on the server) |
+| l2rangeproof_bench        | Single range proof for the sum of squared commitments                                                      |
+| **Server-side operations** |                                                                                                            |
+| dlog_bench                | Measures the time to decrypt using discrete log                                                            |
+| addelgamal_bench          | Measures the time to combine the vector ElGamal commitments of the clients                                 |
+
+Benchmarks that are prefixed with `create_` only perform the creation of the proofs to be measured on a resource-constrained client.
 
 <!-- LICENSE -->
 ## License

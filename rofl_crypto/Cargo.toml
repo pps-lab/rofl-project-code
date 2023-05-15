@@ -1,7 +1,7 @@
 [package]
 name = "rofl_crypto"
 version = "0.1.0"
-authors = ["hiddelycklama <lhidde@ethz.ch>", "mlei <mathiaschinna@gmail.com>"]
+authors = ["Hidde Lycklama <hidde.lycklama@inf.ethz.ch>", "mlei <mathiaschinna@gmail.com>"]
 edition = "2018"
 
 
@@ -10,11 +10,11 @@ name = "rofl_crypto"
 crate-type = ["rlib", "dylib"]
 
 [dependencies]
-curve25519-dalek = {  package = "curve25519-dalek-ng", version = "4", default-features = false, features = ["std", "avx2_backend"], optional = false }
+curve25519-dalek-ng = { version = "4.1", default-features = false, features = ["std", "avx2_backend"], optional = false }
 
 proc-macro2 = { version = "1.0.28" }
 #NOTE mlei: cannot be higher otherwise wont compile
-packed_simd = { version = "0.3.4", package = "packed_simd_2" }
+packed_simd = { version = "0.3.8", package = "packed_simd_2" }
 
 libc = "0.2.48"
 bulletproofs="4.0.0"
@@ -37,11 +37,6 @@ chrono = "0.4.6"
 bencher = "0.1.5"
 reduce = "0.1.2"
 
-# Temporary until this package is fixed for Nightly
-#tinytemplate = { git = "https://github.com/botika/TinyTemplate", branch = "master" }
-#[patch.crates-io]
-#tinytemplate = { git = "https://github.com/botika/TinyTemplate", branch = "master" }
-
 
 [features]
 fp8 = []
@@ -63,7 +58,7 @@ frac10 = []
 frac11 = []
 frac12 = []
 
-avx2_backend = ["curve25519-dalek/avx2_backend"]
+avx2_backend = ["curve25519-dalek-ng/avx2_backend"]
 
 [profile.dev]
 opt-level = 2
@@ -84,6 +79,10 @@ name = "squarerandproof_bench"
 harness = false
 
 [[bench]]
+name = "squareproof_bench"
+harness = false
+
+[[bench]]
 name = "l2rangeproof_bench"
 harness = false
 
@@ -92,23 +91,7 @@ name = "dlog_bench"
 harness = false
 
 [[bench]]
-name = "fp_bench"
-harness = false
-
-[[bench]]
 name = "addelgamal_bench"
-harness = false
-
-[[bench]]
-name = "criterion_dlog_bench"
-harness = false
-
-[[bench]]
-name = "criterion_rangeproof_bench"
-harness = false
-
-[[bench]]
-name = "criterion_randproof_bench"
 harness = false
 
 [[bench]]
@@ -124,13 +107,21 @@ name = "create_squarerandproof_bench"
 harness = false
 
 [[bench]]
-name = "rangeproof_verify_bench"
+name = "create_squareproof_bench"
 harness = false
 
 [[bench]]
-name = "benchmark_rangeproof_bench"
+name = "compressedrandproof_bench"
 harness = false
 
 [[bench]]
-name = "benchmark_randproof_bench"
+name = "create_compressedrandproof_bench"
 harness = false
+
+[[bench]]
+name = "rangeproof_part36_bench"
+harness = false
+
+[[bin]]
+name = "debug"
+path = "src/bin/debug.rs"

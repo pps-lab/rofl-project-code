@@ -13,9 +13,9 @@ use rand::Rng;
 extern crate chrono;
 use chrono::prelude::*;
 
-extern crate curve25519_dalek;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+extern crate curve25519_dalek_ng;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 
 use rofl_crypto::bsgs32::*;
 use rofl_crypto::conversion32::*;
@@ -29,8 +29,8 @@ use std::time::{Duration, Instant};
 
 use std::thread::sleep;
 
-static DIM: [usize; 4] = [32768, 131072, 262144, 524288];
-static num_samples: usize = 4;
+use rofl_crypto::bench_constants::{DIM, num_samples};
+
 
 fn bench_addelgamal_fn(bench: &mut Bencher) {
     for d in DIM.iter() {
@@ -54,7 +54,7 @@ fn bench_addelgamal_fn(bench: &mut Bencher) {
                 .collect();
             println!("sample nr: {}", i);
             let now = Instant::now();
-            add_rp_vec_vec(&rnd_rp_vec_vec);
+            black_box(add_rp_vec_vec(&rnd_rp_vec_vec));
             let elapsed = now.elapsed().as_millis();
             println!("elapsed: {}", elapsed.to_string());
             bench_file.write_all(elapsed.to_string().as_bytes());

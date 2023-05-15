@@ -1,8 +1,8 @@
 use bulletproofs::ProofError;
 use bulletproofs::RangeProof;
 use bulletproofs::{BulletproofGens, PedersenGens};
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
@@ -292,6 +292,7 @@ mod tests {
     use crate::square_rand_proof_vec;
     use rand::Rng;
     use std::cmp;
+    use std::ops::Range;
 
     #[test]
     fn test_next_pow2() {
@@ -398,7 +399,7 @@ mod tests {
         println!("{} {} {}", prove_range, fp_min, fp_max);
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(fp_min..fp_max))
                 .collect(),
             prove_range,
         );
@@ -443,7 +444,7 @@ mod tests {
         println!("float range {:?}", float_range);
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(-float_range, float_range))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(-float_range..float_range))
                 .collect(),
             prove_range,
         );

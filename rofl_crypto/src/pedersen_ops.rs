@@ -1,6 +1,6 @@
 use bulletproofs::PedersenGens;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 use rayon::prelude::*;
 use std::ops::Add;
 
@@ -128,6 +128,7 @@ pub fn rnd_scalar_vec(len: usize) -> Vec<Scalar> {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Range;
     use super::*;
     use crate::conversion32::*;
     use crate::fp::{Fix, N_BITS};
@@ -284,7 +285,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let (fp_min, fp_max) = get_clip_bounds(N_BITS);
         let x_vec: Vec<f32> = (0..n_values)
-            .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+            .map(|_| rng.gen_range::<f32, Range<f32>>(fp_min..fp_max))
             .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
@@ -299,7 +300,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let max: f32 = Fix::max_value().to_float::<f32>() / (scale as f32);
         let min = -max;
-        let rnd_f32_vec: Vec<f32> = (0..len).map(|_| rng.gen_range(min, max)).collect();
+        let rnd_f32_vec: Vec<f32> = (0..len).map(|_| rng.gen_range(min..max)).collect();
         let rnd_scalar_vec: Vec<Scalar> = f32_to_scalar_vec(&rnd_f32_vec);
         rnd_scalar_vec
     }

@@ -1,8 +1,8 @@
 use bulletproofs::ProofError;
 use bulletproofs::RangeProof;
 use bulletproofs::{BulletproofGens, PedersenGens};
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::ristretto::{CompressedRistretto, RistrettoPoint};
+use curve25519_dalek_ng::scalar::Scalar;
 use merlin::Transcript;
 use rayon::prelude::*;
 
@@ -57,16 +57,21 @@ pub fn create_rangeproof(
         .chunks(chunk_size)
         .map(|x| x.to_vec())
         .collect();
+
     let blinding_fp_vec_chunks: Vec<Vec<Scalar>> = blinding_vec_ext
         .chunks(chunk_size)
         .map(|x| x.to_vec())
         .collect();
+
     let proof_args: Vec<(&Vec<u64>, &Vec<Scalar>)> = value_fp_vec_chunks
         .iter()
         .zip(&blinding_fp_vec_chunks)
         .collect();
 
     let pc_gens = PedersenGens::default();
+    // println!("Generaing BPs");
+    // let bp_gens = BulletproofGens::new(prove_range, chunk_size);
+    // println!("Generaing BPs done");
     let res_vec: Vec<Result<(RangeProof, Vec<CompressedRistretto>), ProofError>> = proof_args
         .par_iter()
         .map(|(v, b)| create_rangeproof_helper(v, b, prove_range, &pc_gens))
@@ -74,6 +79,7 @@ pub fn create_rangeproof(
 
     // bundle up results
     let mut res_range_proof_vec: Vec<RangeProof> = Vec::with_capacity(n_chunks);
+
     let mut res_commit_vec: Vec<CompressedRistretto> =
         Vec::with_capacity(value_fp_vec_shifted_clipped_ext.len());
     for r in res_vec {
@@ -115,8 +121,10 @@ fn create_rangeproof_helper(
     prove_range: usize,
     pc_gens: &PedersenGens,
 ) -> Result<(RangeProof, Vec<CompressedRistretto>), ProofError> {
-    let bp_gens = BulletproofGens::new(64, value_vec.len());
     let mut transcript = Transcript::new(b"RangeProof");
+    // println!("Generaing BPs");
+    let bp_gens = BulletproofGens::new(prove_range, value_vec.len());
+    // println!("Generaing BPs done");
     match RangeProof::prove_multiple(
         &bp_gens,
         &pc_gens,
@@ -188,9 +196,9 @@ pub fn verify_rangeproof_helper(
     range_exp: usize,
     pc_gens: &PedersenGens,
 ) -> Result<bool, ProofError> {
-    let bp_gens = BulletproofGens::new(64, commit_vec.len());
     let verify_range: usize = range_exp;
     let mut transcript = Transcript::new(b"RangeProof");
+    let bp_gens = BulletproofGens::new(range_exp, commit_vec.len());
 
     match range_proof.verify_multiple(
         &bp_gens,
@@ -246,6 +254,7 @@ mod tests {
     use crate::range_proof_vec::clip_f32_to_range_vec;
     use rand::Rng;
     use std::cmp;
+    use std::ops::Range;
 
     #[test]
     fn test_next_pow2() {
@@ -294,7 +303,7 @@ mod tests {
 
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(fp_min, fp_max))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(fp_min..fp_max))
                 .collect(),
             prove_range,
         );
@@ -335,7 +344,7 @@ mod tests {
             Fix::from_bits(((1u128 << prove_range) - 1u128) as URawFix).to_float();
         let value_vec: Vec<f32> = clip_f32_to_range_vec(
             &(0..n_values)
-                .map(|_| rng.gen_range::<f32>(-float_range, float_range))
+                .map(|_| rng.gen_range::<f32, Range<f32>>(-float_range..float_range))
                 .collect(),
             prove_range,
         );

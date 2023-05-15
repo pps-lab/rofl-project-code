@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::scalar::Scalar;
 
 use hashbrown::HashMap;
 
@@ -75,6 +75,7 @@ impl BSGSTable {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Range;
     use super::*;
     use crate::conversion32::f32_to_scalar_vec;
     use crate::fp::Fix;
@@ -88,7 +89,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let x_vec: Vec<f32> = (0..n_values)
-            .map(|_| rng.gen_range::<f32>(0.0, Fix::max_value().to_float::<f32>()))
+            .map(|_| rng.gen_range::<f32, Range<f32>>(0.0..(Fix::max_value().to_float::<f32>())))
             .collect();
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);
         let x_vec_enc: Vec<RistrettoPoint> = commit_no_blinding_vec(&x_vec_scalar);
@@ -108,7 +109,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let x_vec: Vec<f32> = (0..n_values)
-            .map(|_| rng.gen_range::<f32>(-Fix::max_value().to_float::<f32>(), 0.0))
+            .map(|_| rng.gen_range::<f32, Range<f32>>(-Fix::max_value().to_float::<f32>()..0.0))
             .collect();
         //let x_vec: Vec<f32> = vec![Fix::max_value().to_float::<f32>()];
         let x_vec_scalar: Vec<Scalar> = f32_to_scalar_vec(&x_vec);

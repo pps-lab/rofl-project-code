@@ -5,9 +5,9 @@ use std::ptr;
 use std::slice;
 
 use bulletproofs::RangeProof;
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek_ng::ristretto::RistrettoPoint;
 
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek_ng::scalar::Scalar;
 
 use crate::conversion32::*;
 use crate::l2_range_proof_vec;

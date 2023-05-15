@@ -50,50 +50,50 @@ base_experiment: # the base config object
 
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
 
-- client: # plain
-    quantization: ~
-  crypto:
-    enc_type: Plain
-  e2e:
-    speculative_execution: false
+  - client: # l2, optimized
+      model_name: dev_intrinsic
+      num_params: 5000
+      model_init_path: "/home/ubuntu/rofl-project-code/models/mnist_dev_intrinsic_5k.txt"
+      quantization:
+        type: probabilistic
+        bits: 8
+        frac: 7
+      model_weight_regularization: 0.01
+      benign_training:
+        learning_rate: 0.1
+        decay:
+          type: boundaries
+          decay_boundaries: [ 13000 ]
+          decay_values: [ 1.0, 0.1 ]
+    server:
+      intrinsic_dimension: 5000
+    crypto:
+      enc_type: l2Compressed
+      fp_bits: 32
+      fp_frac: 7
+    e2e:
+      speculative_execution: true
 
-- client: # l2, optimized
-    model_name: dev_intrinsic
-    num_params: 5000
-    model_init_path: "/home/ubuntu/rofl-project-code/models/mnist_dev_intrinsic_5k.txt"
-    quantization:
-      type: probabilistic
-      bits: 8
-      frac: 7
-    model_weight_regularization: 0.01
-    benign_training:
-      learning_rate: 0.1
-      decay:
-        type: boundaries
-        decay_boundaries: [ 13000 ]
-        decay_values: [ 1.0, 0.1 ]
-  server:
-    intrinsic_dimension: 5000
-  crypto:
-    enc_type: l2
-    fp_bits: 32
-    fp_frac: 7
-  e2e:
-    speculative_execution: true
+  - crypto: # l2, unoptimized
+      enc_type: l2Compressed
+      fp_bits: 32
+    e2e:
+      speculative_execution: false
 
-- crypto: # l2, unoptimized
-    enc_type: l2
-    fp_bits: 32
-  e2e:
-    speculative_execution: false
+  - crypto: # linf, optimized
+      enc_type: RangeCompressed
+      check_percentage: 0.176 # 0-100 for Range, # 3370
+    e2e:
+      speculative_execution: true
+  - crypto: # linf, unoptimized
+      enc_type: RangeCompressed
+      check_percentage: 1.0
+    e2e:
+      speculative_execution: false
 
-- crypto: # linf, optimized
-    enc_type: Range
-    check_percentage: 0.176 # 0-100 for Range, # 3370
-  e2e:
-    speculative_execution: true
-- crypto: # linf, unoptimized
-    enc_type: Range
-    check_percentage: 1.0
-  e2e:
-    speculative_execution: false
+  - client: # plain
+      quantization: ~
+    crypto:
+      enc_type: Plain
+    e2e:
+      speculative_execution: false

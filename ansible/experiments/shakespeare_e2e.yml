@@ -19,7 +19,7 @@ base_experiment: # the base config object
       num_epochs: 1
       batch_size: 64
       optimizer: SGD
-      learning_rate: 0.3
+      learning_rate: 0.003
     num_params: 817872
     quantization: ~
   dataset:
@@ -47,24 +47,29 @@ base_experiment: # the base config object
 experiments: # in the experiments object you have a list for the different experiments with the values for the fields marked as $VARIES$ in the base config object.
   - client: # extrapolate
       quantization:
-        type: probabilistic
+        type: probabilistic # reduce lr?
         bits: 8
-        frac: 7
+        frac: 6
     crypto:
-      enc_type: l2
+      enc_type: l2Compressed
       fp_bits: 32
+      fp_frac: 6
     e2e:
       speculative_execution: false
+    server:
+      num_rounds: 5
   - client: # extrapolate
       quantization:
         type: probabilistic
         bits: 8
-        frac: 7
+        frac: 6
     crypto:
-      enc_type: Range
+      enc_type: RangeCompressed
       check_percentage: 1.0
     e2e:
       speculative_execution: false
+    server:
+      num_rounds: 5
   - client:
       quantization: ~
     crypto:
